@@ -228,26 +228,6 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Specialty */}
-                  <div className="bg-[#131620] p-4 border border-white/5 flex items-start space-x-3">
-                    <Sparkles className="w-4 h-4 text-sky-400 mt-0.5 shrink-0" />
-                    <div>
-                      <span className="text-[10px] font-mono text-gray-500 uppercase block mb-1.5">
-                        Specialty / 특기
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {artist.specialty.map((s, idx) => (
-                          <span
-                            key={idx}
-                            className="text-xs bg-[#182A47]/60 text-sky-200 px-2.5 py-1 border border-sky-400/20"
-                          >
-                            {s}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Languages */}
                   {artist.languages && artist.languages.length > 0 && (
                     <div className="bg-[#131620] p-4 border border-white/5">

@@ -104,8 +104,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setTimeout(() => setToastMessage(''), 3500);
   };
 
-  // Helper to compress & encode image from PC
-  const processImageFile = (file: File, maxWidth = 1200, maxHeight = 1600, quality = 0.85): Promise<string> => {
+  // Helper to compress & optimize image from PC (smart auto-scaling to prevent storage limits)
+  const processImageFile = (file: File, maxWidth = 800, maxHeight = 1066, quality = 0.8): Promise<string> => {
     return new Promise((resolve, reject) => {
       if (!file.type.startsWith('image/')) {
         reject(new Error('이미지 파일(JPG, PNG, WEBP 등)만 등록 가능합니다.'));
@@ -115,29 +115,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
+          try {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
 
-          if (width > height) {
-            if (width > maxWidth) {
-              height = Math.round((height * maxWidth) / width);
-              width = maxWidth;
+            if (width > height) {
+              if (width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+              }
+            } else {
+              if (height > maxHeight) {
+                width = Math.round((width * maxHeight) / height);
+                height = maxHeight;
+              }
             }
-          } else {
-            if (height > maxHeight) {
-              width = Math.round((width * maxHeight) / height);
-              height = maxHeight;
-            }
-          }
 
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', quality));
-          } else {
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              resolve(canvas.toDataURL('image/jpeg', quality));
+            } else {
+              resolve(e.target?.result as string);
+            }
+          } catch (canvasErr) {
             resolve(e.target?.result as string);
           }
         };
@@ -349,38 +353,49 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const handleSaveArtist = async () => {
-    if (!editingArtist || !editingArtist.nameKo || !editingArtist.nameEn) {
-      showToast('배우 한글명과 영문명을 입력해주세요.');
+    if (!editingArtist) return;
+    
+    if (!editingArtist.nameKo || !editingArtist.nameKo.trim()) {
+      showToast('⚠️ 배우 한글명을 입력해주세요.');
+      return;
+    }
+    if (!editingArtist.nameEn || !editingArtist.nameEn.trim()) {
+      showToast('⚠️ 배우 영문명을 입력해주세요.');
       return;
     }
 
-    const artistToSave: Artist = {
-      id: editingArtist.id || `artist-${Date.now()}`,
-      nameKo: editingArtist.nameKo.trim(),
-      nameEn: editingArtist.nameEn.trim(),
-      birth: editingArtist.birth || '2000.01.01',
-      height: Number(editingArtist.height) || 170,
-      gender: editingArtist.gender || 'Female',
-      education: editingArtist.education || '',
-      specialty: editingArtist.specialty || ['연기'],
-      languages: editingArtist.languages || ['한국어'],
-      agency: editingArtist.agency || 'TK MANAGEMENT (㈜TK Company)',
-      instagram: editingArtist.instagram || '',
-      bio: editingArtist.bio || '',
-      profileImage: editingArtist.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=85',
-      galleryImages: editingArtist.galleryImages && editingArtist.galleryImages.length > 0
-        ? editingArtist.galleryImages
-        : [editingArtist.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=85'],
-      showreelUrl: editingArtist.showreelUrl || '',
-      filmography: editingArtist.filmography || [],
-      isActive: editingArtist.isActive !== undefined ? editingArtist.isActive : true,
-      order: Number(editingArtist.order) || (artists.length + 1)
-    };
+    try {
+      const artistToSave: Artist = {
+        id: editingArtist.id || `artist-${Date.now()}`,
+        nameKo: editingArtist.nameKo.trim(),
+        nameEn: editingArtist.nameEn.trim(),
+        birth: editingArtist.birth || '2000.01.01',
+        height: Number(editingArtist.height) || 170,
+        gender: editingArtist.gender || 'Female',
+        education: editingArtist.education || '',
+        specialty: editingArtist.specialty || ['연기'],
+        languages: editingArtist.languages || ['한국어'],
+        agency: editingArtist.agency || 'TK MANAGEMENT (㈜TK Company)',
+        instagram: editingArtist.instagram || '',
+        bio: editingArtist.bio || '',
+        profileImage: editingArtist.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=85',
+        galleryImages: editingArtist.galleryImages && editingArtist.galleryImages.length > 0
+          ? editingArtist.galleryImages
+          : [editingArtist.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=85'],
+        showreelUrl: editingArtist.showreelUrl || '',
+        filmography: editingArtist.filmography || [],
+        isActive: editingArtist.isActive !== undefined ? editingArtist.isActive : true,
+        order: Number(editingArtist.order) || (artists.length + 1)
+      };
 
-    await saveArtist(artistToSave);
-    setEditingArtist(null);
-    showToast(`${artistToSave.nameKo} 배우 정보가 저장되었습니다.`);
-    onRefreshData();
+      await saveArtist(artistToSave);
+      setEditingArtist(null);
+      showToast(`✅ ${artistToSave.nameKo} 배우 정보가 성공적으로 저장되었습니다.`);
+      onRefreshData();
+    } catch (err: any) {
+      console.error('Failed to save artist:', err);
+      showToast(`저장 오류: ${err.message || '저장 중 문제가 발생했습니다.'}`);
+    }
   };
 
   const handleDeleteArtist = async (id: string, name: string) => {
@@ -726,7 +741,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <th className="p-3 w-16">사진</th>
                       <th className="p-3">이름 (한글/영문)</th>
                       <th className="p-3">생년월일/스펙</th>
-                      <th className="p-3">학력 / 특기</th>
+                      <th className="p-3">학력</th>
                       <th className="p-3">필모그래피</th>
                       <th className="p-3 w-24 text-center">공개 여부</th>
                       <th className="p-3 w-32 text-right">관리</th>
@@ -758,10 +773,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <div className="text-gray-400">{artist.height}cm</div>
                         </td>
                         <td className="p-3">
-                          <div className="text-gray-200 line-clamp-1">{artist.education}</div>
-                          <div className="text-gray-400 text-[11px] line-clamp-1">
-                            {artist.specialty.join(', ')}
-                          </div>
+                          <div className="text-gray-200 line-clamp-2">{artist.education}</div>
                         </td>
                         <td className="p-3 font-mono">
                           <span className="bg-sky-950 text-sky-300 px-2 py-0.5 border border-sky-800 text-[11px]">

@@ -201,7 +201,7 @@ export const INITIAL_NEWS: NewsArticle[] = [
 
 TK MANAGEMENT는 체계적인 신인 발굴(Discovery), 트레이닝(Development), 전문적인 매니지먼트(Management)를 통해 배우들이 스크린과 무대에서 최고의 역량을 펼칠 수 있도록 전폭적인 지원을 아끼지 않을 것입니다.
 
-캐스팅 및 비즈니스 문의는 웹사이트 내 CONTACT 페이지 또는 공식 메일(hello@tkmanagement.co.kr)을 통해 상시 접수하고 있습니다.
+캐스팅 및 비즈니스 문의는 웹사이트 내 CONTACT 페이지 또는 캐스팅 및 섭외 담당자 공식 메일(taz0206@naver.com)을 통해 상시 접수하고 있습니다.
 
 많은 관심과 성원을 부탁드립니다.
 

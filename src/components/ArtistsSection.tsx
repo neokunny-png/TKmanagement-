@@ -27,9 +27,6 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 border-b border-white/10 pb-8">
           <div>
-            <span className="text-xs font-mono tracking-widest text-sky-400 uppercase block mb-3">
-              TK MANAGEMENT TALENTS
-            </span>
             <h2 className="text-4xl sm:text-6xl font-display font-black text-white tracking-tighter">
               MEET OUR <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400">
@@ -79,9 +76,7 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
         {/* 3-Column Responsive Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredArtists.map((artist, index) => {
-            const firstName = artist.nameKo;
             const engUpper = artist.nameEn;
-            const singleName = artist.nameEn.split(' ')[artist.nameEn.split(' ').length - 1] || '';
 
             return (
               <motion.div
@@ -107,25 +102,8 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
                   {/* Dramatic multi-stop gradient for text readability */}
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0B0C10] via-[#0B0C10]/30 to-transparent opacity-85 group-hover:opacity-95 transition-opacity" />
 
-                  {/* Top index badge */}
-                  <div className="absolute top-4 left-4 z-10 flex items-center space-x-2">
-                    <span className="text-[10px] font-mono font-bold tracking-widest text-white/70 bg-black/60 backdrop-blur-sm px-2 py-0.5 border border-white/10">
-                      {String(index + 1).padStart(2, '0')}
-                    </span>
-                    {artist.specialty && artist.specialty[0] && (
-                      <span className="text-[10px] font-mono tracking-wider text-sky-300/80 bg-[#182A47]/70 backdrop-blur-sm px-2 py-0.5 border border-sky-400/20">
-                        {artist.specialty[0]}
-                      </span>
-                    )}
-                  </div>
-
                   {/* Bottom Text Details */}
                   <div className="absolute bottom-0 left-0 right-0 p-6 z-10 flex flex-col justify-end">
-                    {/* Subtle romanized brand tag */}
-                    <div className="text-[11px] font-mono tracking-widest text-sky-400 font-bold mb-1 opacity-90">
-                      {singleName}
-                    </div>
-
                     {/* Actor Korean Name & English Name */}
                     <div className="flex items-baseline justify-between mb-2">
                       <h3 className="text-2xl sm:text-3xl font-display font-black text-white tracking-tight group-hover:text-sky-200 transition-colors">
@@ -142,10 +120,10 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
 
                     {/* Physical Specs & Quick Bio Snippet */}
                     <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-gray-400">
-                      <div className="flex items-center space-x-3 text-[11px] font-mono">
+                      <div className="flex items-center space-x-2 text-[11px] font-mono text-gray-300">
+                        <span>{artist.gender === 'Female' ? '여성' : '남성'}</span>
+                        <span className="text-gray-600">•</span>
                         <span>{artist.height}cm</span>
-                        <span>•</span>
-                        <span>{artist.weight}kg</span>
                       </div>
 
                       <div className="flex items-center space-x-1 text-white text-xs font-semibold tracking-wider group-hover:text-sky-400 transition-colors">
@@ -176,7 +154,7 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
             </div>
           </div>
           <div className="text-xs text-sky-300 font-mono tracking-wider">
-            CASTING INQUIRY: hello@tkmanagement.co.kr
+            CASTING INQUIRY: <a href="mailto:taz0206@naver.com" className="hover:underline font-bold text-white">taz0206@naver.com</a>
           </div>
         </div>
       </div>

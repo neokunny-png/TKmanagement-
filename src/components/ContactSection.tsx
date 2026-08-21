@@ -142,16 +142,16 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
                 </div>
                 <div>
                   <span className="text-[10px] font-mono text-gray-500 uppercase block">
-                    E-MAIL / 캐스팅 및 일반 문의
+                    E-MAIL / 캐스팅 및 섭외 담당자 안내
                   </span>
                   <a
-                    href="mailto:hello@tkmanagement.co.kr"
+                    href="mailto:taz0206@naver.com"
                     className="text-sm font-bold text-white hover:text-sky-300 transition-colors font-mono"
                   >
-                    hello@tkmanagement.co.kr
+                    taz0206@naver.com
                   </a>
                   <span className="block text-gray-400 text-[11px] mt-0.5">
-                    casting@tkcompany.kr
+                    캐스팅 및 섭외 제안 상시 접수
                   </span>
                 </div>
               </div>
@@ -182,10 +182,10 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
                     HEADQUARTERS / 본사 위치
                   </span>
                   <span className="text-xs sm:text-sm text-gray-200 font-medium leading-relaxed block">
-                    서울특별시 강남구 논현로 642 TK빌딩 4층 (주)TK Company
+                    서울특별시 마포구 마포나루길 442 마포인트 3층 (주)TK Company
                   </span>
                   <span className="text-[11px] text-gray-500 font-mono block mt-1">
-                    4F TK Bldg, 642 Nonhyeon-ro, Gangnam-gu, Seoul, Korea
+                    3F Mapoint, 442 Maponaru-gil, Mapo-gu, Seoul, Korea
                   </span>
                 </div>
               </div>
@@ -196,7 +196,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
               <div className="text-white font-bold mb-1">㈜TK Company</div>
               <div>사업자등록번호: 211-88-92410</div>
               <div>대중문화예술기획업 등록: 제2025-서울강남-0418호</div>
-              <div>대표이사: 강태경</div>
+              <div>대표이사: 조태경</div>
             </div>
           </div>
 

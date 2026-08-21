@@ -14,7 +14,7 @@ export interface Artist {
   birth: string; // e.g. "2002.04.18"
   height: number; // in cm
   weight?: number; // in kg (optional)
-  specialty: string[];
+  specialty?: string[];
   education: string;
   languages?: string[];
   agency?: string;

@@ -122,10 +122,6 @@ export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({ artist, on
                   <span className="w-20 font-bold text-gray-700 shrink-0">학 력</span>
                   <span className="text-gray-900">{artist.education}</span>
                 </div>
-                <div className="flex">
-                  <span className="w-20 font-bold text-gray-700 shrink-0">특 기</span>
-                  <span className="text-gray-900">{artist.specialty.join(', ')}</span>
-                </div>
                 {artist.languages && (
                   <div className="flex">
                     <span className="w-20 font-bold text-gray-700 shrink-0">외국어</span>
@@ -184,12 +180,12 @@ export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({ artist, on
           <div className="pt-4 border-t-2 border-black flex items-center justify-between text-[10px] text-gray-600 font-mono">
             <div>
               <span className="font-bold text-black">㈜TK Company / TK MANAGEMENT</span>
-              <div className="text-gray-500">서울특별시 강남구 논현로 642 TK빌딩 4층</div>
+              <div className="text-gray-500">서울특별시 마포구 마포나루길 442 마포인트 3층</div>
             </div>
 
             <div className="text-right">
-              <div>CASTING : 02-540-8820 / hello@tkmanagement.co.kr</div>
-              <div>OFFICIAL WEB : www.tkmanagement.co.kr</div>
+              <div>CASTING &amp; 섭외 : 02-540-8820 / taz0206@naver.com</div>
+              <div>OFFICIAL WEB : www.mtkent.com</div>
             </div>
           </div>
         </div>

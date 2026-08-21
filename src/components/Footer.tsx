@@ -39,7 +39,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAdmin }) => {
             </p>
 
             <div className="text-[11px] font-mono text-gray-400 pt-2">
-              CASTING &amp; MANAGEMENT : hello@tkmanagement.co.kr
+              CASTING &amp; 섭외 담당 : taz0206@naver.com
             </div>
           </div>
 
@@ -99,10 +99,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAdmin }) => {
             </h4>
             <div>상호명 : ㈜TK Company (티케이컴퍼니)</div>
             <div>브랜드 : TK MANAGEMENT (티케이 매니지먼트)</div>
-            <div>대표이사 : 강태경 | 개인정보보호책임자 : 강태경</div>
+            <div>대표이사 : 조태경 | 개인정보보호책임자 : 조태경</div>
             <div>사업자등록번호 : 211-88-92410</div>
             <div>대중문화예술기획업 등록번호 : 제2025-서울강남-0418호</div>
-            <div>주소 : 서울특별시 강남구 논현로 642 TK빌딩 4층</div>
+            <div>주소 : 서울특별시 마포구 마포나루길 442 마포인트 3층</div>
             <div>대표전화 : 02-540-8820 | 팩스 : 02-540-8821</div>
           </div>
         </div>
