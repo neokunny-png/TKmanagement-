@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: "Pretendard", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: "Syne", "Pretendard", "Plus Jakarta Sans", sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  .font-serif-title {
+    font-family: "Cinzel", "Syne", "Pretendard", serif;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0B0C10;
+}
+::-webkit-scrollbar-thumb {
+  background: #1F2937;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #182A47;
+}
+
+/* Cinema grain overlay & smooth visuals */
+.cinematic-glow {
+  background: radial-gradient(circle at 50% 30%, rgba(24, 42, 71, 0.45) 0%, rgba(11, 12, 16, 0.95) 75%);
+}
+
+.card-hover-zoom {
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), filter 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-hover-zoom:hover {
+  transform: scale(1.03);
+}

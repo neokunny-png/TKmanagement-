@@ -1,0 +1,6 @@
+{
+  "name": "TK MANAGEMENT",
+  "description": "TK MANAGEMENT (주식회사 TK Company) 공식 웹사이트 및 아티스트/오디션 관리 시스템",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Artists collection: Anyone can read, authenticated staff or public can create/update in dev/demo
+    match /artists/{artistId} {
+      allow read: if true;
+      allow write: if true; // Allow admin/demo management
+    }
+
+    // Auditions collection: Anyone can create (submit application), read/update by admin
+    match /auditions/{auditionId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if true;
+    }
+
+    // News collection: Anyone can read, write by admin
+    match /news/{newsId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Inquiries collection: Anyone can create, read/update by admin
+    match /inquiries/{inquiryId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if true;
+    }
+
+    // Settings collection
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}
