@@ -16,7 +16,7 @@ export const INITIAL_ARTISTS: Artist[] = [
     gender: 'Female',
     order: 1,
     isActive: true,
-    bio: '맑고 투명한 마스크 뒤에 서늘하고 깊은 눈빛을 지닌 배우. 섬세한 감정선과 밀도 높은 호흡으로 관객을 화면 안으로 이끕니다.',
+    bio: '투명하고 맑은 마스크 속에 서늘한 파도와 같은 감정의 깊이를 품은 배우. 흔들리는 눈빛 하나, 찰나의 숨소리만으로도 인물이 감춘 가장 은밀하고 처연한 내면을 스크린 위에 팽팽하게 펼쳐냅니다.',
     profileImage: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=85',
     galleryImages: [
       'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1200&q=85',
@@ -24,12 +24,12 @@ export const INITIAL_ARTISTS: Artist[] = [
       'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=85',
       'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=1200&q=85'
     ],
-    showreelUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=0',
+    showreelUrl: '',
     filmography: [
-      { id: 'f1', year: '2026', title: '단편영화 [새벽의 파도]', role: '주연 (유진 역)', category: 'Movie', note: '제27회 전주국제영화제 단편경쟁 초청' },
       { id: 'f2', year: '2025', title: '웹드라마 [너의 계절이 지나갈 때]', role: '주연 (한다온 역)', category: 'Drama' },
+      { id: 'f1', year: '2026', title: '단편영화 [새벽의 파도]', role: '주연 (유진 역)', category: 'Movie', note: '제27회 전주국제영화제 단편경쟁 초청' },
       { id: 'f3', year: '2025', title: '연극 [안티고네]', role: '이스메네 역', category: 'Theater', note: '대학로 예술극장' },
-      { id: 'f4', year: '2025', title: '아모레퍼시픽 뷰티 브랜드 필름', role: '메인 모델', category: 'Commercial' },
+      { id: 'f4', year: '2025', title: '아모레퍼시픽 뷰티 브랜드 필름', role: '메인 모델', category: 'CF(광고)' },
       { id: 'f5', year: '2024', title: '인디밴드 뮤직비디오 [푸른 밤]', role: '여주인공', category: 'Music Video' }
     ]
   },
@@ -48,7 +48,7 @@ export const INITIAL_ARTISTS: Artist[] = [
     gender: 'Male',
     order: 2,
     isActive: true,
-    bio: '선과 악이 공존하는 마스크와 묵직한 중저음 보이스. 날카로운 카리스마와 소년미를 오가는 독보적인 아우라를 지녔습니다.',
+    bio: '소년의 위태로운 방황과 차가운 느와르적 긴장감이 공존하는 독보적인 마스크. 묵직한 중저음 보이스와 날카로운 시선으로 침묵 속에서도 서사를 완성하며 관객의 시선을 단숨에 사로잡는 흡인력을 지녔습니다.',
     profileImage: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=1000&q=85',
     galleryImages: [
       'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=1200&q=85',
@@ -56,12 +56,12 @@ export const INITIAL_ARTISTS: Artist[] = [
       'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=1200&q=85',
       'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=1200&q=85'
     ],
-    showreelUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=0',
+    showreelUrl: '',
     filmography: [
-      { id: 'f6', year: '2026', title: '독립장편 [우리가 머문 자리]', role: '주연 (태오 역)', category: 'Movie' },
       { id: 'f7', year: '2025', title: 'OTT 오리지널 시리즈 [체이서]', role: '조연 (민성 역)', category: 'Drama' },
+      { id: 'f6', year: '2026', title: '독립장편 [우리가 머문 자리]', role: '주연 (태오 역)', category: 'Movie' },
       { id: 'f8', year: '2025', title: '뮤지컬 [스프링 어웨이크닝]', role: '모리츠 역', category: 'Theater' },
-      { id: 'f9', year: '2024', title: '현대자동차 N Line 브랜드 캠페인', role: '메인 모델', category: 'Commercial' }
+      { id: 'f9', year: '2024', title: '현대자동차 N Line 브랜드 캠페인', role: '메인 모델', category: 'CF(광고)' }
     ]
   },
   {
@@ -79,19 +79,19 @@ export const INITIAL_ARTISTS: Artist[] = [
     gender: 'Male',
     order: 3,
     isActive: true,
-    bio: '강렬한 피지컬과 안정적인 딕션, 날것의 생동감을 온몸으로 표현하는 파워풀한 청춘의 얼굴.',
+    bio: '선 굵은 피지컬과 단단하고 깊은 눈매에서 뿜어져 나오는 강인한 생명력. 온몸을 던지는 역동적인 액션은 물론, 인물의 현실감 넘치는 고뇌와 진정성을 묵직하고 설득력 있게 풀어내는 배우입니다.',
     profileImage: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=1000&q=85',
     galleryImages: [
       'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=1200&q=85',
       'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=1200&q=85',
       'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=1200&q=85'
     ],
-    showreelUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=0',
+    showreelUrl: '',
     filmography: [
-      { id: 'f10', year: '2026', title: '상업영화 [무법지대]', role: '조연 (강철 역)', category: 'Movie' },
       { id: 'f11', year: '2025', title: 'tvN 드라마 [형사의 밤]', role: '에피소드 주인공 (영우 역)', category: 'Drama' },
-      { id: 'f12', year: '2024', title: '스포츠웨어 데상트 글로벌 캠페인', role: '모델', category: 'Commercial' },
-      { id: 'f13', year: '2024', title: '연극 [갈매기]', role: '뜨레쁠례프 역', category: 'Theater' }
+      { id: 'f10', year: '2026', title: '상업영화 [무법지대]', role: '조연 (강철 역)', category: 'Movie' },
+      { id: 'f13', year: '2024', title: '연극 [갈매기]', role: '뜨레쁠례프 역', category: 'Theater' },
+      { id: 'f12', year: '2024', title: '스포츠웨어 데상트 글로벌 캠페인', role: '모델', category: 'CF(광고)' }
     ]
   },
   {
@@ -109,18 +109,18 @@ export const INITIAL_ARTISTS: Artist[] = [
     gender: 'Female',
     order: 4,
     isActive: true,
-    bio: '특유의 몽환적이면서도 단단한 에너지. Z세대의 트렌디함과 클래식한 우아함을 모두 지닌 차세대 여배우.',
+    bio: '렌즈를 응시하는 것만으로도 공간의 무드를 단숨에 장악하는 신비롭고 몽환적인 마스크. 틀에 갇히지 않는 유연한 감각과 당찬 에너지로 Z세대의 새로운 감성을 감각적으로 대변하는 차세대 뮤즈입니다.',
     profileImage: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=1000&q=85',
     galleryImages: [
       'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=1200&q=85',
       'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=1200&q=85',
       'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1200&q=85'
     ],
-    showreelUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=0',
+    showreelUrl: '',
     filmography: [
-      { id: 'f14', year: '2026', title: '단편영화 [도쿄에서 온 편지]', role: '주연 (사나 역)', category: 'Movie', note: '한일합작 단편' },
       { id: 'f15', year: '2025', title: 'JTBC 드라마 [청춘기록: 리와인드]', role: '조연 (서하늘 역)', category: 'Drama' },
-      { id: 'f16', year: '2025', title: '메종 키츠네 코리아 디지털 캠페인', role: '뮤즈', category: 'Commercial' },
+      { id: 'f14', year: '2026', title: '단편영화 [도쿄에서 온 편지]', role: '주연 (사나 역)', category: 'Movie', note: '한일합작 단편' },
+      { id: 'f16', year: '2025', title: '메종 키츠네 코리아 디지털 캠페인', role: '뮤즈', category: 'CF(광고)' },
       { id: 'f17', year: '2024', title: '감성 R&B 뮤직비디오', role: '주연', category: 'Music Video' }
     ]
   },
@@ -139,19 +139,19 @@ export const INITIAL_ARTISTS: Artist[] = [
     gender: 'Male',
     order: 5,
     isActive: true,
-    bio: '따뜻한 미소 속 날카로운 집중력. 자연스러운 일상 연기부터 거친 감정 신까지 폭넓은 스펙트럼을 증명하는 실력파 신예.',
+    bio: '따뜻하고 무해한 청춘의 얼굴 뒤편에 웅크린 날카롭고 집요한 연기적 집중력. 일상의 편안하고 담백한 호흡부터 폭발하는 격정의 순간까지, 캐릭터에 온전히 녹아드는 진정성 있는 배우입니다.',
     profileImage: 'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?auto=format&fit=crop&w=1000&q=85',
     galleryImages: [
       'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?auto=format&fit=crop&w=1200&q=85',
       'https://images.unsplash.com/photo-1496345875659-11f7dd282d1d?auto=format&fit=crop&w=1200&q=85',
       'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=1200&q=85'
     ],
-    showreelUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=0',
+    showreelUrl: '',
     filmography: [
-      { id: 'f18', year: '2026', title: '단편영화 [마지막 쿼터]', role: '주연 (진수 역)', category: 'Movie' },
       { id: 'f19', year: '2025', title: 'KBS 단막극 [그 여름의 행로]', role: '주연 (이도현 역)', category: 'Drama' },
+      { id: 'f18', year: '2026', title: '단편영화 [마지막 쿼터]', role: '주연 (진수 역)', category: 'Movie' },
       { id: 'f20', year: '2025', title: '연극 [시련]', role: '존 프락터 역', category: 'Theater' },
-      { id: 'f21', year: '2024', title: '삼성 갤럭시 캠퍼스 앰버서더', role: '모델', category: 'Commercial' }
+      { id: 'f21', year: '2024', title: '삼성 갤럭시 캠퍼스 앰버서더', role: '모델', category: 'CF(광고)' }
     ]
   },
   {
@@ -169,19 +169,19 @@ export const INITIAL_ARTISTS: Artist[] = [
     gender: 'Male',
     order: 6,
     isActive: true,
-    bio: '글로벌 무대를 겨냥한 감각적인 표현력과 유려한 영어 스피치. 이국적인 마스크와 파괴력 있는 텐션을 지닌 차세대 엔터테이너.',
-    profileImage: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=1000&q=85',
+    bio: '글로벌 무대를 겨냥한 감각적인 비주얼과 거침없는 에너지. 유려한 언어 감각과 역동적인 리듬감으로 캐릭터에 입체적인 생명력을 불어넣으며 신선한 파동을 일으키는 라이징 엔터테이너입니다.',
+    profileImage: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=1000&q=85',
     galleryImages: [
+      'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=1200&q=85',
       'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1513956589380-bad6acb9b9d4?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1200&q=85'
+      'https://images.unsplash.com/photo-1513956589380-bad6acb9b9d4?auto=format&fit=crop&w=1200&q=85'
     ],
-    showreelUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=0',
+    showreelUrl: '',
     filmography: [
       { id: 'f22', year: '2026', title: '글로벌 스트리밍 [SEOUL CYBER]', role: '조연 (Leo 역)', category: 'Drama', note: '영미권 동시 공개' },
-      { id: 'f23', year: '2025', title: '패션 필름 [METAMORPHOSIS]', role: '단독 모델', category: 'Other' },
-      { id: 'f24', year: '2025', title: '나이키 코리아 디지털 광고', role: '댄서 & 모델', category: 'Commercial' },
-      { id: 'f25', year: '2024', title: '단편영화 [무제]', role: '주연 (카이 역)', category: 'Movie' }
+      { id: 'f25', year: '2024', title: '단편영화 [무제]', role: '주연 (카이 역)', category: 'Movie' },
+      { id: 'f24', year: '2025', title: '나이키 코리아 디지털 광고', role: '댄서 & 모델', category: 'CF(광고)' },
+      { id: 'f23', year: '2025', title: '패션 필름 [METAMORPHOSIS]', role: '단독 모델', category: 'Other' }
     ]
   }
 ];

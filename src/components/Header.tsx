@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X, Shield, ArrowUpRight } from 'lucide-react';
+import { TKLogo } from './TKLogo';
 
 interface HeaderProps {
   activeSection: string;
@@ -56,21 +57,13 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           id="btn-brand-logo"
           onClick={() => handleNavClick('hero')}
-          className="flex items-center space-x-3 group text-left focus:outline-none"
+          className="flex items-center group text-left focus:outline-none"
         >
-          {/* T+K Geometric Emblem */}
-          <div className="w-8 h-8 rounded bg-[#182A47] border border-white/20 flex items-center justify-center text-white font-extrabold text-sm tracking-tighter group-hover:border-white transition-colors">
-            <span className="text-white">T</span>
-            <span className="text-sky-400">K</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="font-display font-extrabold tracking-widest text-lg sm:text-xl text-white group-hover:text-slate-200 transition-colors">
-              TK MANAGEMENT
-            </span>
-            <span className="text-[10px] text-gray-400 tracking-wider font-light">
-              ㈜TK Company
-            </span>
-          </div>
+          <TKLogo
+            className="h-8 w-9 group-hover:scale-105 transition-transform"
+            variant="dark"
+            showText={true}
+          />
         </button>
 
         {/* Desktop Navigation */}

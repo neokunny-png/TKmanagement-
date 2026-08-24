@@ -27,14 +27,20 @@ import {
   Image as ImageIcon,
   CheckCircle2,
   Layers,
-  ArrowUpRight
+  ArrowUpRight,
+  ChevronUp,
+  ChevronDown,
+  ArrowUp,
+  ArrowDown,
+  HelpCircle
 } from 'lucide-react';
 import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
-import { Artist, AuditionApplication, NewsArticle, InquiryMessage, AuditionStatus, FilmographyItem } from '../types';
+import { Artist, AuditionApplication, NewsArticle, InquiryMessage, AuditionStatus, FilmographyItem, sortFilmographyByYear } from '../types';
 import {
   saveArtist,
   deleteArtist,
+  updateArtistsOrder,
   seedDefaultArtists,
   getAuditionApplications,
   updateAuditionStatus,
@@ -45,6 +51,7 @@ import {
   updateInquiryStatus
 } from '../lib/db';
 import { INITIAL_ARTISTS } from '../data/initialData';
+import { TKLogoMark } from './TKLogo';
 
 interface AdminDashboardProps {
   artists: Artist[];
@@ -76,6 +83,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Artist editing modal state
   const [editingArtist, setEditingArtist] = useState<Partial<Artist> | null>(null);
   const [isNewArtist, setIsNewArtist] = useState(false);
+  const [showArtistCloseConfirm, setShowArtistCloseConfirm] = useState(false);
+  const [isSavingArtist, setIsSavingArtist] = useState(false);
+  const [languagesInput, setLanguagesInput] = useState('');
+  const [specialtyInput, setSpecialtyInput] = useState('');
   const [newSpecialtyInput, setNewSpecialtyInput] = useState('');
   const [newGalleryImgInput, setNewGalleryImgInput] = useState('');
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
@@ -92,9 +103,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [newFilmCategory, setNewFilmCategory] = useState<FilmographyItem['category']>('Drama');
   const [newFilmNote, setNewFilmNote] = useState('');
 
+  // Filmography item in-place modification state
+  const [editingFilmId, setEditingFilmId] = useState<string | null>(null);
+  const [editFilmYear, setEditFilmYear] = useState('');
+  const [editFilmCategory, setEditFilmCategory] = useState<FilmographyItem['category']>('Drama');
+  const [editFilmTitle, setEditFilmTitle] = useState('');
+  const [editFilmRole, setEditFilmRole] = useState('');
+  const [editFilmNote, setEditFilmNote] = useState('');
+
   // News editing state
   const [editingNews, setEditingNews] = useState<Partial<NewsArticle> | null>(null);
   const [isNewNews, setIsNewNews] = useState(false);
+
+  // Safe in-dashboard confirmation modal (avoids window.confirm iframe blocks)
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    type: 'artist' | 'news' | 'audition' | 'reset_artists';
+    id: string;
+    title: string;
+  } | null>(null);
+  const [isDeletingItem, setIsDeletingItem] = useState(false);
 
   // Notifications / feedback
   const [toastMessage, setToastMessage] = useState('');
@@ -323,7 +350,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // ----------------------------------------------------
   const handleOpenAddArtist = () => {
     setIsNewArtist(true);
+    setShowArtistCloseConfirm(false);
     setProfileImageMode('upload');
+    setLanguagesInput('한국어');
+    setSpecialtyInput('연기');
     setEditingArtist({
       id: `artist-${Date.now()}`,
       nameKo: '',
@@ -348,8 +378,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleOpenEditArtist = (artist: Artist) => {
     setIsNewArtist(false);
+    setShowArtistCloseConfirm(false);
     setProfileImageMode(artist.profileImage && artist.profileImage.startsWith('data:') ? 'upload' : 'upload');
+    setLanguagesInput((artist.languages || []).join(', '));
+    setSpecialtyInput((artist.specialty || []).join(', '));
     setEditingArtist(JSON.parse(JSON.stringify(artist)));
+  };
+
+  const handleRequestCloseArtistModal = () => {
+    // Open confirmation dialog when attempting to close artist edit modal
+    setShowArtistCloseConfirm(true);
   };
 
   const handleSaveArtist = async () => {
@@ -364,7 +402,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       return;
     }
 
+    setIsSavingArtist(true);
     try {
+      const parsedLangs = languagesInput
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+      const parsedSpecs = specialtyInput
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+
       const artistToSave: Artist = {
         id: editingArtist.id || `artist-${Date.now()}`,
         nameKo: editingArtist.nameKo.trim(),
@@ -373,8 +421,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         height: Number(editingArtist.height) || 170,
         gender: editingArtist.gender || 'Female',
         education: editingArtist.education || '',
-        specialty: editingArtist.specialty || ['연기'],
-        languages: editingArtist.languages || ['한국어'],
+        specialty: parsedSpecs.length > 0 ? parsedSpecs : (editingArtist.specialty || ['연기']),
+        languages: parsedLangs.length > 0 ? parsedLangs : (editingArtist.languages || ['한국어']),
         agency: editingArtist.agency || 'TK MANAGEMENT (㈜TK Company)',
         instagram: editingArtist.instagram || '',
         bio: editingArtist.bio || '',
@@ -388,22 +436,77 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         order: Number(editingArtist.order) || (artists.length + 1)
       };
 
-      await saveArtist(artistToSave);
+      if (!isNewArtist && editingArtist.id) {
+        const targetOrder = Number(editingArtist.order) || 1;
+        const targetPos = Math.max(1, Math.min(artists.length, targetOrder)) - 1;
+        const currentPos = artists.findIndex(a => a.id === editingArtist.id);
+        if (currentPos !== -1 && currentPos !== targetPos) {
+          const nextList = [...artists];
+          const [removed] = nextList.splice(currentPos, 1);
+          nextList.splice(targetPos, 0, { ...removed, ...artistToSave });
+          await updateArtistsOrder(nextList);
+        } else {
+          await saveArtist(artistToSave);
+        }
+      } else {
+        await saveArtist(artistToSave);
+      }
+      setShowArtistCloseConfirm(false);
       setEditingArtist(null);
-      showToast(`✅ ${artistToSave.nameKo} 배우 정보가 성공적으로 저장되었습니다.`);
+      showToast(`✅ [${artistToSave.nameKo}] 배우 정보가 성공적으로 저장되었습니다.`);
       onRefreshData();
     } catch (err: any) {
       console.error('Failed to save artist:', err);
       showToast(`저장 오류: ${err.message || '저장 중 문제가 발생했습니다.'}`);
+    } finally {
+      setIsSavingArtist(false);
     }
   };
 
-  const handleDeleteArtist = async (id: string, name: string) => {
-    if (confirm(`정말 ${name} 배우 정보를 삭제하시겠습니까?`)) {
-      await deleteArtist(id);
-      showToast(`${name} 배우가 삭제되었습니다.`);
-      onRefreshData();
-    }
+  const handleMoveArtistUp = async (index: number) => {
+    if (index <= 0) return;
+    const nextList = [...artists];
+    const temp = nextList[index];
+    nextList[index] = nextList[index - 1];
+    nextList[index - 1] = temp;
+
+    await updateArtistsOrder(nextList);
+    showToast(`✅ ${temp.nameKo} 배우 순서를 위로 올렸습니다 (${index}위).`);
+    onRefreshData();
+  };
+
+  const handleMoveArtistDown = async (index: number) => {
+    if (index >= artists.length - 1) return;
+    const nextList = [...artists];
+    const temp = nextList[index];
+    nextList[index] = nextList[index + 1];
+    nextList[index + 1] = temp;
+
+    await updateArtistsOrder(nextList);
+    showToast(`✅ ${temp.nameKo} 배우 순서를 아래로 내렸습니다 (${index + 2}위).`);
+    onRefreshData();
+  };
+
+  const handleSetArtistOrder = async (artistId: string, newOrder: number) => {
+    const targetPos = Math.max(1, Math.min(artists.length, newOrder)) - 1;
+    const currentPos = artists.findIndex(a => a.id === artistId);
+    if (currentPos === -1 || currentPos === targetPos) return;
+
+    const nextList = [...artists];
+    const [removed] = nextList.splice(currentPos, 1);
+    nextList.splice(targetPos, 0, removed);
+
+    await updateArtistsOrder(nextList);
+    showToast(`✅ ${removed.nameKo} 배우 순서를 ${targetPos + 1}번째로 변경했습니다.`);
+    onRefreshData();
+  };
+
+  const handleDeleteArtist = (id: string, name: string) => {
+    setDeleteConfirmation({
+      type: 'artist',
+      id,
+      title: `${name} 배우`
+    });
   };
 
   const handleToggleArtistActive = async (artist: Artist) => {
@@ -413,12 +516,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     onRefreshData();
   };
 
-  const handleResetToDefaultArtists = async () => {
-    if (confirm('기본 6인의 신예 배우 데이터로 초기화하시겠습니까?')) {
-      await seedDefaultArtists();
-      showToast('기본 6인 아티스트 데이터가 성공적으로 복원되었습니다.');
-      onRefreshData();
-    }
+  const handleResetToDefaultArtists = () => {
+    setDeleteConfirmation({
+      type: 'reset_artists',
+      id: 'default',
+      title: '기본 6인의 신예 배우 데이터'
+    });
   };
 
   const handleAddFilmographyItem = () => {
@@ -436,7 +539,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const currentList = editingArtist.filmography || [];
       setEditingArtist({
         ...editingArtist,
-        filmography: [newItem, ...currentList]
+        filmography: sortFilmographyByYear([newItem, ...currentList])
       });
       setNewFilmTitle('');
       setNewFilmRole('');
@@ -444,8 +547,53 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  const handleStartEditFilmographyItem = (item: FilmographyItem) => {
+    setEditingFilmId(item.id);
+    setEditFilmYear(item.year || '');
+    setEditFilmCategory(item.category || 'Drama');
+    setEditFilmTitle(item.title || '');
+    setEditFilmRole(item.role || '');
+    setEditFilmNote(item.note || '');
+  };
+
+  const handleSaveEditedFilmographyItem = () => {
+    if (!editingFilmId || !editingArtist || !editingArtist.filmography) return;
+    if (!editFilmTitle.trim()) {
+      showToast('작품명을 입력해주세요.');
+      return;
+    }
+
+    const updatedList = editingArtist.filmography.map((f) => {
+      if (f.id === editingFilmId) {
+        return {
+          ...f,
+          year: editFilmYear.trim(),
+          category: editFilmCategory,
+          title: editFilmTitle.trim(),
+          role: editFilmRole.trim() || '출연',
+          note: editFilmNote.trim()
+        };
+      }
+      return f;
+    });
+
+    setEditingArtist({
+      ...editingArtist,
+      filmography: sortFilmographyByYear(updatedList)
+    });
+    setEditingFilmId(null);
+    showToast('작품 정보가 수정되었습니다.');
+  };
+
+  const handleCancelEditFilmographyItem = () => {
+    setEditingFilmId(null);
+  };
+
   const handleRemoveFilmographyItem = (filmId: string) => {
     if (editingArtist && editingArtist.filmography) {
+      if (editingFilmId === filmId) {
+        setEditingFilmId(null);
+      }
       setEditingArtist({
         ...editingArtist,
         filmography: editingArtist.filmography.filter(f => f.id !== filmId)
@@ -475,13 +623,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  const handleDeleteAudition = async (id: string, name: string) => {
-    if (confirm(`${name} 지원자의 지원서를 영구 삭제하시겠습니까?`)) {
-      await deleteAuditionApplication(id);
-      showToast('지원서가 삭제되었습니다.');
-      setSelectedAudition(null);
-      fetchAuditionsAndInquiries();
-    }
+  const handleDeleteAudition = (id: string, name: string) => {
+    setDeleteConfirmation({
+      type: 'audition',
+      id,
+      title: `${name} 지원서`
+    });
   };
 
   const getStatusLabel = (status: AuditionStatus) => {
@@ -555,11 +702,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     onRefreshData();
   };
 
-  const handleDeleteNews = async (id: string, title: string) => {
-    if (confirm(`"${title}" 게시물을 삭제하시겠습니까?`)) {
-      await deleteNewsArticle(id);
-      showToast('게시물이 삭제되었습니다.');
-      onRefreshData();
+  const handleDeleteNews = (id: string, title: string) => {
+    setDeleteConfirmation({
+      type: 'news',
+      id,
+      title
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmation) return;
+    const { type, id, title } = deleteConfirmation;
+    setIsDeletingItem(true);
+
+    try {
+      if (type === 'news') {
+        await deleteNewsArticle(id);
+        showToast(`"${title}" 보도자료가 성공적으로 삭제되었습니다.`);
+        onRefreshData();
+      } else if (type === 'artist') {
+        await deleteArtist(id);
+        showToast(`${title}가 삭제되었습니다.`);
+        onRefreshData();
+      } else if (type === 'audition') {
+        await deleteAuditionApplication(id);
+        showToast('지원서가 영구 삭제되었습니다.');
+        setSelectedAudition(null);
+        fetchAuditionsAndInquiries();
+      } else if (type === 'reset_artists') {
+        await seedDefaultArtists();
+        showToast('기본 6인 아티스트 데이터가 성공적으로 복원되었습니다.');
+        onRefreshData();
+      }
+    } catch (err: any) {
+      console.error('Delete execution error:', err);
+      showToast(`삭제 처리 중 오류가 발생했습니다: ${err.message || '다시 시도해주세요.'}`);
+    } finally {
+      setIsDeletingItem(false);
+      setDeleteConfirmation(null);
     }
   };
 
@@ -578,10 +758,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       className="fixed inset-0 z-50 overflow-y-auto bg-black/95 backdrop-blur-xl flex items-center justify-center p-2 sm:p-6"
     >
       <div className="relative w-full max-w-7xl bg-[#0F1118] border border-white/20 shadow-2xl overflow-hidden my-auto flex flex-col h-[90vh]">
-        {/* Toast alert */}
+        {/* Toast alert - High Z-index fixed floating notification */}
         {toastMessage && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-60 bg-sky-500 text-black px-6 py-2.5 rounded-full font-bold text-xs shadow-xl animate-in fade-in slide-in-from-top duration-200">
-            {toastMessage}
+          <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] bg-sky-400 text-black px-6 py-3 rounded-full font-bold text-xs sm:text-sm shadow-2xl flex items-center space-x-2.5 border border-white/30 animate-in fade-in slide-in-from-top duration-200">
+            <CheckCircle2 className="w-4 h-4 text-black shrink-0" />
+            <span>{toastMessage}</span>
           </div>
         )}
 
@@ -589,8 +770,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0B0C10] shrink-0">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded bg-[#182A47] border border-sky-400/40 flex items-center justify-center text-white font-extrabold text-xs">
-                TK
+              <div className="w-8 h-8 flex items-center justify-center">
+                <TKLogoMark className="w-7 h-7" tColor="#FFFFFF" kColor="#38BDF8" />
               </div>
               <div>
                 <h2 className="text-sm sm:text-base font-bold text-white font-display">
@@ -737,7 +918,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <table className="w-full text-xs text-left text-gray-300">
                   <thead className="text-[11px] uppercase bg-black/40 text-gray-400 font-mono border-b border-white/10">
                     <tr>
-                      <th className="p-3 w-12 text-center">순서</th>
+                      <th className="p-3 w-28 text-center">순서 변경</th>
                       <th className="p-3 w-16">사진</th>
                       <th className="p-3">이름 (한글/영문)</th>
                       <th className="p-3">생년월일/스펙</th>
@@ -749,9 +930,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {artists.map((artist, idx) => (
-                      <tr key={artist.id} className="hover:bg-white/5">
-                        <td className="p-3 text-center font-mono text-gray-500">
-                          {String(idx + 1).padStart(2, '0')}
+                      <tr key={artist.id} className="hover:bg-white/5 transition-colors">
+                        <td className="p-3 text-center">
+                          <div className="flex items-center justify-center space-x-1.5">
+                            <span className="font-mono text-gray-300 font-bold bg-white/5 border border-white/15 px-2 py-0.5 text-xs rounded min-w-[28px]">
+                              {String(idx + 1).padStart(2, '0')}
+                            </span>
+                            <div className="flex flex-col space-y-0.5">
+                              <button
+                                type="button"
+                                disabled={idx === 0}
+                                onClick={() => handleMoveArtistUp(idx)}
+                                className="p-1 rounded bg-[#161926] border border-white/10 text-gray-300 hover:text-sky-400 hover:border-sky-500/50 hover:bg-sky-950/40 disabled:opacity-20 disabled:pointer-events-none transition-colors"
+                                title="위로 이동 (우선순위 상승)"
+                              >
+                                <ChevronUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={idx === artists.length - 1}
+                                onClick={() => handleMoveArtistDown(idx)}
+                                className="p-1 rounded bg-[#161926] border border-white/10 text-gray-300 hover:text-sky-400 hover:border-sky-500/50 hover:bg-sky-950/40 disabled:opacity-20 disabled:pointer-events-none transition-colors"
+                                title="아래로 이동 (우선순위 하강)"
+                              >
+                                <ChevronDown className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
                         </td>
                         <td className="p-3">
                           <img
@@ -773,7 +978,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <div className="text-gray-400">{artist.height}cm</div>
                         </td>
                         <td className="p-3">
-                          <div className="text-gray-200 line-clamp-2">{artist.education}</div>
+                          <div className="text-gray-200 line-clamp-1">{artist.education}</div>
+                          {artist.languages && artist.languages.length > 0 && (
+                            <div className="text-[11px] text-sky-400 font-mono mt-0.5 line-clamp-1">
+                              🌐 {artist.languages.join(', ')}
+                            </div>
+                          )}
                         </td>
                         <td className="p-3 font-mono">
                           <span className="bg-sky-950 text-sky-300 px-2 py-0.5 border border-sky-800 text-[11px]">
@@ -1086,41 +1296,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {newsList.map((item) => (
-                      <tr key={item.id} className="hover:bg-white/5">
-                        <td className="p-3 font-mono">
-                          <span className="bg-sky-950 text-sky-300 px-2 py-0.5 border border-sky-800 text-[10px]">
-                            {item.category}
-                          </span>
-                        </td>
-                        <td className="p-3 font-mono text-gray-400">{item.date}</td>
-                        <td className="p-3 font-bold text-white">{item.title}</td>
-                        <td className="p-3 text-gray-400 line-clamp-1">{item.summary}</td>
-                        <td className="p-3 text-center">
-                          {item.isPinned ? (
-                            <span className="text-sky-400 font-bold">PIN</span>
-                          ) : (
-                            <span className="text-gray-600">-</span>
-                          )}
-                        </td>
-                        <td className="p-3 text-right space-x-2">
-                          <button
-                            onClick={() => handleOpenEditNews(item)}
-                            className="p-1.5 text-gray-300 hover:text-white hover:bg-white/10"
-                            title="수정"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteNews(item.id, item.title)}
-                            className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/40"
-                            title="삭제"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                    {newsList.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="p-8 text-center text-gray-500 font-mono">
+                          등록된 보도자료가 없습니다. 상단의 '새 보도자료 작성' 버튼을 눌러 추가하세요.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      newsList.map((item) => (
+                        <tr key={item.id} className="hover:bg-white/5">
+                          <td className="p-3 font-mono">
+                            <span className="bg-sky-950 text-sky-300 px-2 py-0.5 border border-sky-800 text-[10px]">
+                              {item.category}
+                            </span>
+                          </td>
+                          <td className="p-3 font-mono text-gray-400">{item.date}</td>
+                          <td className="p-3 font-bold text-white">{item.title}</td>
+                          <td className="p-3 text-gray-400 line-clamp-1">{item.summary}</td>
+                          <td className="p-3 text-center">
+                            {item.isPinned ? (
+                              <span className="text-sky-400 font-bold">PIN</span>
+                            ) : (
+                              <span className="text-gray-600">-</span>
+                            )}
+                          </td>
+                          <td className="p-3 text-right space-x-2">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditNews(item)}
+                              className="p-1.5 text-gray-300 hover:text-white hover:bg-white/10"
+                              title="수정"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteNews(item.id, item.title)}
+                              className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/40"
+                              title="삭제"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1234,8 +1454,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   {isNewArtist ? '신규 배우 프로필 등록' : `${editingArtist.nameKo} 배우 정보 수정`}
                 </h3>
                 <button
-                  onClick={() => setEditingArtist(null)}
-                  className="p-1.5 text-gray-400 hover:text-white"
+                  type="button"
+                  onClick={handleRequestCloseArtistModal}
+                  className="p-1.5 text-gray-400 hover:text-white transition-colors"
+                  title="창 닫기"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1323,6 +1545,132 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       placeholder="@username"
                       className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none"
                     />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-gray-300 font-medium">가능 언어 / 외국어 (Language)</label>
+                      <span className="text-[11px] text-sky-400 font-mono">쉼표(,)로 구분</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={languagesInput}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setLanguagesInput(val);
+                        const langs = val.split(',').map(s => s.trim()).filter(Boolean);
+                        setEditingArtist(prev => prev ? ({ ...prev, languages: langs }) : null);
+                      }}
+                      placeholder="한국어, 영어 (English), 일본어"
+                      className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 placeholder:text-gray-600"
+                    />
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {['한국어', '영어', '일본어', '중국어', '불어', '스페인어'].map(lang => {
+                        const currentList = languagesInput.split(',').map(s => s.trim()).filter(Boolean);
+                        const isIncluded = currentList.includes(lang);
+                        return (
+                          <button
+                            key={lang}
+                            type="button"
+                            onClick={() => {
+                              const nextList = isIncluded
+                                ? currentList.filter(l => l !== lang)
+                                : [...currentList, lang];
+                              const nextStr = nextList.join(', ');
+                              setLanguagesInput(nextStr);
+                              setEditingArtist(prev => prev ? ({ ...prev, languages: nextList }) : null);
+                            }}
+                            className={`text-[10px] px-2 py-0.5 border font-mono transition-colors ${
+                              isIncluded
+                                ? 'bg-sky-500 text-black border-sky-400 font-bold'
+                                : 'bg-[#12141e] text-gray-400 border-white/10 hover:border-white/30 hover:text-white'
+                            }`}
+                          >
+                            {isIncluded ? `✓ ${lang}` : `+ ${lang}`}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-gray-300 font-medium">특기 / 특화 분야 (Specialty)</label>
+                      <span className="text-[11px] text-sky-400 font-mono">쉼표(,)로 구분</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={specialtyInput}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSpecialtyInput(val);
+                        const specs = val.split(',').map(s => s.trim()).filter(Boolean);
+                        setEditingArtist(prev => prev ? ({ ...prev, specialty: specs }) : null);
+                      }}
+                      placeholder="연기, 현대무용, 승마, 액션/무술"
+                      className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 placeholder:text-gray-600"
+                    />
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {['연기', '보컬/노래', '현대무용', '피아노', '승마', '액션/무술', '수영'].map(spec => {
+                        const currentList = specialtyInput.split(',').map(s => s.trim()).filter(Boolean);
+                        const isIncluded = currentList.includes(spec);
+                        return (
+                          <button
+                            key={spec}
+                            type="button"
+                            onClick={() => {
+                              const nextList = isIncluded
+                                ? currentList.filter(s => s !== spec)
+                                : [...currentList, spec];
+                              const nextStr = nextList.join(', ');
+                              setSpecialtyInput(nextStr);
+                              setEditingArtist(prev => prev ? ({ ...prev, specialty: nextList }) : null);
+                            }}
+                            className={`text-[10px] px-2 py-0.5 border font-mono transition-colors ${
+                              isIncluded
+                                ? 'bg-sky-500 text-black border-sky-400 font-bold'
+                                : 'bg-[#12141e] text-gray-400 border-white/10 hover:border-white/30 hover:text-white'
+                            }`}
+                          >
+                            {isIncluded ? `✓ ${spec}` : `+ ${spec}`}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-gray-300 font-medium">메인 노출 순서 (Display Order)</label>
+                      <span className="text-[11px] text-sky-400 font-mono">1번이 최상단 우선 노출</span>
+                    </div>
+                    <select
+                      value={editingArtist.order || (isNewArtist ? artists.length + 1 : 1)}
+                      onChange={(e) => setEditingArtist({ ...editingArtist, order: Number(e.target.value) })}
+                      className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
+                    >
+                      {Array.from({ length: isNewArtist ? artists.length + 1 : artists.length }, (_, i) => i + 1).map((pos) => (
+                        <option key={pos} value={pos}>
+                          {pos}순위 노출 {pos === 1 ? '(★ 최우선 메인 1번)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-300 font-medium mb-1">공개 상태 (Active)</label>
+                    <select
+                      value={editingArtist.isActive !== false ? 'true' : 'false'}
+                      onChange={(e) => setEditingArtist({ ...editingArtist, isActive: e.target.value === 'true' })}
+                      className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400"
+                    >
+                      <option value="true">공개 (웹사이트에 노출)</option>
+                      <option value="false">비공개 (임시 저장 / 비노출)</option>
+                    </select>
                   </div>
                 </div>
 
@@ -1589,71 +1937,194 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                 {/* Filmography Manager inside Artist Form */}
                 <div className="pt-4 border-t border-white/10 space-y-3">
-                  <span className="font-bold text-sky-400 font-mono uppercase block">
-                    작품 활동 경력 (FILMOGRAPHY)
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sky-400 font-mono uppercase block flex items-center space-x-2">
+                      <span>작품 활동 경력 (FILMOGRAPHY)</span>
+                      <span className="text-xs bg-sky-950 text-sky-300 border border-sky-800 px-2 py-0.5 font-normal">
+                        총 {editingArtist.filmography?.length || 0}건 등록됨
+                      </span>
+                    </span>
+                    <span className="text-[11px] text-gray-400">
+                      등록된 경력 항목의 [수정] 버튼을 눌러 바로 편집할 수 있습니다.
+                    </span>
+                  </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 bg-[#161926] p-3 border border-white/10">
-                    <input
-                      type="text"
-                      placeholder="연도 (2026)"
-                      value={newFilmYear}
-                      onChange={(e) => setNewFilmYear(e.target.value)}
-                      className="bg-black border border-white/10 px-2 py-1 text-white"
-                    />
-                    <select
-                      value={newFilmCategory}
-                      onChange={(e) => setNewFilmCategory(e.target.value as any)}
-                      className="bg-black border border-white/10 px-2 py-1 text-white"
-                    >
-                      <option value="Drama">Drama (드라마)</option>
-                      <option value="Movie">Movie (영화)</option>
-                      <option value="Theater">Theater (연극/뮤지컬)</option>
-                      <option value="Commercial">Commercial (광고)</option>
-                      <option value="Music Video">Music Video (뮤직비디오)</option>
-                    </select>
-                    <input
-                      type="text"
-                      placeholder="작품명"
-                      value={newFilmTitle}
-                      onChange={(e) => setNewFilmTitle(e.target.value)}
-                      className="bg-black border border-white/10 px-2 py-1 text-white"
-                    />
-                    <div className="flex space-x-1">
+                  {/* New Item Creation Row */}
+                  <div className="bg-[#161926] p-3 border border-white/10 space-y-2">
+                    <div className="text-[11px] font-mono text-gray-400">
+                      + 새 작품 경력 추가
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
                       <input
                         type="text"
-                        placeholder="배역 (주연/조연)"
+                        placeholder="연도 (예: 2026)"
+                        value={newFilmYear}
+                        onChange={(e) => setNewFilmYear(e.target.value)}
+                        className="sm:col-span-2 bg-black border border-white/10 px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-sky-400 font-mono"
+                      />
+                      <select
+                        value={newFilmCategory}
+                        onChange={(e) => setNewFilmCategory(e.target.value as any)}
+                        className="sm:col-span-3 bg-black border border-white/10 px-2 py-1.5 text-xs text-white focus:outline-none focus:border-sky-400"
+                      >
+                        <option value="Drama">Drama (드라마)</option>
+                        <option value="Movie">Movie (영화)</option>
+                        <option value="Theater">Theater (연극/뮤지컬)</option>
+                        <option value="CF(광고)">CF (광고)</option>
+                        <option value="Music Video">Music Video (뮤직비디오)</option>
+                        <option value="Other">기타 (Other)</option>
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="작품명 (예: 나의 해방일지)"
+                        value={newFilmTitle}
+                        onChange={(e) => setNewFilmTitle(e.target.value)}
+                        className="sm:col-span-4 bg-black border border-white/10 px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-sky-400"
+                      />
+                      <input
+                        type="text"
+                        placeholder="배역 (예: 김민지 역, 주연)"
                         value={newFilmRole}
                         onChange={(e) => setNewFilmRole(e.target.value)}
-                        className="bg-black border border-white/10 px-2 py-1 text-white flex-1"
+                        className="sm:col-span-2 bg-black border border-white/10 px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-sky-400"
                       />
                       <button
                         type="button"
                         onClick={handleAddFilmographyItem}
-                        className="bg-sky-500 text-black font-bold px-3 py-1 text-xs"
+                        className="sm:col-span-1 bg-sky-500 hover:bg-sky-400 text-black font-bold px-2 py-1.5 text-xs flex items-center justify-center space-x-1 transition-colors"
                       >
-                        추가
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>추가</span>
                       </button>
                     </div>
                   </div>
 
-                  {editingArtist.filmography && editingArtist.filmography.length > 0 && (
-                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                      {editingArtist.filmography.map((f) => (
-                        <div
-                          key={f.id}
-                          className="flex items-center justify-between bg-[#141724] px-3 py-1.5 border border-white/5"
-                        >
-                          <span>[{f.year}] [{f.category}] <strong>{f.title}</strong> - {f.role}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveFilmographyItem(f.id)}
-                            className="text-red-400 hover:text-red-300"
+                  {/* Registered Filmography List & In-Place Editor */}
+                  {editingArtist.filmography && editingArtist.filmography.length > 0 ? (
+                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                      {sortFilmographyByYear(editingArtist.filmography).map((f) => {
+                        const isEditingThis = editingFilmId === f.id;
+                        const catLabel = f.category === 'Commercial' || f.category === 'CF' ? 'CF(광고)' : f.category;
+
+                        if (isEditingThis) {
+                          return (
+                            <div
+                              key={f.id}
+                              className="bg-[#1b2234] p-3 border-2 border-sky-500/70 shadow-lg space-y-2"
+                            >
+                              <div className="flex items-center justify-between text-[11px] text-sky-300 font-mono">
+                                <span>🛠️ 경력 사항 수정 중...</span>
+                                <span>ID: {f.id}</span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                                <input
+                                  type="text"
+                                  placeholder="연도"
+                                  value={editFilmYear}
+                                  onChange={(e) => setEditFilmYear(e.target.value)}
+                                  className="sm:col-span-2 bg-black border border-sky-400/50 px-2 py-1.5 text-xs text-white focus:outline-none font-mono"
+                                />
+                                <select
+                                  value={editFilmCategory}
+                                  onChange={(e) => setEditFilmCategory(e.target.value as any)}
+                                  className="sm:col-span-3 bg-black border border-sky-400/50 px-2 py-1.5 text-xs text-white focus:outline-none"
+                                >
+                                  <option value="Drama">Drama (드라마)</option>
+                                  <option value="Movie">Movie (영화)</option>
+                                  <option value="Theater">Theater (연극/뮤지컬)</option>
+                                  <option value="CF(광고)">CF (광고)</option>
+                                  <option value="Music Video">Music Video (뮤직비디오)</option>
+                                  <option value="Other">기타 (Other)</option>
+                                </select>
+                                <input
+                                  type="text"
+                                  placeholder="작품명"
+                                  value={editFilmTitle}
+                                  onChange={(e) => setEditFilmTitle(e.target.value)}
+                                  className="sm:col-span-4 bg-black border border-sky-400/50 px-2 py-1.5 text-xs text-white focus:outline-none font-bold"
+                                />
+                                <input
+                                  type="text"
+                                  placeholder="배역"
+                                  value={editFilmRole}
+                                  onChange={(e) => setEditFilmRole(e.target.value)}
+                                  className="sm:col-span-3 bg-black border border-sky-400/50 px-2 py-1.5 text-xs text-white focus:outline-none"
+                                />
+                              </div>
+                              <div className="flex justify-end space-x-2 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={handleCancelEditFilmographyItem}
+                                  className="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs border border-white/10 flex items-center space-x-1"
+                                >
+                                  <X className="w-3 h-3" />
+                                  <span>취소</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={handleSaveEditedFilmographyItem}
+                                  className="px-4 py-1 bg-sky-500 hover:bg-sky-400 text-black font-bold text-xs flex items-center space-x-1"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>수정 완료 저장</span>
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div
+                            key={f.id}
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#141724] hover:bg-[#181c2d] px-3 py-2 border border-white/5 transition-colors group"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-mono text-gray-400 text-xs bg-black/40 px-2 py-0.5 border border-white/10">
+                                {f.year}
+                              </span>
+                              <span className="text-[11px] font-mono font-bold bg-sky-950 text-sky-300 border border-sky-800/60 px-2 py-0.5">
+                                {catLabel}
+                              </span>
+                              <span className="text-white text-xs font-semibold">
+                                {f.title}
+                              </span>
+                              <span className="text-gray-400 text-xs font-mono">
+                                — {f.role}
+                              </span>
+                              {f.note && (
+                                <span className="text-gray-500 text-[11px]">
+                                  ({f.note})
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center space-x-1.5 self-end sm:self-auto">
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditFilmographyItem(f)}
+                                className="inline-flex items-center space-x-1 px-2.5 py-1 bg-sky-950/70 hover:bg-sky-900 text-sky-300 border border-sky-800/60 text-[11px] font-medium transition-colors"
+                                title="경력 수정"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                                <span>수정</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFilmographyItem(f.id)}
+                                className="inline-flex items-center space-x-1 px-2 py-1 bg-red-950/40 hover:bg-red-900/70 text-red-400 hover:text-red-200 border border-red-900/40 text-[11px] transition-colors"
+                                title="경력 삭제"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>삭제</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center text-xs text-gray-500 bg-black/20 border border-white/5">
+                      등록된 작품 활동 경력이 없습니다. 상단에서 연도, 카테고리, 작품명, 배역을 입력하여 추가해주세요.
                     </div>
                   )}
                 </div>
@@ -1663,17 +2134,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="flex justify-end space-x-3 pt-4 border-t border-white/10">
                 <button
                   type="button"
-                  onClick={() => setEditingArtist(null)}
-                  className="px-4 py-2 border border-white/10 text-gray-400 hover:text-white"
+                  onClick={handleRequestCloseArtistModal}
+                  className="px-4 py-2 border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
                 >
                   취소
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveArtist}
-                  className="px-6 py-2 bg-white text-black font-bold hover:bg-slate-200"
+                  disabled={isSavingArtist}
+                  className="px-6 py-2 bg-white text-black font-bold hover:bg-slate-200 disabled:opacity-50 transition-colors flex items-center space-x-1.5"
                 >
-                  저장하기
+                  {isSavingArtist ? (
+                    <span>저장 처리 중...</span>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>저장하기</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -1778,6 +2257,135 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   className="px-6 py-2 bg-white text-black font-bold hover:bg-slate-200"
                 >
                   저장하기
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* SUB-MODAL: ARTIST CLOSE CONFIRMATION PROMPT */}
+        {/* ======================================================== */}
+        {showArtistCloseConfirm && editingArtist && (
+          <div className="fixed inset-0 z-[85] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="relative w-full max-w-md bg-[#131722] border border-sky-500/40 shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center space-x-3 text-sky-400">
+                <div className="p-2.5 bg-sky-950/80 border border-sky-500/40 rounded-lg shrink-0">
+                  <HelpCircle className="w-6 h-6 text-sky-400" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-white font-display">
+                    배우 정보 저장 확인
+                  </h4>
+                  <p className="text-xs text-gray-400">
+                    창을 닫기 전에 변경사항을 저장하시겠습니까?
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-black/40 border border-white/5 text-xs text-gray-300 font-mono space-y-1">
+                <div>
+                  대상 배우: <strong className="text-white">{editingArtist.nameKo || '신규 배우'} {editingArtist.nameEn ? `(${editingArtist.nameEn})` : ''}</strong>
+                </div>
+                <div className="text-[11px] text-gray-400">
+                  저장하지 않고 닫으면 입력하거나 수정한 모든 내용이 사라집니다.
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-2 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowArtistCloseConfirm(false)}
+                  className="px-3 py-2 text-xs font-mono text-gray-400 hover:text-white border border-white/10 hover:bg-white/5 transition-colors text-center"
+                >
+                  계속 수정하기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowArtistCloseConfirm(false);
+                    setEditingArtist(null);
+                    showToast('배우 정보 수정을 취소하고 창을 닫았습니다.');
+                  }}
+                  className="px-3 py-2 text-xs font-mono text-red-400 hover:text-red-300 border border-red-900/40 hover:bg-red-950/40 transition-colors text-center"
+                >
+                  저장 안함 (닫기)
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingArtist}
+                  onClick={async () => {
+                    await handleSaveArtist();
+                  }}
+                  className="px-4 py-2 text-xs font-mono font-bold bg-sky-400 hover:bg-sky-300 text-black shadow-lg shadow-sky-950/50 transition-colors flex items-center justify-center space-x-1.5"
+                >
+                  {isSavingArtist ? (
+                    <span>저장 중...</span>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-black" />
+                      <span>저장 후 닫기</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* SUB-MODAL: SAFE DELETE CONFIRMATION DIALOG */}
+        {/* ======================================================== */}
+        {deleteConfirmation && (
+          <div className="fixed inset-0 z-80 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="relative w-full max-w-md bg-[#161822] border border-red-500/40 shadow-2xl p-6 sm:p-7 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center space-x-3 text-red-400">
+                <div className="w-10 h-10 rounded-full bg-red-950/80 border border-red-800 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-white font-display">삭제 확인</h4>
+                  <p className="text-xs text-gray-400">정말로 삭제하시겠습니까?</p>
+                </div>
+              </div>
+
+              <div className="p-3 bg-black/40 border border-white/5 text-xs text-gray-200 break-words font-mono">
+                {deleteConfirmation.type === 'reset_artists' ? (
+                  <span>기본 6인의 신예 배우 데이터로 초기화되며 변경된 내용이 복원됩니다.</span>
+                ) : (
+                  <span>
+                    대상: <strong className="text-white">{deleteConfirmation.title}</strong>
+                  </span>
+                )}
+              </div>
+
+              <p className="text-[11px] text-gray-400 leading-relaxed">
+                삭제된 데이터는 데이터베이스 및 웹사이트에서 즉시 제거됩니다.
+              </p>
+
+              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmation(null)}
+                  disabled={isDeletingItem}
+                  className="px-4 py-2 text-xs font-mono text-gray-400 hover:text-white border border-white/10 hover:bg-white/5 transition-colors"
+                >
+                  취소 (CANCEL)
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  disabled={isDeletingItem}
+                  className="px-5 py-2 text-xs font-mono font-bold bg-red-600 hover:bg-red-500 text-white transition-colors inline-flex items-center space-x-1.5 shadow-lg shadow-red-950/50"
+                >
+                  {isDeletingItem ? (
+                    <span>삭제 처리 중...</span>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>영구 삭제 (DELETE)</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

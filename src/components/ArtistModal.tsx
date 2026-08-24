@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Download, Play, Mail, Instagram, ChevronRight, Award, Film, GraduationCap, Sparkles, FileText } from 'lucide-react';
-import { Artist } from '../types';
+import { Artist, sortFilmographyByYear, getGroupedFilmography } from '../types';
 
 interface ArtistModalProps {
   artist: Artist | null;
@@ -24,6 +24,48 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
   const gallery = artist.galleryImages && artist.galleryImages.length > 0
     ? artist.galleryImages
     : [artist.profileImage];
+
+  // Safely parse and convert showreel URLs, removing any legacy sample video
+  const getEmbedUrl = (rawUrl?: string): string | null => {
+    if (!rawUrl || !rawUrl.trim()) return null;
+    const trimmed = rawUrl.trim();
+    if (trimmed.includes('dQw4w9WgXcQ')) return null;
+
+    try {
+      if (trimmed.includes('youtube.com') || trimmed.includes('youtu.be')) {
+        let videoId = '';
+        if (trimmed.includes('youtu.be/')) {
+          videoId = trimmed.split('youtu.be/')[1]?.split(/[?&#]/)[0] || '';
+        } else if (trimmed.includes('youtube.com/embed/')) {
+          videoId = trimmed.split('youtube.com/embed/')[1]?.split(/[?&#]/)[0] || '';
+        } else if (trimmed.includes('youtube-nocookie.com/embed/')) {
+          videoId = trimmed.split('youtube-nocookie.com/embed/')[1]?.split(/[?&#]/)[0] || '';
+        } else if (trimmed.includes('v=')) {
+          const urlParams = new URLSearchParams(trimmed.split('?')[1] || '');
+          videoId = urlParams.get('v') || '';
+        }
+        if (videoId && videoId !== 'dQw4w9WgXcQ') {
+          return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`;
+        }
+      }
+
+      if (trimmed.includes('vimeo.com')) {
+        const match = trimmed.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+        if (match && match[1]) {
+          return `https://player.vimeo.com/video/${match[1]}?autoplay=1`;
+        }
+      }
+
+      if (trimmed.startsWith('http')) {
+        return trimmed;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  };
+
+  const validEmbedUrl = getEmbedUrl(artist.showreelUrl);
 
   return (
     <div
@@ -70,7 +112,7 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
               
               {/* Showreel quick overlay badge */}
-              {artist.showreelUrl && (
+              {validEmbedUrl && (
                 <button
                   onClick={() => setShowVideoPlayer(true)}
                   className="absolute bottom-4 left-4 right-4 bg-[#182A47]/90 hover:bg-[#182A47] text-white border border-sky-400/40 py-2.5 px-4 flex items-center justify-center space-x-2 text-xs font-semibold tracking-wider transition-all"
@@ -231,47 +273,77 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
                   {/* Languages */}
                   {artist.languages && artist.languages.length > 0 && (
                     <div className="bg-[#131620] p-4 border border-white/5">
-                      <span className="text-[10px] font-mono text-gray-500 uppercase block mb-1">
+                      <span className="text-[10px] font-mono text-gray-500 uppercase block mb-1.5">
                         Language / 언어
                       </span>
                       <div className="flex flex-wrap gap-2 text-xs text-gray-300">
-                        {artist.languages.join(' • ')}
+                        {artist.languages.map((lang, idx) => (
+                          <span key={idx} className="bg-white/5 border border-white/10 px-2.5 py-1 font-mono text-[11px] text-gray-300">
+                            {lang}
+                          </span>
+                        ))}
                       </div>
                     </div>
                   )}
 
-                  {/* Agency Note */}
-                  <div className="text-[11px] text-gray-400 pt-2 font-mono flex items-center justify-between">
-                    <span>AGENCY: ㈜TK Company (TK MANAGEMENT)</span>
-                    <span className="text-sky-400">EXCLUSIVE ARTIST</span>
-                  </div>
+                  {/* Specialty / 특기 & 특화분야 */}
+                  {artist.specialty && artist.specialty.length > 0 && (
+                    <div className="bg-[#131620] p-4 border border-white/5">
+                      <span className="text-[10px] font-mono text-gray-500 uppercase block mb-1.5">
+                        Specialty / 특기 • 특화분야
+                      </span>
+                      <div className="flex flex-wrap gap-2 text-xs text-gray-300">
+                        {artist.specialty.map((spec, idx) => (
+                          <span key={idx} className="bg-sky-950/50 border border-sky-800/50 text-sky-300 px-2.5 py-1 text-[11px] font-medium">
+                            {spec}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Tab 2: Filmography */}
+              {/* Tab 2: Filmography - Grouped by Category */}
               {activeTab === 'WORKS' && (
-                <div className="space-y-3 animate-in fade-in duration-200">
+                <div className="space-y-5 animate-in fade-in duration-200">
                   {artist.filmography && artist.filmography.length > 0 ? (
-                    artist.filmography.map((item) => (
-                      <div
-                        key={item.id}
-                        className="p-3.5 bg-[#131620] border border-white/5 hover:border-white/20 transition-colors flex items-start justify-between"
-                      >
-                        <div className="space-y-1">
+                    getGroupedFilmography(artist.filmography).map((group) => (
+                      <div key={group.categoryKey} className="space-y-2">
+                        {/* Category Group Header */}
+                        <div className="flex items-center justify-between pb-1.5 border-b border-sky-500/30">
                           <div className="flex items-center space-x-2">
-                            <span className="text-[10px] font-mono bg-sky-950 text-sky-300 px-2 py-0.5 border border-sky-800">
-                              {item.category}
-                            </span>
-                            <span className="text-[11px] font-mono text-gray-400">
-                              {item.year}
-                            </span>
+                            <span className="w-1.5 h-3.5 bg-sky-400"></span>
+                            <h4 className="text-xs font-mono font-bold tracking-wider text-sky-300 uppercase">
+                              {group.categoryLabelEn} <span className="text-gray-400 font-normal">({group.categoryLabelKo})</span>
+                            </h4>
                           </div>
-                          <h4 className="text-sm font-bold text-white">
-                            {item.title}
-                          </h4>
-                          <p className="text-xs text-gray-300">
-                            {item.role} {item.note && <span className="text-gray-400">({item.note})</span>}
-                          </p>
+                          <span className="text-[11px] font-mono text-gray-400 bg-white/5 px-2 py-0.5 border border-white/10">
+                            {group.items.length}편
+                          </span>
+                        </div>
+
+                        {/* Category Items List */}
+                        <div className="divide-y divide-white/5 bg-[#131620] border border-white/5">
+                          {group.items.map((item) => (
+                            <div
+                              key={item.id}
+                              className="p-3.5 hover:bg-white/5 transition-colors flex flex-col sm:flex-row sm:items-baseline justify-between gap-1.5"
+                            >
+                              <div className="flex items-baseline space-x-3">
+                                <span className="font-mono text-xs text-sky-400 font-bold shrink-0 min-w-[38px]">
+                                  {item.year}
+                                </span>
+                                <span className="text-sm font-semibold text-white">
+                                  {item.title}
+                                </span>
+                              </div>
+                              <div className="text-xs text-gray-300 font-mono sm:text-right pl-12 sm:pl-0">
+                                <span className="text-gray-200">{item.role}</span>
+                                {item.note && <span className="text-gray-400 ml-1">({item.note})</span>}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     ))
@@ -311,22 +383,35 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
               {/* Tab 4: Video / Reel */}
               {activeTab === 'VIDEO' && (
                 <div className="space-y-4 animate-in fade-in duration-200">
-                  <div className="bg-[#131620] p-6 border border-white/10 text-center">
-                    <Film className="w-10 h-10 text-sky-400 mx-auto mb-3" />
-                    <h4 className="text-base font-bold text-white mb-1">
-                      {artist.nameKo} 배우 공식 연기 쇼릴
-                    </h4>
-                    <p className="text-xs text-gray-400 mb-6 max-w-md mx-auto">
-                      대사 연기, 액션, 감정선 클립이 포함된 최신 오디션용 쇼릴 영상입니다.
-                    </p>
-                    <button
-                      onClick={() => setShowVideoPlayer(true)}
-                      className="inline-flex items-center space-x-2 bg-sky-500 hover:bg-sky-400 text-black px-6 py-3 font-bold text-xs tracking-wider uppercase transition-all"
-                    >
-                      <Play className="w-4 h-4 fill-black" />
-                      <span>쇼릴 영상 전체화면 재생</span>
-                    </button>
-                  </div>
+                  {validEmbedUrl ? (
+                    <div className="bg-[#131620] p-6 border border-white/10 text-center">
+                      <Film className="w-10 h-10 text-sky-400 mx-auto mb-3" />
+                      <h4 className="text-base font-bold text-white mb-1">
+                        {artist.nameKo} 배우 공식 연기 쇼릴
+                      </h4>
+                      <p className="text-xs text-gray-400 mb-6 max-w-md mx-auto">
+                        대사 연기, 액션, 감정선 클립이 포함된 최신 오디션용 쇼릴 영상입니다.
+                      </p>
+                      <button
+                        onClick={() => setShowVideoPlayer(true)}
+                        className="inline-flex items-center space-x-2 bg-sky-500 hover:bg-sky-400 text-black px-6 py-3 font-bold text-xs tracking-wider uppercase transition-all"
+                      >
+                        <Play className="w-4 h-4 fill-black" />
+                        <span>쇼릴 영상 전체화면 재생</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="bg-[#131620] p-8 border border-white/10 text-center space-y-3">
+                      <Film className="w-10 h-10 text-gray-500 mx-auto mb-2" />
+                      <h4 className="text-base font-bold text-white">
+                        등록된 공식 쇼릴 영상이 없습니다
+                      </h4>
+                      <p className="text-xs text-gray-400 max-w-md mx-auto leading-relaxed">
+                        현재 해당 배우의 공개용 쇼릴 영상이 준비 중입니다.<br />
+                        추가 연기 영상 및 포트폴리오는 캐스팅 문의를 통해 확인하실 수 있습니다.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -360,7 +445,7 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
         </div>
 
         {/* Video Player Modal Overlay */}
-        {showVideoPlayer && (
+        {showVideoPlayer && validEmbedUrl && (
           <div className="fixed inset-0 z-60 bg-black/95 flex items-center justify-center p-4">
             <div className="relative w-full max-w-4xl bg-black border border-white/20 aspect-video">
               <button
@@ -371,7 +456,7 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
                 <span>CLOSE VIDEO</span>
               </button>
               <iframe
-                src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1"
+                src={validEmbedUrl}
                 title={`${artist.nameKo} Showreel`}
                 className="w-full h-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

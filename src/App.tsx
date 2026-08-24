@@ -11,7 +11,7 @@ import { Footer } from './components/Footer';
 import { ProfilePrintSheet } from './components/ProfilePrintSheet';
 import { AdminDashboard } from './components/AdminDashboard';
 import { Artist, NewsArticle } from './types';
-import { getArtists, getNewsArticles, subscribeToArtists } from './lib/db';
+import { getArtists, getNewsArticles, subscribeToArtists, subscribeToNews } from './lib/db';
 import { INITIAL_ARTISTS, INITIAL_NEWS } from './data/initialData';
 
 export default function App() {
@@ -37,8 +37,14 @@ export default function App() {
       }
     });
 
+    // Real-time listener for news
+    const unsubscribeNews = subscribeToNews((updatedNews) => {
+      setNewsList(updatedNews);
+    });
+
     return () => {
       if (unsubscribeArtists) unsubscribeArtists();
+      if (unsubscribeNews) unsubscribeNews();
     };
   }, []);
 

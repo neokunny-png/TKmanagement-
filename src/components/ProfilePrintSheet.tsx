@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Printer, Download, Mail, Phone, Globe } from 'lucide-react';
-import { Artist } from '../types';
+import { Artist, sortFilmographyByYear, getGroupedFilmography } from '../types';
+import { TKLogoMark } from './TKLogo';
 
 interface ProfilePrintSheetProps {
   artist: Artist | null;
@@ -50,11 +51,11 @@ export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({ artist, on
           {/* Header Banner */}
           <div className="flex items-center justify-between border-b-2 border-black pb-4">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-[#182A47] text-white flex items-center justify-center font-black text-base">
-                TK
+              <div className="w-10 h-10 flex items-center justify-center">
+                <TKLogoMark className="w-9 h-9" tColor="#000000" kColor="#1E3A8A" />
               </div>
               <div>
-                <h1 className="text-xl font-black tracking-widest leading-none font-display">
+                <h1 className="text-xl font-black tracking-widest leading-none font-display text-black">
                   TK MANAGEMENT
                 </h1>
                 <span className="text-[10px] tracking-wider text-gray-500 font-mono">
@@ -151,26 +152,28 @@ export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({ artist, on
             </h4>
 
             {artist.filmography && artist.filmography.length > 0 ? (
-              <table className="w-full text-xs text-left">
-                <thead>
-                  <tr className="border-b border-gray-200 text-gray-500 font-mono text-[10px]">
-                    <th className="py-1.5 w-16">연도</th>
-                    <th className="py-1.5 w-20">구분</th>
-                    <th className="py-1.5">작품명</th>
-                    <th className="py-1.5 w-32">배역 및 비고</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {artist.filmography.map((item) => (
-                    <tr key={item.id}>
-                      <td className="py-1.5 font-mono text-gray-600">{item.year}</td>
-                      <td className="py-1.5 font-mono font-semibold">{item.category}</td>
-                      <td className="py-1.5 font-bold text-gray-900">{item.title}</td>
-                      <td className="py-1.5 text-gray-700">{item.role} {item.note ? `(${item.note})` : ''}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="space-y-3">
+                {getGroupedFilmography(artist.filmography).map((group) => (
+                  <div key={group.categoryKey} className="space-y-1">
+                    <div className="text-[11px] font-bold text-gray-900 font-mono border-b border-gray-300 pb-0.5 flex justify-between">
+                      <span>{group.categoryLabelEn} ({group.categoryLabelKo})</span>
+                    </div>
+                    <table className="w-full text-xs text-left">
+                      <tbody className="divide-y divide-gray-100">
+                        {group.items.map((item) => (
+                          <tr key={item.id}>
+                            <td className="py-1 w-14 font-mono text-gray-600 text-[11px] align-top">{item.year}</td>
+                            <td className="py-1 font-bold text-gray-900 align-top">{item.title}</td>
+                            <td className="py-1 w-48 text-right text-gray-700 text-[11px] align-top">
+                              {item.role} {item.note ? `(${item.note})` : ''}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+              </div>
             ) : (
               <p className="text-xs text-gray-500 py-2">등록된 활동 경력이 없습니다.</p>
             )}

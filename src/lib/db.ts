@@ -6,12 +6,13 @@ import {
   addDoc,
   deleteDoc,
   updateDoc,
+  writeBatch,
   query,
   orderBy,
   onSnapshot
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Artist, AuditionApplication, NewsArticle, InquiryMessage, AuditionStatus } from '../types';
+import { Artist, AuditionApplication, NewsArticle, InquiryMessage, AuditionStatus, sortFilmographyByYear } from '../types';
 import { INITIAL_ARTISTS, INITIAL_NEWS } from '../data/initialData';
 
 const ARTISTS_COLLECTION = 'artists';
@@ -38,7 +39,14 @@ export async function getArtists(): Promise<Artist[]> {
     
     const artists: Artist[] = [];
     snapshot.forEach((docSnap) => {
-      artists.push({ id: docSnap.id, ...docSnap.data() } as Artist);
+      const data = docSnap.data();
+      const showreel = data.showreelUrl && !data.showreelUrl.includes('dQw4w9WgXcQ') ? data.showreelUrl : '';
+      artists.push({
+        id: docSnap.id,
+        ...data,
+        showreelUrl: showreel,
+        filmography: sortFilmographyByYear(data.filmography)
+      } as Artist);
     });
 
     localStorage.setItem(LOCAL_STORAGE_ARTISTS_KEY, JSON.stringify(artists));
@@ -67,7 +75,14 @@ export function subscribeToArtists(callback: (artists: Artist[]) => void) {
       }
       const artists: Artist[] = [];
       snapshot.forEach((docSnap) => {
-        artists.push({ id: docSnap.id, ...docSnap.data() } as Artist);
+        const data = docSnap.data();
+        const showreel = data.showreelUrl && !data.showreelUrl.includes('dQw4w9WgXcQ') ? data.showreelUrl : '';
+        artists.push({
+          id: docSnap.id,
+          ...data,
+          showreelUrl: showreel,
+          filmography: sortFilmographyByYear(data.filmography)
+        } as Artist);
       });
       localStorage.setItem(LOCAL_STORAGE_ARTISTS_KEY, JSON.stringify(artists));
       callback(artists);
@@ -88,6 +103,7 @@ export async function seedDefaultArtists(): Promise<void> {
       const docRef = doc(db, ARTISTS_COLLECTION, artist.id);
       await setDoc(docRef, {
         ...artist,
+        filmography: sortFilmographyByYear(artist.filmography),
         updatedAt: Date.now()
       });
     }
@@ -102,6 +118,7 @@ export async function saveArtist(artist: Artist): Promise<void> {
   const artistData = {
     ...artist,
     id: artistId,
+    filmography: sortFilmographyByYear(artist.filmography),
     updatedAt: Date.now()
   };
 
@@ -137,6 +154,35 @@ export async function deleteArtist(artistId: string): Promise<void> {
     const updated = list.filter((a) => a.id !== artistId);
     localStorage.setItem(LOCAL_STORAGE_ARTISTS_KEY, JSON.stringify(updated));
   }
+}
+
+export async function updateArtistsOrder(orderedArtists: Artist[]): Promise<void> {
+  const updatedList: Artist[] = orderedArtists.map((artist, idx) => ({
+    ...artist,
+    order: idx + 1,
+    updatedAt: Date.now()
+  }));
+
+  try {
+    const batch = writeBatch(db);
+    for (const a of updatedList) {
+      const docRef = doc(db, ARTISTS_COLLECTION, a.id);
+      batch.update(docRef, { order: a.order, updatedAt: a.updatedAt });
+    }
+    await batch.commit();
+  } catch (error) {
+    console.warn('Firestore updateArtistsOrder batch update error:', error);
+    for (const a of updatedList) {
+      try {
+        const docRef = doc(db, ARTISTS_COLLECTION, a.id);
+        await setDoc(docRef, { order: a.order, updatedAt: a.updatedAt }, { merge: true });
+      } catch (e) {
+        // fallback ignored
+      }
+    }
+  }
+
+  localStorage.setItem(LOCAL_STORAGE_ARTISTS_KEY, JSON.stringify(updatedList));
 }
 
 // AUDITIONS
@@ -240,42 +286,130 @@ export async function deleteAuditionApplication(id: string): Promise<void> {
   }
 }
 
+const LOCAL_STORAGE_DELETED_NEWS_KEY = 'tk_cached_deleted_news_ids';
+
+function getDeletedNewsIds(): string[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_DELETED_NEWS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function addDeletedNewsId(id: string) {
+  try {
+    const ids = getDeletedNewsIds();
+    if (!ids.includes(id)) {
+      ids.push(id);
+      localStorage.setItem(LOCAL_STORAGE_DELETED_NEWS_KEY, JSON.stringify(ids));
+    }
+  } catch (e) {}
+}
+
 // NEWS
 export async function getNewsArticles(): Promise<NewsArticle[]> {
+  const deletedIds = getDeletedNewsIds();
   try {
     const q = query(collection(db, NEWS_COLLECTION), orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
 
     if (snapshot.empty) {
-      await seedDefaultNews();
-      return INITIAL_NEWS;
+      // Check if user has already explicitly initialized or deleted items
+      const isInitialized = localStorage.getItem('tk_news_initialized');
+      if (!isInitialized) {
+        localStorage.setItem('tk_news_initialized', 'true');
+        await seedDefaultNews();
+        return INITIAL_NEWS.filter((n) => !deletedIds.includes(n.id));
+      }
+      return [];
     }
 
     const list: NewsArticle[] = [];
     snapshot.forEach((docSnap) => {
-      list.push({ id: docSnap.id, ...docSnap.data() } as NewsArticle);
+      const data = docSnap.data();
+      if (!deletedIds.includes(docSnap.id) && !deletedIds.includes(data.id)) {
+        list.push({ id: docSnap.id, ...data } as NewsArticle);
+      }
     });
+
     localStorage.setItem(LOCAL_STORAGE_NEWS_KEY, JSON.stringify(list));
+    localStorage.setItem('tk_news_initialized', 'true');
     return list;
   } catch (error) {
-    console.warn('Firestore getNews error:', error);
+    console.warn('Firestore getNews error, using local cache:', error);
     const cached = localStorage.getItem(LOCAL_STORAGE_NEWS_KEY);
     if (cached) {
       try {
-        return JSON.parse(cached);
+        const parsed: NewsArticle[] = JSON.parse(cached);
+        return parsed.filter((n) => !deletedIds.includes(n.id));
       } catch (e) {}
     }
-    return INITIAL_NEWS;
+    return INITIAL_NEWS.filter((n) => !deletedIds.includes(n.id));
+  }
+}
+
+export function subscribeToNews(callback: (newsList: NewsArticle[]) => void) {
+  try {
+    const q = query(collection(db, NEWS_COLLECTION), orderBy('createdAt', 'desc'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const deletedIds = getDeletedNewsIds();
+        if (snapshot.empty) {
+          const isInit = localStorage.getItem('tk_news_initialized');
+          if (!isInit) {
+            callback(INITIAL_NEWS.filter((n) => !deletedIds.includes(n.id)));
+          } else {
+            callback([]);
+          }
+          return;
+        }
+
+        const list: NewsArticle[] = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (!deletedIds.includes(docSnap.id) && !deletedIds.includes(data.id)) {
+            list.push({ id: docSnap.id, ...data } as NewsArticle);
+          }
+        });
+
+        localStorage.setItem(LOCAL_STORAGE_NEWS_KEY, JSON.stringify(list));
+        localStorage.setItem('tk_news_initialized', 'true');
+        callback(list);
+      },
+      (err) => {
+        console.warn('Snapshot listener error on news:', err);
+        const deletedIds = getDeletedNewsIds();
+        const cached = localStorage.getItem(LOCAL_STORAGE_NEWS_KEY);
+        if (cached) {
+          try {
+            const parsed: NewsArticle[] = JSON.parse(cached);
+            callback(parsed.filter((n) => !deletedIds.includes(n.id)));
+            return;
+          } catch (e) {}
+        }
+        callback(INITIAL_NEWS.filter((n) => !deletedIds.includes(n.id)));
+      }
+    );
+  } catch (err) {
+    console.warn('Subscribe to news failed:', err);
+    return () => {};
   }
 }
 
 export async function seedDefaultNews(): Promise<void> {
   try {
+    const deletedIds = getDeletedNewsIds();
     for (const item of INITIAL_NEWS) {
-      const docRef = doc(db, NEWS_COLLECTION, item.id);
-      await setDoc(docRef, item);
+      if (!deletedIds.includes(item.id)) {
+        const docRef = doc(db, NEWS_COLLECTION, item.id);
+        await setDoc(docRef, item);
+      }
     }
-    localStorage.setItem(LOCAL_STORAGE_NEWS_KEY, JSON.stringify(INITIAL_NEWS));
+    const filteredInitial = INITIAL_NEWS.filter((n) => !deletedIds.includes(n.id));
+    localStorage.setItem(LOCAL_STORAGE_NEWS_KEY, JSON.stringify(filteredInitial));
+    localStorage.setItem('tk_news_initialized', 'true');
   } catch (error) {
     console.error('Error seeding news:', error);
   }
@@ -283,11 +417,17 @@ export async function seedDefaultNews(): Promise<void> {
 
 export async function saveNewsArticle(article: NewsArticle): Promise<void> {
   const newsId = article.id || `news-${Date.now()}`;
-  const newsData = {
+  const newsData: NewsArticle = {
     ...article,
     id: newsId,
     createdAt: article.createdAt || Date.now()
   };
+
+  // Remove from deleted list if re-saved
+  try {
+    const deletedIds = getDeletedNewsIds().filter((id) => id !== newsId);
+    localStorage.setItem(LOCAL_STORAGE_DELETED_NEWS_KEY, JSON.stringify(deletedIds));
+  } catch (e) {}
 
   try {
     const docRef = doc(db, NEWS_COLLECTION, newsId);
@@ -305,21 +445,27 @@ export async function saveNewsArticle(article: NewsArticle): Promise<void> {
     list.unshift(newsData);
   }
   localStorage.setItem(LOCAL_STORAGE_NEWS_KEY, JSON.stringify(list));
+  localStorage.setItem('tk_news_initialized', 'true');
 }
 
 export async function deleteNewsArticle(id: string): Promise<void> {
+  // 1. Record ID in deleted IDs tracking
+  addDeletedNewsId(id);
+
+  // 2. Delete from Firestore
   try {
-    await deleteDoc(doc(db, NEWS_COLLECTION, id));
+    const docRef = doc(db, NEWS_COLLECTION, id);
+    await deleteDoc(docRef);
   } catch (error) {
     console.warn('Firestore deleteNews error:', error);
   }
 
+  // 3. Update localStorage cache immediately
   const cached = localStorage.getItem(LOCAL_STORAGE_NEWS_KEY);
-  if (cached) {
-    const list: NewsArticle[] = JSON.parse(cached);
-    const updated = list.filter((n) => n.id !== id);
-    localStorage.setItem(LOCAL_STORAGE_NEWS_KEY, JSON.stringify(updated));
-  }
+  let list: NewsArticle[] = cached ? JSON.parse(cached) : [...INITIAL_NEWS];
+  const updated = list.filter((n) => n.id !== id);
+  localStorage.setItem(LOCAL_STORAGE_NEWS_KEY, JSON.stringify(updated));
+  localStorage.setItem('tk_news_initialized', 'true');
 }
 
 // INQUIRIES

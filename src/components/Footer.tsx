@@ -1,5 +1,6 @@
 import React from 'react';
 import { Shield, ArrowUp } from 'lucide-react';
+import { TKLogo } from './TKLogo';
 
 interface FooterProps {
   onNavigate: (sectionId: string) => void;
@@ -18,20 +19,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAdmin }) => {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 pb-12 border-b border-white/10">
           {/* Logo & Corporate Manifesto */}
           <div className="md:col-span-5 space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 rounded bg-[#182A47] border border-white/20 flex items-center justify-center text-white font-extrabold text-sm tracking-tighter">
-                <span>T</span>
-                <span className="text-sky-400">K</span>
-              </div>
-              <div>
-                <span className="font-display font-black text-white text-lg tracking-widest block">
-                  TK MANAGEMENT
-                </span>
-                <span className="text-[10px] text-gray-400 tracking-wider">
-                  ㈜TK Company
-                </span>
-              </div>
-            </div>
+            <TKLogo
+              className="h-8 w-9"
+              variant="dark"
+              showText={true}
+            />
 
             <p className="text-xs text-gray-400 max-w-sm leading-relaxed font-light">
               YOUR NEXT SCENE. STARTS HERE. <br />
