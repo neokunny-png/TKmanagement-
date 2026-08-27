@@ -59,13 +59,13 @@ export const NewsSection: React.FC<NewsSectionProps> = ({ newsList }) => {
         </div>
 
         {/* Category Filter Tabs */}
-        <div className="flex items-center space-x-2 overflow-x-auto pb-4 mb-8 text-xs font-mono scrollbar-none">
+        <div className="flex items-center space-x-2 overflow-x-auto pb-4 mb-8 text-xs font-mono scrollbar-none touch-scroll max-w-full">
           {categories.map((cat) => (
             <button
               key={cat.key}
               type="button"
               onClick={() => setSelectedCategory(cat.key)}
-              className={`px-4 py-2 border whitespace-nowrap transition-all uppercase tracking-wider ${
+              className={`px-3.5 sm:px-4 py-2 border whitespace-nowrap transition-all uppercase tracking-wider cursor-pointer min-h-[38px] ${
                 selectedCategory === cat.key
                   ? 'bg-sky-400 text-black font-bold border-sky-400 shadow-lg shadow-sky-950/40'
                   : 'bg-[#111319] text-gray-400 border-white/10 hover:border-white/30 hover:text-white'
@@ -143,11 +143,11 @@ export const NewsSection: React.FC<NewsSectionProps> = ({ newsList }) => {
 
       {/* Article Detail Modal */}
       {selectedArticle && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
-          <div className="relative w-full max-w-3xl bg-[#11131A] border border-white/20 shadow-2xl p-6 sm:p-10 my-auto animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 overflow-y-auto touch-scroll bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
+          <div className="relative w-full max-w-3xl bg-[#11131A] border border-white/20 shadow-2xl p-6 sm:p-10 my-auto animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] max-h-[90dvh] overflow-y-auto touch-scroll">
             <button
               onClick={() => setSelectedArticle(null)}
-              className="absolute top-5 right-5 p-2 text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+              className="absolute top-4 right-4 sm:top-5 sm:right-5 p-2 text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center"
               title="창 닫기"
             >
               <X className="w-5 h-5" />
