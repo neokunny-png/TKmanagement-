@@ -36,11 +36,11 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
           </div>
 
           {/* Filter Navigation */}
-          <div className="mt-8 md:mt-0 flex items-center space-x-2 bg-[#111319] p-1.5 border border-white/10">
+          <div className="mt-6 md:mt-0 flex items-center space-x-1.5 sm:space-x-2 bg-[#111319] p-1.5 border border-white/10 overflow-x-auto scrollbar-none touch-scroll max-w-full">
             <button
               id="filter-artists-all"
               onClick={() => setFilter('ALL')}
-              className={`px-4 py-2 text-xs font-semibold tracking-wider transition-colors ${
+              className={`px-3.5 sm:px-4 py-2 text-xs font-semibold tracking-wider transition-colors whitespace-nowrap cursor-pointer min-h-[38px] ${
                 filter === 'ALL'
                   ? 'bg-white text-black'
                   : 'text-gray-400 hover:text-white'
@@ -51,7 +51,7 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
             <button
               id="filter-artists-female"
               onClick={() => setFilter('FEMALE')}
-              className={`px-4 py-2 text-xs font-semibold tracking-wider transition-colors ${
+              className={`px-3.5 sm:px-4 py-2 text-xs font-semibold tracking-wider transition-colors whitespace-nowrap cursor-pointer min-h-[38px] ${
                 filter === 'FEMALE'
                   ? 'bg-white text-black'
                   : 'text-gray-400 hover:text-white'
@@ -62,7 +62,7 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
             <button
               id="filter-artists-male"
               onClick={() => setFilter('MALE')}
-              className={`px-4 py-2 text-xs font-semibold tracking-wider transition-colors ${
+              className={`px-3.5 sm:px-4 py-2 text-xs font-semibold tracking-wider transition-colors whitespace-nowrap cursor-pointer min-h-[38px] ${
                 filter === 'MALE'
                   ? 'bg-white text-black'
                   : 'text-gray-400 hover:text-white'

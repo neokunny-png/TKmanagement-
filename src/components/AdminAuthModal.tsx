@@ -97,7 +97,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
   return (
     <div
       id="admin-auth-modal-overlay"
-      className="fixed inset-0 z-60 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200"
+      className="fixed inset-0 z-60 bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto touch-scroll animate-in fade-in duration-200"
     >
       <div className="relative w-full max-w-md bg-[#0F111A] border border-white/20 shadow-2xl overflow-hidden my-auto p-6 sm:p-8 space-y-6 animate-in zoom-in-95 duration-150">
         {/* Glow ambient background decoration */}
@@ -107,7 +107,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+          className="absolute top-4 right-4 sm:top-5 sm:right-5 p-2 text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center"
           title="닫기"
         >
           <X className="w-5 h-5" />

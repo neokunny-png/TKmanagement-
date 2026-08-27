@@ -13,7 +13,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAdmin }) => {
   };
 
   return (
-    <footer className="bg-[#07080B] text-gray-400 text-xs border-t border-white/10 pt-16 pb-12">
+    <footer className="bg-[#07080B] text-gray-400 text-xs border-t border-white/10 pt-16 pb-[calc(3rem+env(safe-area-inset-bottom,0px))]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Top Footer Layout */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 pb-12 border-b border-white/10">

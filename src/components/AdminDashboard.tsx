@@ -829,9 +829,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   return (
     <div
       id="admin-dashboard-overlay"
-      className="fixed inset-0 z-50 overflow-y-auto bg-black/95 backdrop-blur-xl flex items-center justify-center p-2 sm:p-6"
+      className="fixed inset-0 z-50 overflow-y-auto touch-scroll bg-black/95 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4 md:p-6"
     >
-      <div className="relative w-full max-w-7xl bg-[#0F1118] border border-white/20 shadow-2xl overflow-hidden my-auto flex flex-col h-[90vh]">
+      <div className="relative w-full max-w-7xl bg-[#0F1118] border border-white/20 shadow-2xl overflow-hidden my-auto flex flex-col h-[92vh] h-[92dvh] max-h-[95dvh]">
         {/* Toast alert - High Z-index fixed floating notification */}
         {toastMessage && (
           <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] bg-sky-400 text-black px-6 py-3 rounded-full font-bold text-xs sm:text-sm shadow-2xl flex items-center space-x-2.5 border border-white/30 animate-in fade-in slide-in-from-top duration-200">

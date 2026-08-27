@@ -71,22 +71,22 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
   return (
     <div
       id="artist-modal-overlay"
-      className="fixed inset-0 z-50 overflow-y-auto bg-black/90 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4 md:p-6"
+      className="fixed inset-0 z-50 overflow-y-auto touch-scroll bg-black/90 backdrop-blur-xl flex items-center justify-center p-2 sm:p-4 md:p-6"
     >
       <div
         id="artist-modal-container"
-        className="relative w-full max-w-5xl bg-[#0F1117] border border-white/15 shadow-2xl overflow-hidden my-auto"
+        className="relative w-full max-w-5xl bg-[#0F1117] border border-white/15 shadow-2xl overflow-hidden my-auto max-h-[92vh] max-h-[92dvh] flex flex-col"
       >
         {/* Header Action Bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0B0C10]">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-white/10 bg-[#0B0C10] shrink-0">
           <div className="flex items-center space-x-3">
-            <TKLogoMark className="w-7 h-5" tColor="#FFFFFF" kColor="#38BDF8" />
+            <TKLogoMark className="w-7 h-5 shrink-0" tColor="#FFFFFF" kColor="#38BDF8" />
             <div className="flex items-center space-x-2">
-              <span className="text-xs font-bold font-display tracking-widest text-white">
+              <span className="text-xs font-bold font-display tracking-widest text-white whitespace-nowrap">
                 TK MANAGEMENT
               </span>
               <span className="text-gray-600 text-xs font-mono">/</span>
-              <span className="text-xs font-mono tracking-widest text-gray-400">
+              <span className="text-[11px] sm:text-xs font-mono tracking-widest text-gray-400 whitespace-nowrap">
                 ARTIST DOSSIER
               </span>
             </div>
@@ -95,7 +95,7 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
           <button
             id="btn-close-artist-modal"
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-2 text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
@@ -103,9 +103,10 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
         </div>
 
         {/* Modal Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[620px]">
-          {/* Left Column: Visual Showcase */}
-          <div className="lg:col-span-5 relative bg-black/60 p-6 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-white/10">
+        <div className="overflow-y-auto touch-scroll flex-1">
+          <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[620px]">
+            {/* Left Column: Visual Showcase */}
+            <div className="lg:col-span-5 relative bg-black/60 p-6 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-white/10">
             {/* Active Image */}
             <div className="relative aspect-[3/4] w-full overflow-hidden border border-white/10 bg-neutral-900 shadow-inner group">
               <img
@@ -120,7 +121,7 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
               {validEmbedUrl && (
                 <button
                   onClick={() => setShowVideoPlayer(true)}
-                  className="absolute bottom-4 left-4 right-4 bg-[#182A47]/90 hover:bg-[#182A47] text-white border border-sky-400/40 py-2.5 px-4 flex items-center justify-center space-x-2 text-xs font-semibold tracking-wider transition-all"
+                  className="absolute bottom-4 left-4 right-4 bg-[#182A47]/90 hover:bg-[#182A47] text-white border border-sky-400/40 py-2.5 px-4 flex items-center justify-center space-x-2 text-xs font-semibold tracking-wider transition-all cursor-pointer"
                 >
                   <Play className="w-3.5 h-3.5 fill-sky-400 text-sky-400" />
                   <span>PLAY SHOWREEL (쇼릴 재생)</span>
@@ -422,12 +423,12 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
             </div>
 
             {/* Modal Bottom Action Controls */}
-            <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap items-center justify-between gap-4 bg-[#0B0C10] -mx-6 -mb-6 sm:-mx-8 sm:-mb-8 p-6">
+            <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap items-center justify-between gap-4 bg-[#0B0C10] -mx-6 -mb-6 sm:-mx-8 sm:-mb-8 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
               {/* PDF Profile Download Button (User Spec Requirement #6) */}
               <button
                 id="btn-download-artist-profile"
                 onClick={() => onOpenPrintSheet(artist)}
-                className="inline-flex items-center space-x-2 bg-[#182A47] hover:bg-sky-900 text-white border border-sky-400/40 px-5 py-3 text-xs font-semibold tracking-wider transition-all"
+                className="inline-flex items-center space-x-2 bg-[#182A47] hover:bg-sky-900 text-white border border-sky-400/40 px-5 py-3 text-xs font-semibold tracking-wider transition-all cursor-pointer"
               >
                 <Download className="w-4 h-4 text-sky-300" />
                 <span>DOWNLOAD PROFILE (프로필 인쇄 / PDF)</span>
@@ -440,7 +441,7 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
                   onClose();
                   onCastingInquiry(artist);
                 }}
-                className="inline-flex items-center space-x-2 bg-white text-black hover:bg-slate-200 px-6 py-3 text-xs font-bold tracking-wider transition-all shadow-md"
+                className="inline-flex items-center space-x-2 bg-white text-black hover:bg-slate-200 px-6 py-3 text-xs font-bold tracking-wider transition-all shadow-md cursor-pointer"
               >
                 <Mail className="w-4 h-4" />
                 <span>이 배우 캐스팅 문의하기</span>
@@ -448,6 +449,7 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
             </div>
           </div>
         </div>
+      </div>
 
         {/* Video Player Modal Overlay */}
         {showVideoPlayer && validEmbedUrl && (
