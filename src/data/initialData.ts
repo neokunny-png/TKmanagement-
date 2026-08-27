@@ -65,9 +65,9 @@ export const INITIAL_ARTISTS: Artist[] = [
     ]
   },
   {
-    id: 'artist-park-minjun',
-    nameKo: '박민준',
-    nameEn: 'PARK MIN JUN',
+    id: 'artist-park-minwook',
+    nameKo: '박민욱',
+    nameEn: 'PARK MIN WOOK',
     birth: '1999.07.22',
     height: 185,
     weight: 72,
@@ -75,16 +75,16 @@ export const INITIAL_ARTISTS: Artist[] = [
     education: '서울예술대학교 공연학부 연기전공',
     languages: ['한국어 (Native)'],
     agency: 'TK MANAGEMENT (㈜TK Company)',
-    instagram: '@minjun_park_scene',
+    instagram: '@minwook_park_scene',
     gender: 'Male',
     order: 3,
     isActive: true,
     bio: '선 굵은 피지컬과 단단하고 깊은 눈매에서 뿜어져 나오는 강인한 생명력. 온몸을 던지는 역동적인 액션은 물론, 인물의 현실감 넘치는 고뇌와 진정성을 묵직하고 설득력 있게 풀어내는 배우입니다.',
-    profileImage: '/images/actors/park-minjun.jpg',
+    profileImage: '/images/actors/park-minwook.jpg',
     galleryImages: [
-      '/images/actors/park-minjun.jpg',
-      '/images/actors/park-minjun-1.jpg',
-      '/images/actors/park-minjun-2.jpg'
+      '/images/actors/park-minwook.jpg',
+      '/images/actors/park-minwook-1.jpg',
+      '/images/actors/park-minwook-2.jpg'
     ],
     showreelUrl: '',
     filmography: [
@@ -197,7 +197,7 @@ export const INITIAL_NEWS: NewsArticle[] = [
 
 배우의 가능성을 발견하고 새로운 장면을 만들어가는 프리미엄 액터스 매니지먼트 TK MANAGEMENT의 공식 웹사이트가 정식 런칭되었습니다.
 
-이번 런칭과 함께 최은서, 이은수, 박민준, 박도이, 박현진, 박아론 등 6인의 독보적인 신예 아티스트들의 공식 프로필, 필모그래피 및 최신 쇼릴이 공개되었습니다.
+이번 런칭과 함께 최은서, 이은수, 박민욱, 박도이, 박현진, 박아론 등 6인의 독보적인 신예 아티스트들의 공식 프로필, 필모그래피 및 최신 쇼릴이 공개되었습니다.
 
 TK MANAGEMENT는 체계적인 신인 발굴(Discovery), 트레이닝(Development), 전문적인 매니지먼트(Management)를 통해 배우들이 스크린과 무대에서 최고의 역량을 펼칠 수 있도록 전폭적인 지원을 아끼지 않을 것입니다.
 

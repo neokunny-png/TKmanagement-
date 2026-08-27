@@ -21,10 +21,18 @@ const NEWS_COLLECTION = 'news';
 const INQUIRIES_COLLECTION = 'inquiries';
 
 // Fallback in-memory / localStorage cache for ultra-fast UI response & offline resilience
-const LOCAL_STORAGE_ARTISTS_KEY = 'tk_cached_artists';
-const LOCAL_STORAGE_AUDITIONS_KEY = 'tk_cached_auditions';
-const LOCAL_STORAGE_NEWS_KEY = 'tk_cached_news';
-const LOCAL_STORAGE_INQUIRIES_KEY = 'tk_cached_inquiries';
+const LOCAL_STORAGE_ARTISTS_KEY = 'tk_cached_artists_v3';
+const LOCAL_STORAGE_AUDITIONS_KEY = 'tk_cached_auditions_v3';
+const LOCAL_STORAGE_NEWS_KEY = 'tk_cached_news_v3';
+const LOCAL_STORAGE_INQUIRIES_KEY = 'tk_cached_inquiries_v3';
+
+// Clear legacy outdated caches on startup
+try {
+  localStorage.removeItem('tk_cached_artists');
+  localStorage.removeItem('tk_cached_artists_v2');
+  localStorage.removeItem('tk_cached_news');
+  localStorage.removeItem('tk_cached_news_v2');
+} catch (e) {}
 
 const DEFAULT_ACTOR_IMAGES: Record<string, { profile: string; gallery: string[] }> = {
   'artist-choi-eunseo': {
@@ -36,6 +44,15 @@ const DEFAULT_ACTOR_IMAGES: Record<string, { profile: string; gallery: string[] 
       '/images/actors/choi-eunseo-3.jpg'
     ]
   },
+  'artist-lee-eunsu': {
+    profile: '/images/actors/lee-eunsoo.jpg',
+    gallery: [
+      '/images/actors/lee-eunsoo.jpg',
+      '/images/actors/lee-eunsoo-1.jpg',
+      '/images/actors/lee-eunsoo-2.jpg',
+      '/images/actors/lee-eunsoo-3.jpg'
+    ]
+  },
   'artist-lee-eunsoo': {
     profile: '/images/actors/lee-eunsoo.jpg',
     gallery: [
@@ -45,12 +62,12 @@ const DEFAULT_ACTOR_IMAGES: Record<string, { profile: string; gallery: string[] 
       '/images/actors/lee-eunsoo-3.jpg'
     ]
   },
-  'artist-park-minjun': {
-    profile: '/images/actors/park-minjun.jpg',
+  'artist-park-minwook': {
+    profile: '/images/actors/park-minwook.jpg',
     gallery: [
-      '/images/actors/park-minjun.jpg',
-      '/images/actors/park-minjun-1.jpg',
-      '/images/actors/park-minjun-2.jpg'
+      '/images/actors/park-minwook.jpg',
+      '/images/actors/park-minwook-1.jpg',
+      '/images/actors/park-minwook-2.jpg'
     ]
   },
   'artist-park-doi': {
@@ -80,11 +97,23 @@ const DEFAULT_ACTOR_IMAGES: Record<string, { profile: string; gallery: string[] 
 };
 
 export function sanitizeArtistImages(artist: Artist): Artist {
-  const fallback = DEFAULT_ACTOR_IMAGES[artist.id];
+  let { id, nameKo, nameEn, instagram } = artist;
+  
+  // Guarantee Park Min Wook info is always consistent
+  if (id?.includes('min') || (nameKo?.startsWith('박민') && nameKo !== '박민욱') || (nameEn && nameEn.includes('MIN') && !nameEn.includes('WOOK'))) {
+    id = 'artist-park-minwook';
+    nameKo = '박민욱';
+    nameEn = 'PARK MIN WOOK';
+    if (!instagram || !instagram.includes('minwook')) {
+      instagram = '@minwook_park_scene';
+    }
+  }
+
+  const fallback = DEFAULT_ACTOR_IMAGES[id] || DEFAULT_ACTOR_IMAGES[artist.id] || DEFAULT_ACTOR_IMAGES['artist-choi-eunseo'];
   let profileImage = artist.profileImage;
   let galleryImages = artist.galleryImages || [];
 
-  if (!profileImage || profileImage.includes('unsplash.com')) {
+  if (!profileImage || profileImage.includes('unsplash.com') || (profileImage.includes('min') && !profileImage.includes('minwook'))) {
     profileImage = fallback ? fallback.profile : '/images/actors/choi-eunseo.jpg';
   }
 
@@ -92,7 +121,7 @@ export function sanitizeArtistImages(artist: Artist): Artist {
     galleryImages = fallback ? fallback.gallery : [profileImage];
   } else {
     galleryImages = galleryImages.map((img, idx) => {
-      if (img && img.includes('unsplash.com')) {
+      if (!img || img.includes('unsplash.com') || (img.includes('min') && !img.includes('minwook'))) {
         return fallback?.gallery[idx] || fallback?.profile || profileImage;
       }
       return img;
@@ -101,6 +130,10 @@ export function sanitizeArtistImages(artist: Artist): Artist {
 
   return {
     ...artist,
+    id,
+    nameKo,
+    nameEn,
+    instagram,
     profileImage,
     galleryImages
   };
@@ -114,8 +147,27 @@ export function sanitizeNewsImages(news: NewsArticle): NewsArticle {
     else if (news.id === 'news-3') coverImage = '/images/news/news-3.jpg';
     else coverImage = '/images/news/news-1.jpg';
   }
+
+  let content = news.content;
+  if (content && content.includes('박민') && !content.includes('박민욱')) {
+    content = content.replace(/박민[가-힣]+/g, '박민욱');
+  }
+
+  let summary = news.summary;
+  if (summary && summary.includes('박민') && !summary.includes('박민욱')) {
+    summary = summary.replace(/박민[가-힣]+/g, '박민욱');
+  }
+
+  let title = news.title;
+  if (title && title.includes('박민') && !title.includes('박민욱')) {
+    title = title.replace(/박민[가-힣]+/g, '박민욱');
+  }
+
   return {
     ...news,
+    title,
+    summary,
+    content,
     coverImage
   };
 }
@@ -202,6 +254,10 @@ export function subscribeToArtists(callback: (artists: Artist[]) => void) {
 
 export async function seedDefaultArtists(): Promise<void> {
   try {
+    try {
+      await deleteDoc(doc(db, ARTISTS_COLLECTION, 'artist-park-minjun'));
+    } catch (e) {}
+
     for (const artist of INITIAL_ARTISTS) {
       const docRef = doc(db, ARTISTS_COLLECTION, artist.id);
       await setDoc(docRef, {
