@@ -16,7 +16,7 @@ export const Hero: React.FC<HeroProps> = ({ onExploreArtists, onApplyAudition })
       {/* Background Editorial Visual with cinematic layers */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         <img
-          src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=2000&q=85"
+          src="/images/hero/hero-bg.jpg"
           alt="TK Management Hero Actor"
           className="w-full h-full object-cover object-center filter grayscale-[35%] brightness-[0.45] scale-105 transition-transform duration-1000 ease-out"
           referrerPolicy="no-referrer"

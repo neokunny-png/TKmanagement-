@@ -26,6 +26,100 @@ const LOCAL_STORAGE_AUDITIONS_KEY = 'tk_cached_auditions';
 const LOCAL_STORAGE_NEWS_KEY = 'tk_cached_news';
 const LOCAL_STORAGE_INQUIRIES_KEY = 'tk_cached_inquiries';
 
+const DEFAULT_ACTOR_IMAGES: Record<string, { profile: string; gallery: string[] }> = {
+  'artist-choi-eunseo': {
+    profile: '/images/actors/choi-eunseo.jpg',
+    gallery: [
+      '/images/actors/choi-eunseo.jpg',
+      '/images/actors/choi-eunseo-1.jpg',
+      '/images/actors/choi-eunseo-2.jpg',
+      '/images/actors/choi-eunseo-3.jpg'
+    ]
+  },
+  'artist-lee-eunsoo': {
+    profile: '/images/actors/lee-eunsoo.jpg',
+    gallery: [
+      '/images/actors/lee-eunsoo.jpg',
+      '/images/actors/lee-eunsoo-1.jpg',
+      '/images/actors/lee-eunsoo-2.jpg',
+      '/images/actors/lee-eunsoo-3.jpg'
+    ]
+  },
+  'artist-park-minjun': {
+    profile: '/images/actors/park-minjun.jpg',
+    gallery: [
+      '/images/actors/park-minjun.jpg',
+      '/images/actors/park-minjun-1.jpg',
+      '/images/actors/park-minjun-2.jpg'
+    ]
+  },
+  'artist-park-doi': {
+    profile: '/images/actors/park-doi.jpg',
+    gallery: [
+      '/images/actors/park-doi.jpg',
+      '/images/actors/park-doi-1.jpg',
+      '/images/actors/park-doi-2.jpg'
+    ]
+  },
+  'artist-park-hyunjin': {
+    profile: '/images/actors/park-hyunjin.jpg',
+    gallery: [
+      '/images/actors/park-hyunjin.jpg',
+      '/images/actors/park-hyunjin-1.jpg',
+      '/images/actors/park-hyunjin-2.jpg'
+    ]
+  },
+  'artist-park-aaron': {
+    profile: '/images/actors/park-aaron.jpg',
+    gallery: [
+      '/images/actors/park-aaron.jpg',
+      '/images/actors/park-aaron-1.jpg',
+      '/images/actors/park-aaron-2.jpg'
+    ]
+  }
+};
+
+export function sanitizeArtistImages(artist: Artist): Artist {
+  const fallback = DEFAULT_ACTOR_IMAGES[artist.id];
+  let profileImage = artist.profileImage;
+  let galleryImages = artist.galleryImages || [];
+
+  if (!profileImage || profileImage.includes('unsplash.com')) {
+    profileImage = fallback ? fallback.profile : '/images/actors/choi-eunseo.jpg';
+  }
+
+  if (galleryImages.length === 0) {
+    galleryImages = fallback ? fallback.gallery : [profileImage];
+  } else {
+    galleryImages = galleryImages.map((img, idx) => {
+      if (img && img.includes('unsplash.com')) {
+        return fallback?.gallery[idx] || fallback?.profile || profileImage;
+      }
+      return img;
+    });
+  }
+
+  return {
+    ...artist,
+    profileImage,
+    galleryImages
+  };
+}
+
+export function sanitizeNewsImages(news: NewsArticle): NewsArticle {
+  let coverImage = news.coverImage;
+  if (!coverImage || coverImage.includes('unsplash.com')) {
+    if (news.id === 'news-1') coverImage = '/images/news/news-1.jpg';
+    else if (news.id === 'news-2') coverImage = '/images/news/news-2.jpg';
+    else if (news.id === 'news-3') coverImage = '/images/news/news-3.jpg';
+    else coverImage = '/images/news/news-1.jpg';
+  }
+  return {
+    ...news,
+    coverImage
+  };
+}
+
 export async function getArtists(): Promise<Artist[]> {
   try {
     const q = query(collection(db, ARTISTS_COLLECTION), orderBy('order', 'asc'));
@@ -34,19 +128,19 @@ export async function getArtists(): Promise<Artist[]> {
     if (snapshot.empty) {
       console.log('No artists found in Firestore, seeding initial artists...');
       await seedDefaultArtists();
-      return INITIAL_ARTISTS;
+      return INITIAL_ARTISTS.map(sanitizeArtistImages);
     }
     
     const artists: Artist[] = [];
     snapshot.forEach((docSnap) => {
       const data = docSnap.data();
       const showreel = data.showreelUrl && !data.showreelUrl.includes('dQw4w9WgXcQ') ? data.showreelUrl : '';
-      artists.push({
+      artists.push(sanitizeArtistImages({
         id: docSnap.id,
         ...data,
         showreelUrl: showreel,
         filmography: sortFilmographyByYear(data.filmography)
-      } as Artist);
+      } as Artist));
     });
 
     localStorage.setItem(LOCAL_STORAGE_ARTISTS_KEY, JSON.stringify(artists));
@@ -56,12 +150,13 @@ export async function getArtists(): Promise<Artist[]> {
     const cached = localStorage.getItem(LOCAL_STORAGE_ARTISTS_KEY);
     if (cached) {
       try {
-        return JSON.parse(cached);
+        const parsed: Artist[] = JSON.parse(cached);
+        return parsed.map(sanitizeArtistImages);
       } catch (e) {
         // fallback
       }
     }
-    return INITIAL_ARTISTS;
+    return INITIAL_ARTISTS.map(sanitizeArtistImages);
   }
 }
 
@@ -70,29 +165,37 @@ export function subscribeToArtists(callback: (artists: Artist[]) => void) {
     const q = query(collection(db, ARTISTS_COLLECTION), orderBy('order', 'asc'));
     return onSnapshot(q, (snapshot) => {
       if (snapshot.empty) {
-        callback(INITIAL_ARTISTS);
+        callback(INITIAL_ARTISTS.map(sanitizeArtistImages));
         return;
       }
       const artists: Artist[] = [];
       snapshot.forEach((docSnap) => {
         const data = docSnap.data();
         const showreel = data.showreelUrl && !data.showreelUrl.includes('dQw4w9WgXcQ') ? data.showreelUrl : '';
-        artists.push({
+        artists.push(sanitizeArtistImages({
           id: docSnap.id,
           ...data,
           showreelUrl: showreel,
           filmography: sortFilmographyByYear(data.filmography)
-        } as Artist);
+        } as Artist));
       });
       localStorage.setItem(LOCAL_STORAGE_ARTISTS_KEY, JSON.stringify(artists));
       callback(artists);
     }, (err) => {
       console.warn('Snapshot listener error on artists:', err);
-      callback(INITIAL_ARTISTS);
+      const cached = localStorage.getItem(LOCAL_STORAGE_ARTISTS_KEY);
+      if (cached) {
+        try {
+          const parsed: Artist[] = JSON.parse(cached);
+          callback(parsed.map(sanitizeArtistImages));
+          return;
+        } catch (e) {}
+      }
+      callback(INITIAL_ARTISTS.map(sanitizeArtistImages));
     });
   } catch (err) {
     console.warn('Subscribe failed:', err);
-    callback(INITIAL_ARTISTS);
+    callback(INITIAL_ARTISTS.map(sanitizeArtistImages));
     return () => {};
   }
 }
@@ -329,7 +432,7 @@ export async function getNewsArticles(): Promise<NewsArticle[]> {
     snapshot.forEach((docSnap) => {
       const data = docSnap.data();
       if (!deletedIds.includes(docSnap.id) && !deletedIds.includes(data.id)) {
-        list.push({ id: docSnap.id, ...data } as NewsArticle);
+        list.push(sanitizeNewsImages({ id: docSnap.id, ...data } as NewsArticle));
       }
     });
 
@@ -342,10 +445,10 @@ export async function getNewsArticles(): Promise<NewsArticle[]> {
     if (cached) {
       try {
         const parsed: NewsArticle[] = JSON.parse(cached);
-        return parsed.filter((n) => !deletedIds.includes(n.id));
+        return parsed.map(sanitizeNewsImages).filter((n) => !deletedIds.includes(n.id));
       } catch (e) {}
     }
-    return INITIAL_NEWS.filter((n) => !deletedIds.includes(n.id));
+    return INITIAL_NEWS.map(sanitizeNewsImages).filter((n) => !deletedIds.includes(n.id));
   }
 }
 
@@ -359,7 +462,7 @@ export function subscribeToNews(callback: (newsList: NewsArticle[]) => void) {
         if (snapshot.empty) {
           const isInit = localStorage.getItem('tk_news_initialized');
           if (!isInit) {
-            callback(INITIAL_NEWS.filter((n) => !deletedIds.includes(n.id)));
+            callback(INITIAL_NEWS.map(sanitizeNewsImages).filter((n) => !deletedIds.includes(n.id)));
           } else {
             callback([]);
           }
@@ -370,7 +473,7 @@ export function subscribeToNews(callback: (newsList: NewsArticle[]) => void) {
         snapshot.forEach((docSnap) => {
           const data = docSnap.data();
           if (!deletedIds.includes(docSnap.id) && !deletedIds.includes(data.id)) {
-            list.push({ id: docSnap.id, ...data } as NewsArticle);
+            list.push(sanitizeNewsImages({ id: docSnap.id, ...data } as NewsArticle));
           }
         });
 
@@ -385,11 +488,11 @@ export function subscribeToNews(callback: (newsList: NewsArticle[]) => void) {
         if (cached) {
           try {
             const parsed: NewsArticle[] = JSON.parse(cached);
-            callback(parsed.filter((n) => !deletedIds.includes(n.id)));
+            callback(parsed.map(sanitizeNewsImages).filter((n) => !deletedIds.includes(n.id)));
             return;
           } catch (e) {}
         }
-        callback(INITIAL_NEWS.filter((n) => !deletedIds.includes(n.id)));
+        callback(INITIAL_NEWS.map(sanitizeNewsImages).filter((n) => !deletedIds.includes(n.id)));
       }
     );
   } catch (err) {

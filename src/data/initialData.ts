@@ -17,12 +17,12 @@ export const INITIAL_ARTISTS: Artist[] = [
     order: 1,
     isActive: true,
     bio: '투명하고 맑은 마스크 속에 서늘한 파도와 같은 감정의 깊이를 품은 배우. 흔들리는 눈빛 하나, 찰나의 숨소리만으로도 인물이 감춘 가장 은밀하고 처연한 내면을 스크린 위에 팽팽하게 펼쳐냅니다.',
-    profileImage: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=85',
+    profileImage: '/images/actors/choi-eunseo.jpg',
     galleryImages: [
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=1200&q=85'
+      '/images/actors/choi-eunseo.jpg',
+      '/images/actors/choi-eunseo-1.jpg',
+      '/images/actors/choi-eunseo-2.jpg',
+      '/images/actors/choi-eunseo-3.jpg'
     ],
     showreelUrl: '',
     filmography: [
@@ -49,12 +49,12 @@ export const INITIAL_ARTISTS: Artist[] = [
     order: 2,
     isActive: true,
     bio: '소년의 위태로운 방황과 차가운 느와르적 긴장감이 공존하는 독보적인 마스크. 묵직한 중저음 보이스와 날카로운 시선으로 침묵 속에서도 서사를 완성하며 관객의 시선을 단숨에 사로잡는 흡인력을 지녔습니다.',
-    profileImage: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=1000&q=85',
+    profileImage: '/images/actors/lee-eunsoo.jpg',
     galleryImages: [
-      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=1200&q=85'
+      '/images/actors/lee-eunsoo.jpg',
+      '/images/actors/lee-eunsoo-1.jpg',
+      '/images/actors/lee-eunsoo-2.jpg',
+      '/images/actors/lee-eunsoo-3.jpg'
     ],
     showreelUrl: '',
     filmography: [
@@ -80,11 +80,11 @@ export const INITIAL_ARTISTS: Artist[] = [
     order: 3,
     isActive: true,
     bio: '선 굵은 피지컬과 단단하고 깊은 눈매에서 뿜어져 나오는 강인한 생명력. 온몸을 던지는 역동적인 액션은 물론, 인물의 현실감 넘치는 고뇌와 진정성을 묵직하고 설득력 있게 풀어내는 배우입니다.',
-    profileImage: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=1000&q=85',
+    profileImage: '/images/actors/park-minjun.jpg',
     galleryImages: [
-      'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=1200&q=85'
+      '/images/actors/park-minjun.jpg',
+      '/images/actors/park-minjun-1.jpg',
+      '/images/actors/park-minjun-2.jpg'
     ],
     showreelUrl: '',
     filmography: [
@@ -110,11 +110,11 @@ export const INITIAL_ARTISTS: Artist[] = [
     order: 4,
     isActive: true,
     bio: '렌즈를 응시하는 것만으로도 공간의 무드를 단숨에 장악하는 신비롭고 몽환적인 마스크. 틀에 갇히지 않는 유연한 감각과 당찬 에너지로 Z세대의 새로운 감성을 감각적으로 대변하는 차세대 뮤즈입니다.',
-    profileImage: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=1000&q=85',
+    profileImage: '/images/actors/park-doi.jpg',
     galleryImages: [
-      'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1200&q=85'
+      '/images/actors/park-doi.jpg',
+      '/images/actors/park-doi-1.jpg',
+      '/images/actors/park-doi-2.jpg'
     ],
     showreelUrl: '',
     filmography: [
@@ -140,11 +140,11 @@ export const INITIAL_ARTISTS: Artist[] = [
     order: 5,
     isActive: true,
     bio: '따뜻하고 무해한 청춘의 얼굴 뒤편에 웅크린 날카롭고 집요한 연기적 집중력. 일상의 편안하고 담백한 호흡부터 폭발하는 격정의 순간까지, 캐릭터에 온전히 녹아드는 진정성 있는 배우입니다.',
-    profileImage: 'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?auto=format&fit=crop&w=1000&q=85',
+    profileImage: '/images/actors/park-hyunjin.jpg',
     galleryImages: [
-      'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1496345875659-11f7dd282d1d?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=1200&q=85'
+      '/images/actors/park-hyunjin.jpg',
+      '/images/actors/park-hyunjin-1.jpg',
+      '/images/actors/park-hyunjin-2.jpg'
     ],
     showreelUrl: '',
     filmography: [
@@ -170,11 +170,11 @@ export const INITIAL_ARTISTS: Artist[] = [
     order: 6,
     isActive: true,
     bio: '글로벌 무대를 겨냥한 감각적인 비주얼과 거침없는 에너지. 유려한 언어 감각과 역동적인 리듬감으로 캐릭터에 입체적인 생명력을 불어넣으며 신선한 파동을 일으키는 라이징 엔터테이너입니다.',
-    profileImage: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=1000&q=85',
+    profileImage: '/images/actors/park-aaron.jpg',
     galleryImages: [
-      'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=1200&q=85',
-      'https://images.unsplash.com/photo-1513956589380-bad6acb9b9d4?auto=format&fit=crop&w=1200&q=85'
+      '/images/actors/park-aaron.jpg',
+      '/images/actors/park-aaron-1.jpg',
+      '/images/actors/park-aaron-2.jpg'
     ],
     showreelUrl: '',
     filmography: [
@@ -207,7 +207,7 @@ TK MANAGEMENT는 체계적인 신인 발굴(Discovery), 트레이닝(Development
 
 감사합니다.
 ㈜TK Company / TK MANAGEMENT 배상`,
-    coverImage: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=1200&q=85',
+    coverImage: '/images/news/news-1.jpg',
     isPinned: true,
     author: 'TK MANAGEMENT 홍보팀',
     createdAt: Date.now() - 1000 * 60 * 60 * 24
@@ -237,7 +237,7 @@ TK MANAGEMENT는 아직 발견되지 않은 배우의 숨겨진 가능성을 찾
 접수된 모든 지원서는 전문 캐스팅 디렉터 팀의 심사를 거치며, 1차 서류 합격자에 한해 개별 오디션 일정이 안내됩니다.
 
 여러분의 다음 장면을 TK MANAGEMENT와 함께 시작하세요.`,
-    coverImage: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1200&q=85',
+    coverImage: '/images/news/news-2.jpg',
     isPinned: true,
     author: 'TK MANAGEMENT 캐스팅팀',
     createdAt: Date.now() - 1000 * 60 * 60 * 48
@@ -253,7 +253,7 @@ TK MANAGEMENT는 아직 발견되지 않은 배우의 숨겨진 가능성을 찾
 극 중 최은서는 내면의 깊은 상처를 안고 바닷가 마을을 찾아온 주인공 '유진' 역을 맡아, 특유의 섬세한 감정선과 밀도 높은 눈빛 연기로 호평을 이끌어냈습니다.
 
 최은서 배우의 차기작 및 영화제 상영 일정은 추후 공식 채널을 통해 공지될 예정입니다.`,
-    coverImage: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=85',
+    coverImage: '/images/news/news-3.jpg',
     isPinned: false,
     author: 'TK MANAGEMENT 홍보팀',
     createdAt: Date.now() - 1000 * 60 * 60 * 96

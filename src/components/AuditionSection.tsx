@@ -79,7 +79,7 @@ export const AuditionSection: React.FC = () => {
         specialty: formData.specialty.trim(),
         bio: formData.bio.trim(),
         experience: formData.experience.trim(),
-        photoUrlFace: formData.photoUrlFace.trim() || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
+        photoUrlFace: formData.photoUrlFace.trim() || '/images/actors/choi-eunseo.jpg',
         photoUrlFull: formData.photoUrlFull.trim(),
         videoUrl: formData.videoUrl.trim()
       });

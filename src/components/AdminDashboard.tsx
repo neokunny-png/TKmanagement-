@@ -389,7 +389,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       agency: 'TK MANAGEMENT (㈜TK Company)',
       instagram: '@',
       bio: '',
-      profileImage: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=85',
+      profileImage: '/images/actors/choi-eunseo.jpg',
       galleryImages: [],
       showreelUrl: '',
       filmography: [],
@@ -448,10 +448,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         agency: editingArtist.agency || 'TK MANAGEMENT (㈜TK Company)',
         instagram: editingArtist.instagram || '',
         bio: editingArtist.bio || '',
-        profileImage: editingArtist.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=85',
+        profileImage: editingArtist.profileImage || '/images/actors/choi-eunseo.jpg',
         galleryImages: editingArtist.galleryImages && editingArtist.galleryImages.length > 0
           ? editingArtist.galleryImages
-          : [editingArtist.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=85'],
+          : [editingArtist.profileImage || '/images/actors/choi-eunseo.jpg'],
         showreelUrl: editingArtist.showreelUrl || '',
         filmography: editingArtist.filmography || [],
         isActive: editingArtist.isActive !== undefined ? editingArtist.isActive : true,
@@ -689,7 +689,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       date: new Date().toISOString().slice(0, 10).replace(/-/g, '.'),
       summary: '',
       content: '',
-      coverImage: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=1200&q=85',
+      coverImage: '/images/news/news-1.jpg',
       isPinned: false,
       author: 'TK MANAGEMENT 홍보팀',
       createdAt: Date.now()
