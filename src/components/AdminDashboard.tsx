@@ -2000,7 +2000,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           type="url"
                           value={editingArtist.profileImage || ''}
                           onChange={(e) => setEditingArtist({ ...editingArtist, profileImage: e.target.value })}
-                          placeholder="https://images.unsplash.com/..."
+                          placeholder="https://example.com/image.jpg 또는 /images/actors/..."
                           className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400"
                         />
                         {editingArtist.profileImage && (
@@ -2542,7 +2542,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       type="url"
                       value={editingNews.coverImage || ''}
                       onChange={(e) => setEditingNews({ ...editingNews, coverImage: e.target.value })}
-                      placeholder="https://images.unsplash.com/photo-..."
+                      placeholder="https://example.com/news-cover.jpg 또는 /images/news/..."
                       className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white font-mono placeholder-gray-600 focus:outline-none focus:border-sky-400 text-xs"
                     />
                   )}
