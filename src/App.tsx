@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
+import { auth } from './lib/firebase';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { AboutSection } from './components/AboutSection';
@@ -10,6 +12,7 @@ import { ContactSection } from './components/ContactSection';
 import { Footer } from './components/Footer';
 import { ProfilePrintSheet } from './components/ProfilePrintSheet';
 import { AdminDashboard } from './components/AdminDashboard';
+import { AdminAuthModal } from './components/AdminAuthModal';
 import { Artist, NewsArticle } from './types';
 import { getArtists, getNewsArticles, subscribeToArtists, subscribeToNews } from './lib/db';
 import { INITIAL_ARTISTS, INITIAL_NEWS } from './data/initialData';
@@ -19,11 +22,49 @@ export default function App() {
   const [newsList, setNewsList] = useState<NewsArticle[]>(INITIAL_NEWS);
   const [activeSection, setActiveSection] = useState<string>('hero');
 
+  // Admin Authentication State
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
+    return (
+      auth.currentUser !== null ||
+      sessionStorage.getItem('tk_admin_auth') === 'true'
+    );
+  });
+  const [adminIdentifier, setAdminIdentifier] = useState<string>(() => {
+    return (
+      auth.currentUser?.email ||
+      sessionStorage.getItem('tk_admin_email') ||
+      'Master Administrator'
+    );
+  });
+  const [isAdminAuthModalOpen, setIsAdminAuthModalOpen] = useState<boolean>(false);
+  const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
+
   // Modals
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
   const [printArtist, setPrintArtist] = useState<Artist | null>(null);
   const [preselectedActorForContact, setPreselectedActorForContact] = useState<Artist | null>(null);
-  const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
+
+  // Sync auth state with Firebase Auth
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsAdminAuthenticated(true);
+        setAdminIdentifier(user.email || user.displayName || 'Google Admin');
+      } else {
+        // If not logged into Firebase, check sessionStorage
+        const isSessionAuth = sessionStorage.getItem('tk_admin_auth') === 'true';
+        if (isSessionAuth) {
+          setIsAdminAuthenticated(true);
+          setAdminIdentifier(sessionStorage.getItem('tk_admin_email') || 'Master Administrator');
+        } else {
+          setIsAdminAuthenticated(false);
+          setAdminIdentifier('');
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Initialize data and real-time subscription
   useEffect(() => {
@@ -95,14 +136,46 @@ export default function App() {
     handleNavigate('contact');
   };
 
+  // Admin access entry point: gate with authentication
+  const handleOpenAdmin = () => {
+    if (isAdminAuthenticated) {
+      setIsAdminOpen(true);
+    } else {
+      setIsAdminAuthModalOpen(true);
+    }
+  };
+
+  const handleAuthSuccess = (authType: 'google' | 'passcode', userIdentifier?: string) => {
+    setIsAdminAuthenticated(true);
+    if (userIdentifier) {
+      setAdminIdentifier(userIdentifier);
+    }
+    setIsAdminAuthModalOpen(false);
+    setIsAdminOpen(true);
+  };
+
+  const handleLogoutAdmin = async () => {
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.warn(e);
+    }
+    sessionStorage.removeItem('tk_admin_auth');
+    sessionStorage.removeItem('tk_admin_type');
+    sessionStorage.removeItem('tk_admin_email');
+    setIsAdminAuthenticated(false);
+    setAdminIdentifier('');
+    setIsAdminOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-[#0B0C10] text-[#E5E7EB] flex flex-col selection:bg-[#182A47] selection:text-white">
       {/* Sleek Fixed Header */}
       <Header
         activeSection={activeSection}
         onNavigate={handleNavigate}
-        onOpenAdmin={() => setIsAdminOpen(true)}
-        isAdmin={false}
+        onOpenAdmin={handleOpenAdmin}
+        isAdmin={isAdminAuthenticated}
       />
 
       {/* Main Flow */}
@@ -139,7 +212,14 @@ export default function App() {
       {/* Footer */}
       <Footer
         onNavigate={handleNavigate}
-        onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenAdmin={handleOpenAdmin}
+      />
+
+      {/* Admin Authentication Modal Gate */}
+      <AdminAuthModal
+        isOpen={isAdminAuthModalOpen}
+        onClose={() => setIsAdminAuthModalOpen(false)}
+        onSuccess={handleAuthSuccess}
       />
 
       {/* Artist Dossier Modal */}
@@ -168,10 +248,13 @@ export default function App() {
         <AdminDashboard
           artists={artists}
           newsList={newsList}
+          adminIdentifier={adminIdentifier}
           onClose={() => setIsAdminOpen(false)}
+          onLogout={handleLogoutAdmin}
           onRefreshData={loadInitialData}
         />
       )}
     </div>
   );
 }
+

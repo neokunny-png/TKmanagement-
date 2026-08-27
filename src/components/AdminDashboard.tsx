@@ -32,7 +32,10 @@ import {
   ChevronDown,
   ArrowUp,
   ArrowDown,
-  HelpCircle
+  HelpCircle,
+  Pin,
+  PinOff,
+  Calendar
 } from 'lucide-react';
 import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
@@ -58,16 +61,19 @@ interface AdminDashboardProps {
   newsList: NewsArticle[];
   onClose: () => void;
   onRefreshData: () => void;
+  adminIdentifier?: string;
+  onLogout?: () => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   artists,
   newsList,
   onClose,
-  onRefreshData
+  onRefreshData,
+  adminIdentifier,
+  onLogout
 }) => {
-  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
-  const [isDemoAdmin, setIsDemoAdmin] = useState(true); // Default true to allow instantaneous evaluation, synced with Firebase Auth
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(auth.currentUser);
   const [activeTab, setActiveTab] = useState<'ARTISTS' | 'AUDITIONS' | 'NEWS' | 'INQUIRIES'>('ARTISTS');
 
   // Auditions state
@@ -114,6 +120,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // News editing state
   const [editingNews, setEditingNews] = useState<Partial<NewsArticle> | null>(null);
   const [isNewNews, setIsNewNews] = useState(false);
+  const [showNewsCloseConfirm, setShowNewsCloseConfirm] = useState(false);
+  const [isSavingNews, setIsSavingNews] = useState(false);
+  const [newsCoverImageMode, setNewsCoverImageMode] = useState<'upload' | 'url'>('upload');
+  const [isUploadingNewsImage, setIsUploadingNewsImage] = useState(false);
+  const [newsSearchQuery, setNewsSearchQuery] = useState('');
+  const [newsCategoryFilter, setNewsCategoryFilter] = useState<string>('ALL');
 
   // Safe in-dashboard confirmation modal (avoids window.confirm iframe blocks)
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
@@ -305,7 +317,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setCurrentUser(user);
-        setIsDemoAdmin(true);
       }
     });
     return () => unsubscribe();
@@ -331,7 +342,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     try {
       const res = await signInWithPopup(auth, googleProvider);
       setCurrentUser(res.user);
-      setIsDemoAdmin(true);
       showToast(`로그인 성공: ${res.user.displayName || res.user.email}`);
     } catch (err: any) {
       console.error(err);
@@ -340,9 +350,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const handleSignOut = async () => {
-    await signOut(auth);
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.warn(e);
+    }
+    sessionStorage.removeItem('tk_admin_auth');
+    sessionStorage.removeItem('tk_admin_type');
+    sessionStorage.removeItem('tk_admin_email');
     setCurrentUser(null);
-    showToast('로그아웃되었습니다.');
+    showToast('관리자 세션이 로그아웃되었습니다.');
+    if (onLogout) {
+      onLogout();
+    } else {
+      onClose();
+    }
   };
 
   // ----------------------------------------------------
@@ -658,6 +680,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // ----------------------------------------------------
   const handleOpenAddNews = () => {
     setIsNewNews(true);
+    setShowNewsCloseConfirm(false);
+    setNewsCoverImageMode('upload');
     setEditingNews({
       id: `news-${Date.now()}`,
       title: '',
@@ -674,32 +698,82 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleOpenEditNews = (news: NewsArticle) => {
     setIsNewNews(false);
+    setShowNewsCloseConfirm(false);
+    setNewsCoverImageMode(news.coverImage && news.coverImage.startsWith('data:') ? 'upload' : 'url');
     setEditingNews(JSON.parse(JSON.stringify(news)));
+  };
+
+  const handleRequestCloseNewsModal = () => {
+    setShowNewsCloseConfirm(true);
+  };
+
+  const handleTogglePinNews = async (news: NewsArticle) => {
+    try {
+      const updated = { ...news, isPinned: !news.isPinned };
+      await saveNewsArticle(updated);
+      showToast(
+        updated.isPinned
+          ? `📌 "${news.title}" 기사가 상단 고정되었습니다.`
+          : `📌 "${news.title}" 기사의 상단 고정이 해제되었습니다.`
+      );
+      onRefreshData();
+    } catch (err) {
+      console.error('Failed to toggle pin:', err);
+      showToast('상단 고정 변경 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleNewsImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingNews) return;
+
+    setIsUploadingNewsImage(true);
+    try {
+      const optimizedDataUrl = await processImageFile(file, 1200, 800, 0.85);
+      setEditingNews(prev => prev ? ({ ...prev, coverImage: optimizedDataUrl }) : null);
+      showToast('대표 이미지가 성공적으로 업로드되었습니다.');
+    } catch (err: any) {
+      console.error('News image upload failed:', err);
+      showToast(`이미지 처리 오류: ${err.message || '다시 시도해주세요.'}`);
+    } finally {
+      setIsUploadingNewsImage(false);
+    }
   };
 
   const handleSaveNews = async () => {
     if (!editingNews || !editingNews.title || !editingNews.content) {
-      showToast('뉴스 제목과 본문을 입력해주세요.');
+      showToast('뉴스 제목과 본문 내용을 모두 입력해주세요.');
       return;
     }
 
-    const newsToSave: NewsArticle = {
-      id: editingNews.id || `news-${Date.now()}`,
-      title: editingNews.title.trim(),
-      category: editingNews.category || 'Notice',
-      date: editingNews.date || new Date().toISOString().slice(0, 10).replace(/-/g, '.'),
-      summary: editingNews.summary || editingNews.content.slice(0, 120) + '...',
-      content: editingNews.content,
-      coverImage: editingNews.coverImage,
-      isPinned: editingNews.isPinned || false,
-      author: editingNews.author || 'TK MANAGEMENT',
-      createdAt: editingNews.createdAt || Date.now()
-    };
+    setIsSavingNews(true);
+    try {
+      const newsToSave: NewsArticle = {
+        id: editingNews.id || `news-${Date.now()}`,
+        title: editingNews.title.trim(),
+        category: editingNews.category || 'Notice',
+        date: editingNews.date || new Date().toISOString().slice(0, 10).replace(/-/g, '.'),
+        summary: (editingNews.summary && editingNews.summary.trim()) 
+          ? editingNews.summary.trim() 
+          : (editingNews.content.slice(0, 120) + (editingNews.content.length > 120 ? '...' : '')),
+        content: editingNews.content.trim(),
+        coverImage: editingNews.coverImage || '',
+        isPinned: editingNews.isPinned || false,
+        author: (editingNews.author && editingNews.author.trim()) ? editingNews.author.trim() : 'TK MANAGEMENT',
+        createdAt: editingNews.createdAt || Date.now()
+      };
 
-    await saveNewsArticle(newsToSave);
-    setEditingNews(null);
-    showToast('보도자료가 성공적으로 저장되었습니다.');
-    onRefreshData();
+      await saveNewsArticle(newsToSave);
+      setShowNewsCloseConfirm(false);
+      setEditingNews(null);
+      showToast(`✅ [${newsToSave.title}] 보도자료가 성공적으로 저장되었습니다.`);
+      onRefreshData();
+    } catch (err: any) {
+      console.error('Failed to save news article:', err);
+      showToast(`저장 중 오류가 발생했습니다: ${err.message || '다시 시도해주세요.'}`);
+    } finally {
+      setIsSavingNews(false);
+    }
   };
 
   const handleDeleteNews = (id: string, title: string) => {
@@ -784,36 +858,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
 
             {/* Auth Status Badge */}
-            <div className="hidden sm:flex items-center space-x-2 bg-white/5 border border-white/10 px-3 py-1 text-xs">
+            <div className="hidden sm:flex items-center space-x-2 bg-white/5 border border-sky-500/30 px-3 py-1 text-xs">
               <Shield className="w-3.5 h-3.5 text-sky-400" />
-              <span className="text-gray-300">
-                {currentUser ? currentUser.email : 'Master Admin (Authorized)'}
+              <span className="text-gray-200 font-mono text-[11px]">
+                {adminIdentifier || (currentUser ? currentUser.email : 'Master Admin (Authorized)')}
               </span>
             </div>
           </div>
 
           <div className="flex items-center space-x-3">
-            {currentUser ? (
-              <button
-                onClick={handleSignOut}
-                className="flex items-center space-x-1.5 text-xs text-gray-400 hover:text-white px-3 py-1.5 border border-white/10"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>로그아웃</span>
-              </button>
-            ) : (
-              <button
-                onClick={handleGoogleSignIn}
-                className="flex items-center space-x-1.5 text-xs text-sky-300 bg-sky-950/60 hover:bg-sky-900 border border-sky-800 px-3 py-1.5"
-              >
-                <Shield className="w-3.5 h-3.5" />
-                <span>Google 관리자 인증</span>
-              </button>
-            )}
+            <button
+              onClick={handleSignOut}
+              className="flex items-center space-x-1.5 text-xs text-gray-300 hover:text-white px-3 py-1.5 border border-white/10 hover:border-red-500/50 hover:bg-red-950/30 transition-all"
+              title="관리자 로그아웃"
+            >
+              <LogOut className="w-3.5 h-3.5 text-red-400" />
+              <span>로그아웃</span>
+            </button>
 
             <button
               onClick={onClose}
               className="p-2 text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+              title="닫기"
             >
               <X className="w-5 h-5" />
             </button>
@@ -1261,91 +1327,229 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {/* ======================================================== */}
           {/* TAB 3: NEWS MANAGEMENT */}
           {/* ======================================================== */}
-          {activeTab === 'NEWS' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between bg-[#141724] p-4 border border-white/10">
-                <div>
-                  <h3 className="text-base font-bold text-white">
-                    보도자료 및 공지사항 관리
-                  </h3>
-                  <p className="text-xs text-gray-400">
-                    홈페이지에 게재될 캐스팅 소식, 영화제 초청, 공지사항을 작성/수정합니다.
-                  </p>
+          {activeTab === 'NEWS' && (() => {
+            const filteredNews = newsList.filter((item) => {
+              const matchesCategory =
+                newsCategoryFilter === 'ALL' || item.category === newsCategoryFilter;
+              const matchesQuery =
+                !newsSearchQuery.trim() ||
+                item.title.toLowerCase().includes(newsSearchQuery.toLowerCase()) ||
+                item.summary.toLowerCase().includes(newsSearchQuery.toLowerCase()) ||
+                item.content.toLowerCase().includes(newsSearchQuery.toLowerCase()) ||
+                (item.author && item.author.toLowerCase().includes(newsSearchQuery.toLowerCase()));
+              return matchesCategory && matchesQuery;
+            });
+
+            return (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#141724] p-4 sm:p-5 border border-white/10">
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <h3 className="text-base font-bold text-white">
+                        보도자료 및 공지사항 관리
+                      </h3>
+                      <span className="text-xs font-mono bg-sky-950 text-sky-400 border border-sky-800 px-2 py-0.5">
+                        총 {newsList.length}건
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      홈페이지에 게재될 캐스팅 소식, 영화제 초청, 공지사항, 인터뷰 기사를 등록 및 수정합니다.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleOpenAddNews}
+                    className="inline-flex items-center justify-center space-x-1.5 bg-white text-black hover:bg-slate-200 px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors shrink-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>새 보도자료 작성</span>
+                  </button>
                 </div>
 
-                <button
-                  onClick={handleOpenAddNews}
-                  className="inline-flex items-center space-x-1.5 bg-white text-black hover:bg-slate-200 px-4 py-2 text-xs font-bold uppercase tracking-wider"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>새 보도자료 작성</span>
-                </button>
-              </div>
+                {/* Filter & Search Controls */}
+                <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-[#11131A] p-3.5 border border-white/10">
+                  {/* Category Pills */}
+                  <div className="flex items-center space-x-1 overflow-x-auto pb-1 md:pb-0 text-xs font-mono">
+                    {[
+                      { key: 'ALL', label: '전체' },
+                      { key: 'Notice', label: '공지사항' },
+                      { key: 'Casting', label: '캐스팅' },
+                      { key: 'Media', label: '언론보도' },
+                      { key: 'Interview', label: '인터뷰' },
+                      { key: 'Company', label: '회사소식' }
+                    ].map((cat) => (
+                      <button
+                        key={cat.key}
+                        type="button"
+                        onClick={() => setNewsCategoryFilter(cat.key)}
+                        className={`px-3 py-1.5 whitespace-nowrap transition-colors border ${
+                          newsCategoryFilter === cat.key
+                            ? 'bg-sky-500 text-black font-bold border-sky-400'
+                            : 'bg-black/30 text-gray-400 border-white/10 hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
 
-              {/* News Table */}
-              <div className="bg-[#11131A] border border-white/10 overflow-x-auto">
-                <table className="w-full text-xs text-left text-gray-300">
-                  <thead className="text-[11px] uppercase bg-black/40 text-gray-400 font-mono border-b border-white/10">
-                    <tr>
-                      <th className="p-3 w-16">분류</th>
-                      <th className="p-3 w-28">작성일</th>
-                      <th className="p-3">제목</th>
-                      <th className="p-3">요약</th>
-                      <th className="p-3 w-20 text-center">고정</th>
-                      <th className="p-3 w-28 text-right">관리</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {newsList.length === 0 ? (
+                  {/* Search Box */}
+                  <div className="relative md:w-72">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="제목, 본문, 작성자 검색..."
+                      value={newsSearchQuery}
+                      onChange={(e) => setNewsSearchQuery(e.target.value)}
+                      className="w-full bg-[#161924] border border-white/10 pl-8 pr-8 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-sky-400"
+                    />
+                    {newsSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setNewsSearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* News Table */}
+                <div className="bg-[#11131A] border border-white/10 overflow-x-auto">
+                  <table className="w-full text-xs text-left text-gray-300">
+                    <thead className="text-[11px] uppercase bg-black/40 text-gray-400 font-mono border-b border-white/10">
                       <tr>
-                        <td colSpan={6} className="p-8 text-center text-gray-500 font-mono">
-                          등록된 보도자료가 없습니다. 상단의 '새 보도자료 작성' 버튼을 눌러 추가하세요.
-                        </td>
+                        <th className="p-3 w-14 text-center">고정</th>
+                        <th className="p-3 w-20">이미지</th>
+                        <th className="p-3 w-24">분류</th>
+                        <th className="p-3 w-28">게시일</th>
+                        <th className="p-3">제목 및 본문 요약</th>
+                        <th className="p-3 w-32">작성자</th>
+                        <th className="p-3 w-28 text-right">관리</th>
                       </tr>
-                    ) : (
-                      newsList.map((item) => (
-                        <tr key={item.id} className="hover:bg-white/5">
-                          <td className="p-3 font-mono">
-                            <span className="bg-sky-950 text-sky-300 px-2 py-0.5 border border-sky-800 text-[10px]">
-                              {item.category}
-                            </span>
-                          </td>
-                          <td className="p-3 font-mono text-gray-400">{item.date}</td>
-                          <td className="p-3 font-bold text-white">{item.title}</td>
-                          <td className="p-3 text-gray-400 line-clamp-1">{item.summary}</td>
-                          <td className="p-3 text-center">
-                            {item.isPinned ? (
-                              <span className="text-sky-400 font-bold">PIN</span>
-                            ) : (
-                              <span className="text-gray-600">-</span>
-                            )}
-                          </td>
-                          <td className="p-3 text-right space-x-2">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditNews(item)}
-                              className="p-1.5 text-gray-300 hover:text-white hover:bg-white/10"
-                              title="수정"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteNews(item.id, item.title)}
-                              className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/40"
-                              title="삭제"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {filteredNews.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="p-12 text-center text-gray-500 font-mono">
+                            {newsSearchQuery || newsCategoryFilter !== 'ALL'
+                              ? '검색 조건에 일치하는 보도자료가 없습니다.'
+                              : '등록된 보도자료가 없습니다. 상단의 "새 보도자료 작성" 버튼을 눌러 추가하세요.'}
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        filteredNews.map((item) => (
+                          <tr key={item.id} className="hover:bg-white/5 transition-colors">
+                            {/* Pin Toggle */}
+                            <td className="p-3 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePinNews(item)}
+                                title={item.isPinned ? '상단 고정 해제' : '상단 고정 설정'}
+                                className={`p-1.5 border transition-colors ${
+                                  item.isPinned
+                                    ? 'bg-sky-500 text-black border-sky-400 font-bold'
+                                    : 'bg-white/5 text-gray-500 border-white/10 hover:text-white'
+                                }`}
+                              >
+                                {item.isPinned ? <Pin className="w-3.5 h-3.5" /> : <PinOff className="w-3.5 h-3.5" />}
+                              </button>
+                            </td>
+
+                            {/* Cover Thumbnail */}
+                            <td className="p-3">
+                              {item.coverImage ? (
+                                <div className="w-14 h-10 overflow-hidden border border-white/10 bg-black/40">
+                                  <img
+                                    src={item.coverImage}
+                                    alt={item.title}
+                                    className="w-full h-full object-cover"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-14 h-10 border border-white/5 bg-black/20 flex items-center justify-center text-[10px] font-mono text-gray-600">
+                                  NO IMG
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Category */}
+                            <td className="p-3 font-mono">
+                              <span
+                                className={`px-2 py-0.5 border text-[10px] inline-block ${
+                                  item.category === 'Notice'
+                                    ? 'bg-blue-950/80 text-blue-300 border-blue-800'
+                                    : item.category === 'Casting'
+                                    ? 'bg-amber-950/80 text-amber-300 border-amber-800'
+                                    : item.category === 'Media'
+                                    ? 'bg-purple-950/80 text-purple-300 border-purple-800'
+                                    : item.category === 'Interview'
+                                    ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+                                    : 'bg-sky-950 text-sky-300 border-sky-800'
+                                }`}
+                              >
+                                {item.category}
+                              </span>
+                            </td>
+
+                            {/* Date */}
+                            <td className="p-3 font-mono text-gray-400 whitespace-nowrap">
+                              {item.date}
+                            </td>
+
+                            {/* Title & Summary */}
+                            <td className="p-3">
+                              <div className="flex items-center space-x-2">
+                                <span className="font-bold text-white hover:text-sky-300 transition-colors cursor-pointer" onClick={() => handleOpenEditNews(item)}>
+                                  {item.title}
+                                </span>
+                                {item.isPinned && (
+                                  <span className="text-[9px] font-mono px-1.5 py-0.2 bg-sky-950 text-sky-300 border border-sky-700">
+                                    PINNED
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-gray-400 line-clamp-1 mt-0.5 font-light">
+                                {item.summary || item.content.slice(0, 80)}
+                              </p>
+                            </td>
+
+                            {/* Author */}
+                            <td className="p-3 text-gray-400 font-mono text-[11px] truncate">
+                              {item.author || 'TK MANAGEMENT'}
+                            </td>
+
+                            {/* Actions */}
+                            <td className="p-3 text-right space-x-2 whitespace-nowrap">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditNews(item)}
+                                className="px-2 py-1 bg-white/10 hover:bg-white text-gray-200 hover:text-black font-semibold text-[11px] border border-white/10 transition-colors inline-flex items-center space-x-1"
+                                title="보도자료 수정"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                                <span>수정</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteNews(item.id, item.title)}
+                                className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/40 border border-transparent hover:border-red-900/40 transition-colors"
+                                title="삭제"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* ======================================================== */}
           {/* TAB 4: INQUIRIES MANAGEMENT */}
@@ -2163,100 +2367,343 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {/* SUB-MODAL: NEWS CREATE / EDIT MODAL */}
         {/* ======================================================== */}
         {editingNews && (
-          <div className="fixed inset-0 z-70 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-            <div className="relative w-full max-w-3xl bg-[#11141E] border border-white/20 shadow-2xl p-6 sm:p-8 my-auto space-y-4">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <h3 className="text-lg font-bold text-white">
-                  {isNewNews ? '신규 보도자료 작성' : '보도자료 수정'}
-                </h3>
-                <button onClick={() => setEditingNews(null)} className="text-gray-400 hover:text-white">
+          <div className="fixed inset-0 z-70 bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+            <div className="relative w-full max-w-3xl bg-[#11141E] border border-white/20 shadow-2xl p-5 sm:p-8 my-auto space-y-5 animate-in fade-in zoom-in-95 duration-150">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-sky-950/80 border border-sky-600/40 text-sky-400">
+                    <Newspaper className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white font-display">
+                      {isNewNews ? '신규 보도자료 / 공지사항 작성' : `보도자료 수정: ${editingNews.title || ''}`}
+                    </h3>
+                    <p className="text-[11px] text-gray-400">
+                      홈페이지 NEWS 섹션에 게재될 기사 및 공지 정보를 수정합니다.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRequestCloseNewsModal}
+                  className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                  title="창 닫기"
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="space-y-3 text-xs">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-4 text-xs">
+                {/* 1. Category, Date, Author */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-gray-400 mb-1">카테고리</label>
+                    <label className="block text-gray-300 font-medium mb-1">
+                      분류 (Category) <span className="text-red-400">*</span>
+                    </label>
                     <select
                       value={editingNews.category || 'Notice'}
                       onChange={(e) => setEditingNews({ ...editingNews, category: e.target.value as any })}
-                      className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white"
+                      className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 text-xs font-mono"
                     >
-                      <option value="Notice">Notice (공지사항)</option>
-                      <option value="Casting">Casting (캐스팅 소식)</option>
-                      <option value="Media">Media (언론 보도)</option>
-                      <option value="Interview">Interview (인터뷰)</option>
-                      <option value="Company">Company (회사 소식)</option>
+                      <option value="Notice">📢 Notice (공지사항)</option>
+                      <option value="Casting">🎬 Casting (캐스팅 소식)</option>
+                      <option value="Media">📰 Media (언론 보도)</option>
+                      <option value="Interview">🎤 Interview (인터뷰)</option>
+                      <option value="Company">🏢 Company (회사 소식)</option>
                     </select>
                   </div>
+
                   <div>
-                    <label className="block text-gray-400 mb-1">게시일자</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-gray-300 font-medium">
+                        게시일자 (YYYY.MM.DD) <span className="text-red-400">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const today = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
+                          setEditingNews({ ...editingNews, date: today });
+                        }}
+                        className="text-[10px] text-sky-400 hover:text-sky-300 underline font-mono"
+                      >
+                        오늘 날짜
+                      </button>
+                    </div>
                     <input
                       type="text"
                       value={editingNews.date || ''}
                       onChange={(e) => setEditingNews({ ...editingNews, date: e.target.value })}
-                      placeholder="2026.08.20"
-                      className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white"
+                      placeholder="2026.08.25"
+                      className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white font-mono focus:outline-none focus:border-sky-400 text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-300 font-medium mb-1">
+                      작성 부서 / 작성자
+                    </label>
+                    <input
+                      type="text"
+                      value={editingNews.author || ''}
+                      onChange={(e) => setEditingNews({ ...editingNews, author: e.target.value })}
+                      placeholder="TK MANAGEMENT 홍보팀"
+                      className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 text-xs"
                     />
                   </div>
                 </div>
 
+                {/* 2. Title */}
                 <div>
-                  <label className="block text-gray-400 mb-1">제목 *</label>
+                  <label className="block text-gray-300 font-medium mb-1">
+                    기사 제목 (Title) <span className="text-red-400">*</span>
+                  </label>
                   <input
                     type="text"
                     value={editingNews.title || ''}
                     onChange={(e) => setEditingNews({ ...editingNews, title: e.target.value })}
-                    className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white"
+                    placeholder="예: [공식] 배우 한지민, 차기작 글로벌 OTT 시리즈 주연 확정"
+                    className="w-full bg-[#161926] border border-white/10 px-3.5 py-2.5 text-sm text-white font-bold placeholder-gray-600 focus:outline-none focus:border-sky-400"
                   />
                 </div>
 
+                {/* 3. Summary */}
                 <div>
-                  <label className="block text-gray-400 mb-1">커버 이미지 URL (선택)</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-gray-300 font-medium">
+                      기사 요약 (Summary / Lead text)
+                    </label>
+                    <span className="text-[10px] text-gray-500 font-mono">
+                      {editingNews.summary?.length || 0}자 (미입력 시 본문 앞부분 자동 추출)
+                    </span>
+                  </div>
                   <input
-                    type="url"
-                    value={editingNews.coverImage || ''}
-                    onChange={(e) => setEditingNews({ ...editingNews, coverImage: e.target.value })}
-                    className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white"
+                    type="text"
+                    value={editingNews.summary || ''}
+                    onChange={(e) => setEditingNews({ ...editingNews, summary: e.target.value })}
+                    placeholder="뉴스 목록 카드에 표시될 한 줄 요약문을 입력하세요 (선택)"
+                    className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-sky-400 text-xs"
                   />
                 </div>
 
+                {/* 4. Cover Image with PC File Upload or URL */}
+                <div className="p-3.5 bg-black/40 border border-white/10 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-gray-300 font-medium flex items-center space-x-1.5">
+                      <ImageIcon className="w-3.5 h-3.5 text-sky-400" />
+                      <span>대표 이미지 / 보도 포스터 (Cover Image)</span>
+                    </label>
+                    <div className="flex items-center space-x-1 text-[11px] font-mono">
+                      <button
+                        type="button"
+                        onClick={() => setNewsCoverImageMode('upload')}
+                        className={`px-2 py-0.5 border ${
+                          newsCoverImageMode === 'upload'
+                            ? 'bg-sky-500 text-black font-bold border-sky-400'
+                            : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'
+                        }`}
+                      >
+                        PC 파일 업로드
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewsCoverImageMode('url')}
+                        className={`px-2 py-0.5 border ${
+                          newsCoverImageMode === 'url'
+                            ? 'bg-sky-500 text-black font-bold border-sky-400'
+                            : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'
+                        }`}
+                      >
+                        URL 직접 입력
+                      </button>
+                    </div>
+                  </div>
+
+                  {newsCoverImageMode === 'upload' ? (
+                    <div className="flex flex-col sm:flex-row items-center gap-3">
+                      <label className="w-full sm:w-auto flex-1 cursor-pointer">
+                        <div className="flex items-center justify-center space-x-2 py-3 px-4 border border-dashed border-white/20 hover:border-sky-400 bg-white/5 hover:bg-sky-950/20 text-gray-300 hover:text-sky-300 transition-colors">
+                          <Upload className="w-4 h-4 text-sky-400" />
+                          <span className="text-xs font-mono">
+                            {isUploadingNewsImage ? '이미지 최적화 처리 중...' : '내 컴퓨터에서 이미지 파일 선택 (JPG, PNG, WEBP)'}
+                          </span>
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleNewsImageFileUpload}
+                          disabled={isUploadingNewsImage}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <input
+                      type="url"
+                      value={editingNews.coverImage || ''}
+                      onChange={(e) => setEditingNews({ ...editingNews, coverImage: e.target.value })}
+                      placeholder="https://images.unsplash.com/photo-..."
+                      className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white font-mono placeholder-gray-600 focus:outline-none focus:border-sky-400 text-xs"
+                    />
+                  )}
+
+                  {/* Image Preview */}
+                  {editingNews.coverImage && (
+                    <div className="flex items-center space-x-3 pt-1">
+                      <div className="w-24 h-16 border border-white/20 overflow-hidden bg-black/60 shrink-0">
+                        <img
+                          src={editingNews.coverImage}
+                          alt="Cover Preview"
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                      <div className="text-[11px] text-gray-400 space-y-1">
+                        <span className="text-sky-400 font-mono block">미리보기 이미지 등록 완료</span>
+                        <button
+                          type="button"
+                          onClick={() => setEditingNews({ ...editingNews, coverImage: '' })}
+                          className="text-red-400 hover:text-red-300 underline font-mono text-[10px]"
+                        >
+                          이미지 제거
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 5. Content */}
                 <div>
-                  <label className="block text-gray-400 mb-1">본문 내용 *</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-gray-300 font-medium">
+                      보도자료 본문 내용 (Content) <span className="text-red-400">*</span>
+                    </label>
+                    <span className="text-[10px] text-gray-500 font-mono">
+                      {editingNews.content?.length || 0}자 | 줄바꿈(Enter) 시 본문에 문단이 자연스럽게 구분됩니다.
+                    </span>
+                  </div>
                   <textarea
-                    rows={6}
+                    rows={8}
                     value={editingNews.content || ''}
                     onChange={(e) => setEditingNews({ ...editingNews, content: e.target.value })}
-                    className="w-full bg-[#161926] border border-white/10 p-3 text-white"
+                    placeholder="보도자료 본문 내용을 작성해주세요..."
+                    className="w-full bg-[#161926] border border-white/10 p-3.5 text-white placeholder-gray-600 focus:outline-none focus:border-sky-400 text-xs leading-relaxed"
                   />
                 </div>
 
-                <div>
-                  <label className="flex items-center space-x-2 text-gray-300">
+                {/* 6. Pin Option */}
+                <div className="p-3 bg-black/30 border border-white/10">
+                  <label className="flex items-center space-x-2 text-gray-200 cursor-pointer select-none">
                     <input
                       type="checkbox"
                       checked={editingNews.isPinned || false}
                       onChange={(e) => setEditingNews({ ...editingNews, isPinned: e.target.checked })}
-                      className="accent-sky-500"
+                      className="accent-sky-500 w-4 h-4"
                     />
-                    <span>상단 고정 (PINNED ARTICLE)</span>
+                    <div className="flex items-center space-x-1.5">
+                      <Pin className="w-3.5 h-3.5 text-sky-400" />
+                      <span className="font-bold text-xs">상단 고정 (PINNED ARTICLE)</span>
+                      <span className="text-gray-400 text-[11px] font-normal">
+                        - 뉴스 목록 최상단에 눈에 띄게 고정 표시됩니다.
+                      </span>
+                    </div>
                   </label>
                 </div>
               </div>
 
+              {/* Action Buttons */}
               <div className="flex justify-end space-x-3 pt-3 border-t border-white/10">
                 <button
-                  onClick={() => setEditingNews(null)}
-                  className="px-4 py-2 border border-white/10 text-gray-400 hover:text-white"
+                  type="button"
+                  onClick={handleRequestCloseNewsModal}
+                  className="px-4 py-2 border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
                 >
                   취소
                 </button>
                 <button
+                  type="button"
                   onClick={handleSaveNews}
-                  className="px-6 py-2 bg-white text-black font-bold hover:bg-slate-200"
+                  disabled={isSavingNews}
+                  className="px-6 py-2 bg-white text-black font-bold hover:bg-slate-200 disabled:opacity-50 transition-colors flex items-center space-x-1.5"
                 >
-                  저장하기
+                  {isSavingNews ? (
+                    <span>저장 처리 중...</span>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>저장하기</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* SUB-MODAL: NEWS CLOSE CONFIRMATION PROMPT */}
+        {/* ======================================================== */}
+        {showNewsCloseConfirm && editingNews && (
+          <div className="fixed inset-0 z-[85] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="relative w-full max-w-md bg-[#131722] border border-sky-500/40 shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center space-x-3 text-sky-400">
+                <div className="p-2.5 bg-sky-950/80 border border-sky-500/40 rounded-lg shrink-0">
+                  <HelpCircle className="w-6 h-6 text-sky-400" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-white font-display">
+                    보도자료 저장 확인
+                  </h4>
+                  <p className="text-xs text-gray-400">
+                    창을 닫기 전에 변경사항을 저장하시겠습니까?
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-black/40 border border-white/5 text-xs text-gray-300 font-mono space-y-1">
+                <div>
+                  기사 제목: <strong className="text-white">{editingNews.title || '제목 없음'}</strong>
+                </div>
+                <div className="text-[11px] text-gray-400">
+                  저장하지 않고 닫으면 입력하거나 수정한 모든 내용이 사라집니다.
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-2 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowNewsCloseConfirm(false)}
+                  className="px-3 py-2 text-xs font-mono text-gray-400 hover:text-white border border-white/10 hover:bg-white/5 transition-colors text-center"
+                >
+                  계속 수정하기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowNewsCloseConfirm(false);
+                    setEditingNews(null);
+                    showToast('보도자료 수정을 취소하고 창을 닫았습니다.');
+                  }}
+                  className="px-3 py-2 text-xs font-mono text-red-400 hover:text-red-300 border border-red-900/40 hover:bg-red-950/40 transition-colors text-center"
+                >
+                  저장 안함 (닫기)
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingNews}
+                  onClick={async () => {
+                    await handleSaveNews();
+                  }}
+                  className="px-4 py-2 text-xs font-mono font-bold bg-sky-400 hover:bg-sky-300 text-black shadow-lg shadow-sky-950/50 transition-colors flex items-center justify-center space-x-1.5"
+                >
+                  {isSavingNews ? (
+                    <span>저장 중...</span>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-black" />
+                      <span>저장 후 닫기</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

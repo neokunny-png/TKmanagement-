@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Download, Play, Mail, Instagram, ChevronRight, Award, Film, GraduationCap, Sparkles, FileText } from 'lucide-react';
 import { Artist, sortFilmographyByYear, getGroupedFilmography } from '../types';
+import { TKLogoMark } from './TKLogo';
 
 interface ArtistModalProps {
   artist: Artist | null;
@@ -79,12 +80,16 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
         {/* Header Action Bar */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0B0C10]">
           <div className="flex items-center space-x-3">
-            <div className="w-6 h-6 rounded bg-[#182A47] flex items-center justify-center text-white text-[11px] font-black">
-              TK
+            <TKLogoMark className="w-7 h-5" tColor="#FFFFFF" kColor="#38BDF8" />
+            <div className="flex items-center space-x-2">
+              <span className="text-xs font-bold font-display tracking-widest text-white">
+                TK MANAGEMENT
+              </span>
+              <span className="text-gray-600 text-xs font-mono">/</span>
+              <span className="text-xs font-mono tracking-widest text-gray-400">
+                ARTIST DOSSIER
+              </span>
             </div>
-            <span className="text-xs font-mono tracking-widest text-gray-400">
-              ARTIST DOSSIER / CASTING PROFILE
-            </span>
           </div>
 
           <button
