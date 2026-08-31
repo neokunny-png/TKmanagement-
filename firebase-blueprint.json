@@ -1,0 +1,97 @@
+{
+  "entities": {
+    "Artist": {
+      "title": "Artist",
+      "description": "Actor / artist entity for TK Management",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nameKo": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "profileImageUrl": { "type": "string" },
+        "image": { "type": "string" },
+        "gender": { "type": "string" },
+        "birth": { "type": "string" },
+        "height": { "type": "number" },
+        "weight": { "type": "number" },
+        "education": { "type": "string" },
+        "agency": { "type": "string" },
+        "instagram": { "type": "string" },
+        "bio": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "order": { "type": "number" },
+        "filmography": { "type": "array" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "nameKo", "nameEn"]
+    },
+    "NewsArticle": {
+      "title": "NewsArticle",
+      "description": "News article entity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "date": { "type": "string" },
+        "summary": { "type": "string" },
+        "content": { "type": "string" },
+        "coverImage": { "type": "string" },
+        "isPinned": { "type": "boolean" },
+        "author": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "title", "category", "content"]
+    },
+    "AuditionApplication": {
+      "title": "AuditionApplication",
+      "description": "Audition application submitted by user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "birth": { "type": "string" },
+        "gender": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "status": { "type": "string" },
+        "submittedAt": { "type": "number" }
+      },
+      "required": ["id", "name", "phone", "email"]
+    },
+    "InquiryMessage": {
+      "title": "InquiryMessage",
+      "description": "Contact or casting inquiry message",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "name", "email", "message"]
+    }
+  },
+  "firestore": {
+    "/artists/{artistId}": {
+      "schema": "Artist",
+      "description": "Collection of actor profiles"
+    },
+    "/news/{newsId}": {
+      "schema": "NewsArticle",
+      "description": "Collection of official news and casting notices"
+    },
+    "/auditions/{auditionId}": {
+      "schema": "AuditionApplication",
+      "description": "Collection of audition applications"
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": "InquiryMessage",
+      "description": "Collection of contact inquiries"
+    }
+  }
+}

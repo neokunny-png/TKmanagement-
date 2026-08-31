@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Printer, Download, Mail, Phone, Globe } from 'lucide-react';
 import { Artist, sortFilmographyByYear, getGroupedFilmography } from '../types';
+import { getOfficialActorImage } from '../data/artists';
 import { TKLogoMark } from './TKLogo';
 
 interface ProfilePrintSheetProps {
@@ -11,6 +12,7 @@ interface ProfilePrintSheetProps {
 export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({ artist, onClose }) => {
   if (!artist) return null;
 
+  const photoUrl = artist.profileImageUrl || artist.image || artist.profileImage || null;
   const [imgError, setImgError] = React.useState(false);
 
   const handlePrint = () => {
@@ -77,18 +79,27 @@ export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({ artist, on
             {/* Photo Column */}
             <div className="col-span-12 sm:col-span-5">
               <div className="aspect-[3/4] w-full border border-gray-300 overflow-hidden bg-gray-100 flex items-center justify-center">
-                {imgError || !artist.profileImage ? (
+                {!photoUrl ? (
                   <div className="text-center p-4">
                     <div className="font-mono text-xs font-bold text-gray-500 uppercase">
-                      IMAGE NOT UPLOADED
+                      OFFICIAL PROFILE IMAGE
                     </div>
                     <div className="font-mono text-[9px] text-gray-400 mt-1 uppercase">
+                      NOT UPLOADED
+                    </div>
+                  </div>
+                ) : imgError ? (
+                  <div className="text-center p-4">
+                    <div className="font-mono text-xs font-bold text-gray-500 uppercase">
                       OFFICIAL PROFILE IMAGE
+                    </div>
+                    <div className="font-mono text-[9px] text-gray-400 mt-1 uppercase">
+                      NOT AVAILABLE
                     </div>
                   </div>
                 ) : (
                   <img
-                    src={artist.profileImage}
+                    src={photoUrl}
                     alt={artist.nameKo}
                     onError={() => setImgError(true)}
                     className="w-full h-full object-cover"

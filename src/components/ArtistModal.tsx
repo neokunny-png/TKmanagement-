@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Download, Play, Mail, Instagram, ChevronRight, Award, Film, GraduationCap, Sparkles, FileText } from 'lucide-react';
 import { Artist, sortFilmographyByYear, getGroupedFilmography } from '../types';
+import { getOfficialActorImage } from '../data/artists';
 import { TKLogoMark } from './TKLogo';
 
 interface ArtistModalProps {
@@ -18,6 +19,7 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
 }) => {
   if (!artist) return null;
 
+  const photoUrl = artist.profileImageUrl || artist.image || artist.profileImage || null;
   const [activeTab, setActiveTab] = useState<'PROFILE' | 'VIDEO' | 'WORKS'>('PROFILE');
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
   const [imgError, setImgError] = useState(false);
@@ -105,28 +107,40 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
             <div className="lg:col-span-5 relative bg-black/60 p-6 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-white/10">
               {/* Official Single Profile Image */}
               <div className="relative aspect-[3/4] w-full overflow-hidden border border-white/10 bg-neutral-900 shadow-inner group">
-                {imgError || !artist.profileImage ? (
-                  <div className="w-full h-full bg-[#161922] flex flex-col items-center justify-center p-6 text-center">
-                    <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center mb-3 text-gray-500 font-mono text-xs">
+                {!photoUrl ? (
+                  <div className="w-full h-full bg-[#161922] flex flex-col items-center justify-center p-6 text-center select-none">
+                    <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center mb-3 text-gray-400 font-mono text-xs">
                       TK
                     </div>
-                    <span className="text-xs font-mono tracking-widest text-gray-400 uppercase">
-                      IMAGE NOT UPLOADED
-                    </span>
-                    <span className="text-[10px] text-gray-600 font-mono mt-1">
+                    <span className="text-xs font-mono tracking-widest text-gray-400 uppercase font-semibold">
                       OFFICIAL PROFILE IMAGE
+                    </span>
+                    <span className="text-[10px] text-gray-500 font-mono mt-1">
+                      NOT UPLOADED
+                    </span>
+                  </div>
+                ) : imgError ? (
+                  <div className="w-full h-full bg-[#161922] flex flex-col items-center justify-center p-6 text-center select-none">
+                    <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center mb-3 text-gray-400 font-mono text-xs">
+                      TK
+                    </div>
+                    <span className="text-xs font-mono tracking-widest text-gray-400 uppercase font-semibold">
+                      OFFICIAL PROFILE IMAGE
+                    </span>
+                    <span className="text-[10px] text-gray-500 font-mono mt-1">
+                      NOT AVAILABLE
                     </span>
                   </div>
                 ) : (
                   <img
-                    src={artist.profileImage}
+                    src={photoUrl}
                     alt={artist.nameKo}
                     onError={() => setImgError(true)}
                     className="w-full h-full object-cover object-center"
                     referrerPolicy="no-referrer"
                   />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 pointer-events-none" />
                 
                 {/* Showreel quick overlay badge */}
                 {validEmbedUrl && (

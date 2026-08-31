@@ -133,26 +133,28 @@ export interface Artist {
   id: string;
   nameKo: string;
   nameEn: string;
-  birth: string; // e.g. "2002.04.18"
-  height: number; // in cm
+  profileImageUrl?: string | null;
+  image?: string | null;
+  profileImage?: string | null;
+  birth?: string; // e.g. "2002.04.18"
+  height?: number; // in cm
   weight?: number; // in kg (optional)
   specialty?: string[];
-  education: string;
+  education?: string;
   languages?: string[];
   agency?: string;
   instagram?: string;
-  profileImage: string;
   showreelUrl?: string;
   bio?: string;
   filmography: FilmographyItem[];
   career?: string[];
   awards?: string[];
   works?: string[];
-  isActive: boolean;
-  order: number;
-  gender: 'Female' | 'Male';
-  createdAt?: number;
-  updatedAt?: number;
+  isActive?: boolean;
+  order?: number;
+  gender?: 'Female' | 'Male';
+  createdAt?: string | number;
+  updatedAt?: string | number;
 }
 
 export type AuditionStatus = 'pending' | 'reviewed' | 'interview' | 'passed' | 'rejected';

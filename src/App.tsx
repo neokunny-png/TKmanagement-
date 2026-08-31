@@ -14,11 +14,28 @@ import { AdminAuthModal } from './components/AdminAuthModal';
 import { Artist, NewsArticle } from './types';
 import { ARTISTS } from './data/artists';
 import { NEWS_ARTICLES } from './data/news';
+import { subscribeArtists } from './services/artistService';
+import { subscribeNews } from './services/newsService';
 
 export default function App() {
   const [artists, setArtists] = useState<Artist[]>(ARTISTS);
   const [newsList, setNewsList] = useState<NewsArticle[]>(NEWS_ARTICLES);
   const [activeSection, setActiveSection] = useState<string>('hero');
+
+  // Real-time Firestore Subscriptions
+  useEffect(() => {
+    const unsubArtists = subscribeArtists((updatedArtists) => {
+      setArtists(updatedArtists);
+    });
+    const unsubNews = subscribeNews((updatedNews) => {
+      setNewsList(updatedNews);
+    });
+
+    return () => {
+      unsubArtists();
+      unsubNews();
+    };
+  }, []);
 
   // Admin Authentication State (Passcode session based with safe browser storage access)
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
@@ -45,24 +62,31 @@ export default function App() {
 
   // Track active section on scroll
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      const sections = ['hero', 'about', 'artists', 'audition', 'news', 'contact'];
-      const scrollPos = window.scrollY + 200;
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const sections = ['hero', 'about', 'artists', 'audition', 'news', 'contact'];
+          const scrollPos = window.scrollY + 200;
 
-      for (const sec of sections) {
-        const el = document.getElementById(sec);
-        if (el) {
-          const top = el.offsetTop;
-          const height = el.offsetHeight;
-          if (scrollPos >= top && scrollPos < top + height) {
-            setActiveSection(sec);
-            break;
+          for (const sec of sections) {
+            const el = document.getElementById(sec);
+            if (el) {
+              const top = el.offsetTop;
+              const height = el.offsetHeight;
+              if (scrollPos >= top && scrollPos < top + height) {
+                setActiveSection(prev => (prev !== sec ? sec : prev));
+                break;
+              }
+            }
           }
-        }
+          ticking = false;
+        });
+        ticking = true;
       }
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 

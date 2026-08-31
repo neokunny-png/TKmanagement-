@@ -67,7 +67,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ artistCount }) => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-24">
           <div className="p-8 bg-[#111319] border border-white/10 hover:border-white/25 transition-all group">
             <div className="text-5xl sm:text-6xl font-display font-black text-white group-hover:text-sky-400 transition-colors mb-2">
-              {artistCount > 0 ? String(artistCount).padStart(2, '0') : '06'}
+              {String(artistCount).padStart(2, '0')}
             </div>
             <div className="text-xs tracking-widest font-mono text-gray-400 uppercase mb-1">
               ARTISTS

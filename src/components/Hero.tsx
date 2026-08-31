@@ -44,10 +44,10 @@ export const Hero: React.FC<HeroProps> = ({ onExploreArtists, onApplyAudition })
           {/* Slogan */}
           <div className="space-y-2 mb-4 sm:mb-6">
             <h1 className="font-display text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tighter text-white leading-[1.05] break-words">
-              YOUR NEXT SCENE.
+              WE DEVELOP
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-sky-300">
-                STARTS HERE.
+                THE NEXT STORY.
               </span>
             </h1>
           </div>

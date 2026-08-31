@@ -38,6 +38,15 @@ import {
   Calendar
 } from 'lucide-react';
 import { Artist, AuditionApplication, NewsArticle, InquiryMessage, AuditionStatus, FilmographyItem, sortFilmographyByYear } from '../types';
+import {
+  saveArtistToDb,
+  deleteArtistFromDb,
+  uploadArtistPhoto,
+  deleteArtistPhoto,
+  getCanonicalArtistId,
+  dataUrlToBlob
+} from '../services/artistService';
+import { saveNewsToDb, deleteNewsFromDb } from '../services/newsService';
 import { ARTISTS } from '../data/artists';
 import { NEWS_ARTICLES } from '../data/news';
 import { TKLogoMark } from './TKLogo';
@@ -84,6 +93,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [specialtyInput, setSpecialtyInput] = useState('');
   const [newSpecialtyInput, setNewSpecialtyInput] = useState('');
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
+  const [selectedPhotoFile, setSelectedPhotoFile] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const [profileImageMode, setProfileImageMode] = useState<'upload' | 'url'>('upload');
   const profileFileInputRef = useRef<HTMLInputElement>(null);
   const [isDraggingProfile, setIsDraggingProfile] = useState(false);
@@ -197,19 +208,57 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  const handleProfilePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingArtist) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('⚠️ 이미지 파일(JPG, PNG, WEBP 등)만 등록 가능합니다.');
+      return;
+    }
+    setIsProcessingPhoto(true);
+    try {
+      setSelectedPhotoFile(file);
+      const preview = URL.createObjectURL(file);
+      setPhotoPreviewUrl(preview);
+      setEditingArtist(prev => prev ? {
+        ...prev,
+        profileImage: preview,
+        profileImageUrl: preview,
+        image: preview,
+      } : null);
+      showToast(`대표 프로필 사진이 선택되었습니다 (${(file.size / 1024).toFixed(0)} KB).`);
+    } catch (err: any) {
+      showToast('사진 등록 실패: ' + (err.message || '오류 발생'));
+    } finally {
+      setIsProcessingPhoto(false);
+      if (profileFileInputRef.current) {
+        profileFileInputRef.current.value = '';
+      }
+    }
+  };
+
   const handleProfilePhotoDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDraggingProfile(false);
     const files = e.dataTransfer.files;
     if (!files || files.length === 0 || !editingArtist) return;
+    const file = files[0];
+    if (!file.type.startsWith('image/')) {
+      showToast('⚠️ 이미지 파일만 등록 가능합니다.');
+      return;
+    }
     setIsProcessingPhoto(true);
     try {
-      const dataUrl = await processImageFile(files[0]);
+      setSelectedPhotoFile(file);
+      const preview = URL.createObjectURL(file);
+      setPhotoPreviewUrl(preview);
       setEditingArtist(prev => prev ? {
         ...prev,
-        profileImage: dataUrl,
+        profileImage: preview,
+        profileImageUrl: preview,
+        image: preview,
       } : null);
-      showToast('대표 프로필 사진이 등록되었습니다.');
+      showToast(`대표 프로필 사진이 선택되었습니다 (${(file.size / 1024).toFixed(0)} KB).`);
     } catch (err: any) {
       showToast('사진 등록 실패: ' + (err.message || '오류 발생'));
     } finally {
@@ -237,6 +286,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleOpenAddArtist = () => {
     setIsNewArtist(true);
     setShowArtistCloseConfirm(false);
+    setSelectedPhotoFile(null);
+    setPhotoPreviewUrl(null);
     setProfileImageMode('upload');
     setLanguagesInput('한국어');
     setSpecialtyInput('연기');
@@ -264,7 +315,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleOpenEditArtist = (artist: Artist) => {
     setIsNewArtist(false);
     setShowArtistCloseConfirm(false);
-    setProfileImageMode(artist.profileImage && artist.profileImage.startsWith('data:') ? 'upload' : 'upload');
+    setSelectedPhotoFile(null);
+    setPhotoPreviewUrl(null);
+    setProfileImageMode(artist.profileImageUrl || artist.profileImage || artist.image ? 'upload' : 'upload');
     setLanguagesInput((artist.languages || []).join(', '));
     setSpecialtyInput((artist.specialty || []).join(', '));
     setEditingArtist(JSON.parse(JSON.stringify(artist)));
@@ -289,6 +342,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     setIsSavingArtist(true);
     try {
+      const canonicalId = getCanonicalArtistId(
+        editingArtist.id || '',
+        `${editingArtist.nameKo.trim()} ${editingArtist.nameEn.trim()}`
+      );
+
       const parsedLangs = languagesInput
         .split(',')
         .map(s => s.trim())
@@ -298,8 +356,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         .map(s => s.trim())
         .filter(Boolean);
 
+      // Keep existing photo URL if no new file is selected
+      const existingPhotoUrl = (editingArtist.profileImageUrl && !editingArtist.profileImageUrl.startsWith('blob:'))
+        ? editingArtist.profileImageUrl
+        : (editingArtist.image && !editingArtist.image.startsWith('blob:'))
+          ? editingArtist.image
+          : null;
+
       const artistToSave: Artist = {
-        id: editingArtist.id || `artist-${Date.now()}`,
+        id: canonicalId,
         nameKo: editingArtist.nameKo.trim(),
         nameEn: editingArtist.nameEn.trim(),
         birth: editingArtist.birth || '2000.01.01',
@@ -311,67 +376,107 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         agency: editingArtist.agency || 'TK MANAGEMENT (㈜TK Company)',
         instagram: editingArtist.instagram || '',
         bio: editingArtist.bio || '',
-        profileImage: editingArtist.profileImage || '',
+        profileImageUrl: existingPhotoUrl,
         showreelUrl: editingArtist.showreelUrl || '',
         filmography: editingArtist.filmography || [],
         isActive: editingArtist.isActive !== undefined ? editingArtist.isActive : true,
         order: Number(editingArtist.order) || (artists.length + 1)
       };
 
+      if (selectedPhotoFile) {
+        showToast('📸 Firebase Storage에 사진 업로드 및 DB 저장 중...');
+      } else {
+        showToast('💾 배우 정보를 DB에 저장하는 중...');
+      }
+
+      // Unified single pipeline: Handles Storage upload -> Download URL -> Firestore setDoc
+      const savedArtist = await saveArtistToDb(artistToSave, selectedPhotoFile);
+
       setShowArtistCloseConfirm(false);
       setEditingArtist(null);
+      setSelectedPhotoFile(null);
+      setPhotoPreviewUrl(null);
       
       const updatedList = isNewArtist
-        ? [...artists, artistToSave]
-        : artists.map(a => a.id === artistToSave.id ? artistToSave : a);
+        ? [...artists, savedArtist]
+        : artists.map(a => a.id === savedArtist.id ? savedArtist : a);
       
       if (onUpdateArtists) {
         onUpdateArtists(updatedList);
       }
-      showToast(`✅ [${artistToSave.nameKo}] 배우 정보가 반영되었습니다.`);
+      showToast(`✅ [${savedArtist.nameKo}] 배우 정보가 DB에 저장되었습니다.`);
     } catch (err: any) {
-      console.error('Failed to save artist:', err);
-      showToast(`저장 오류: ${err.message || '저장 중 문제가 발생했습니다.'}`);
+      console.error('Failed to save artist to DB:', err);
+      let errMsg = err?.message || '저장 중 문제가 발생했습니다.';
+      try {
+        const parsed = JSON.parse(errMsg);
+        if (parsed?.error) errMsg = parsed.error;
+      } catch {}
+      showToast(`⚠️ 저장 오류: ${errMsg}`);
     } finally {
       setIsSavingArtist(false);
     }
   };
 
-  const handleMoveArtistUp = (index: number) => {
+  const handleMoveArtistUp = async (index: number) => {
     if (index <= 0) return;
     const newArr = [...artists];
     const temp = newArr[index];
     newArr[index] = newArr[index - 1];
     newArr[index - 1] = temp;
+    // Update orders
+    newArr.forEach((a, i) => { a.order = i + 1; });
     if (onUpdateArtists) {
       onUpdateArtists(newArr);
     }
     showToast(`✅ ${temp.nameKo} 배우 순서를 위로 올렸습니다 (${index}위).`);
+    try {
+      await saveArtistToDb({ ...newArr[index - 1], order: index });
+      await saveArtistToDb({ ...newArr[index], order: index + 1 });
+    } catch (e) {
+      console.error('Failed to persist order', e);
+    }
   };
 
-  const handleMoveArtistDown = (index: number) => {
+  const handleMoveArtistDown = async (index: number) => {
     if (index >= artists.length - 1) return;
     const newArr = [...artists];
     const temp = newArr[index];
     newArr[index] = newArr[index + 1];
     newArr[index + 1] = temp;
+    // Update orders
+    newArr.forEach((a, i) => { a.order = i + 1; });
     if (onUpdateArtists) {
       onUpdateArtists(newArr);
     }
     showToast(`✅ ${temp.nameKo} 배우 순서를 아래로 내렸습니다 (${index + 2}위).`);
+    try {
+      await saveArtistToDb({ ...newArr[index], order: index + 1 });
+      await saveArtistToDb({ ...newArr[index + 1], order: index + 2 });
+    } catch (e) {
+      console.error('Failed to persist order', e);
+    }
   };
 
-  const handleSetArtistOrder = (artistId: string, newOrder: number) => {
+  const handleSetArtistOrder = async (artistId: string, newOrder: number) => {
     const targetPos = Math.max(1, Math.min(artists.length, newOrder)) - 1;
     const currentIndex = artists.findIndex(a => a.id === artistId);
     if (currentIndex === -1 || currentIndex === targetPos) return;
     const newArr = [...artists];
     const [moved] = newArr.splice(currentIndex, 1);
     newArr.splice(targetPos, 0, moved);
+    newArr.forEach((a, i) => { a.order = i + 1; });
     if (onUpdateArtists) {
       onUpdateArtists(newArr);
     }
     showToast(`✅ 배우 순서를 ${targetPos + 1}번째로 변경했습니다.`);
+    try {
+      for (const a of newArr) {
+        await saveArtistToDb(a);
+      }
+    } catch (e) {
+      console.error('Failed to persist order', e);
+    }
   };
 
   const handleDeleteArtist = (id: string, name: string) => {
@@ -382,12 +487,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     });
   };
 
-  const handleToggleArtistActive = (artist: Artist) => {
+  const handleToggleArtistActive = async (artist: Artist) => {
     const updated = artists.map(a => a.id === artist.id ? { ...a, isActive: !a.isActive } : a);
     if (onUpdateArtists) {
       onUpdateArtists(updated);
     }
     showToast(`${artist.nameKo} 배우 공개 상태가 변경되었습니다.`);
+    try {
+      await saveArtistToDb({ ...artist, isActive: !artist.isActive });
+    } catch (e) {
+      console.error('Failed to update status', e);
+    }
   };
 
   const handleAddFilmographyItem = () => {
@@ -599,6 +709,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         createdAt: editingNews.createdAt || Date.now()
       };
 
+      await saveNewsToDb(newsToSave);
+
       const updated = isNewNews
         ? [newsToSave, ...newsList]
         : newsList.map(n => n.id === newsToSave.id ? newsToSave : n);
@@ -626,26 +738,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     });
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deleteConfirmation) return;
     const { type, id, title } = deleteConfirmation;
     setIsDeletingItem(true);
 
     try {
       if (type === 'news') {
+        await deleteNewsFromDb(id);
         if (onUpdateNews) {
           onUpdateNews(newsList.filter(n => n.id !== id));
         }
         showToast(`"${title}" 보도자료가 삭제되었습니다.`);
       } else if (type === 'artist') {
+        await deleteArtistFromDb(id);
         if (onUpdateArtists) {
           onUpdateArtists(artists.filter(a => a.id !== id));
         }
-        showToast(`${title}가 삭제되었습니다.`);
+        showToast(`${title}가 DB에서 완전히 삭제되었습니다.`);
       } else if (type === 'audition') {
         showToast('지원서가 삭제되었습니다.');
         setSelectedAudition(null);
       }
+    } catch (err: any) {
+      console.error('Delete error:', err);
+      showToast(`삭제 오류: ${err.message || '다시 시도해주세요.'}`);
     } finally {
       setIsDeletingItem(false);
       setDeleteConfirmation(null);
@@ -849,12 +966,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </div>
                         </td>
                         <td className="p-3">
-                          <img
-                            src={artist.profileImage}
-                            alt={artist.nameKo}
-                            className="w-10 h-13 object-cover border border-white/10"
-                            referrerPolicy="no-referrer"
-                          />
+                          {artist.profileImageUrl || artist.image || artist.profileImage ? (
+                            <img
+                              src={artist.profileImageUrl || artist.image || artist.profileImage}
+                              alt={artist.nameKo}
+                              className="w-10 h-13 object-cover border border-white/10"
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <div className="w-10 h-13 bg-neutral-900 border border-white/10 flex items-center justify-center text-[8px] text-gray-500 font-mono text-center p-0.5 leading-tight">
+                              NO<br />IMG
+                            </div>
+                          )}
                         </td>
                         <td className="p-3">
                           <div className="font-bold text-white text-sm">{artist.nameKo}</div>
@@ -1703,146 +1826,108 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 {/* ======================================================== */}
-                {/* PHOTO UPLOAD SECTION (PC DIRECT UPLOAD & GALLERY) */}
+                {/* OFFICIAL ACTOR PHOTO UPLOAD & PREVIEW */}
                 {/* ======================================================== */}
                 <div className="pt-4 border-t border-white/10 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                      <span className="font-bold text-sky-400 font-mono uppercase text-xs flex items-center space-x-1.5">
-                        <ImageIcon className="w-4 h-4 text-sky-400" />
-                        <span>배우 사진 등록 (PC 사진 파일 업로드 지원)</span>
-                      </span>
-                      <p className="text-[11px] text-gray-400 mt-0.5">
-                        컴퓨터(PC)의 사진 파일을 선택하거나 드래그하여 등록할 수 있습니다. (JPG, PNG, WebP)
-                      </p>
-                    </div>
-
-                    <div className="flex items-center space-x-1 bg-black/40 p-1 border border-white/10 text-[11px]">
-                      <button
-                        type="button"
-                        onClick={() => setProfileImageMode('upload')}
-                        className={`px-2.5 py-1 font-medium transition-colors ${
-                          profileImageMode === 'upload' ? 'bg-sky-500 text-black font-bold' : 'text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        내 PC에서 등록
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setProfileImageMode('url')}
-                        className={`px-2.5 py-1 font-medium transition-colors ${
-                          profileImageMode === 'url' ? 'bg-sky-500 text-black font-bold' : 'text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        URL 직접입력
-                      </button>
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-gray-200 font-medium text-xs">
+                      공식 프로필 사진 (Official Profile Image)
+                    </label>
+                    <span className="text-[11px] text-sky-400 font-mono">
+                      {isProcessingPhoto ? '사진 처리 중...' : '권장 비율 3:4'}
+                    </span>
                   </div>
 
-                  {/* 1. Main Profile Photo */}
-                  <div className="bg-[#141724] p-4 border border-white/10 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-white flex items-center space-x-1.5">
-                        <span className="w-2 h-2 rounded-full bg-sky-400"></span>
-                        <span>대표 메인 프로필 사진 (필수)</span>
-                      </label>
-                      {editingArtist.profileImage && (
-                        <span className="text-[11px] font-mono text-emerald-400 flex items-center space-x-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>등록 완료</span>
-                        </span>
-                      )}
-                    </div>
+                  {/* Hidden file input */}
+                  <input
+                    type="file"
+                    ref={profileFileInputRef}
+                    accept="image/*"
+                    onChange={handleProfilePhotoSelect}
+                    className="hidden"
+                  />
 
-                    {profileImageMode === 'upload' ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
-                        {/* Preview Box */}
-                        <div className="sm:col-span-4 aspect-[3/4] max-h-52 relative overflow-hidden bg-black/50 border border-white/20 flex items-center justify-center group mx-auto sm:mx-0 w-36 sm:w-full">
-                          {editingArtist.profileImage ? (
-                            <>
-                              <img
-                                src={editingArtist.profileImage}
-                                alt="Profile Preview"
-                                className="w-full h-full object-cover"
-                                referrerPolicy="no-referrer"
-                              />
-                              <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 text-center">
-                                <button
-                                  type="button"
-                                  onClick={() => profileFileInputRef.current?.click()}
-                                  className="bg-white text-black text-xs font-bold px-3 py-1.5 mb-1.5 hover:bg-slate-200"
-                                >
-                                  사진 변경
-                                </button>
-                                <span className="text-[10px] text-gray-300">PC 파일로 교체</span>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="text-center p-4 text-gray-500 text-xs">
-                              <ImageIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                              <span>사진 없음</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Dropzone & PC Button */}
-                        <div className="sm:col-span-8">
-                          <input
-                            ref={profileFileInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={handleProfilePhotoUpload}
-                            className="hidden"
-                          />
-                          <div
-                            onDragOver={(e) => { e.preventDefault(); setIsDraggingProfile(true); }}
-                            onDragLeave={() => setIsDraggingProfile(false)}
-                            onDrop={handleProfilePhotoDrop}
-                            onClick={() => profileFileInputRef.current?.click()}
-                            className={`border-2 border-dashed p-6 text-center cursor-pointer transition-all ${
-                              isDraggingProfile
-                                ? 'border-sky-400 bg-sky-950/50 text-white'
-                                : 'border-white/20 hover:border-sky-400/60 bg-black/30 hover:bg-white/5'
-                            }`}
-                          >
-                            <Upload className={`w-8 h-8 mx-auto mb-2 transition-transform ${isDraggingProfile ? 'scale-110 text-sky-400' : 'text-gray-400'}`} />
-                            <p className="text-sm font-bold text-white mb-1">
-                              내 PC에서 대표 프로필 사진 선택
-                            </p>
-                            <p className="text-xs text-gray-400">
-                              클릭하거나 이미지 파일을 이 영역으로 드래그 & 드롭하세요
-                            </p>
-                            <div className="mt-3 inline-flex items-center space-x-1 text-[11px] font-mono text-sky-300 bg-[#182A47] px-3 py-1 border border-sky-400/30">
-                              <span>권장 비율: 3:4 세로형 인물 프로필 사진</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <input
-                          type="text"
-                          value={editingArtist.profileImage || ''}
-                          onChange={(e) => setEditingArtist({ ...editingArtist, profileImage: e.target.value })}
-                          placeholder="/images/actors/choi-eunseo.jpg"
-                          className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-sky-400"
-                        />
-                        <p className="text-[11px] text-gray-400">
-                          정적 사이트 빌드용 공식 이미지 경로: <code className="text-sky-300 font-mono">/images/actors/{editingArtist.id || 'actor-id'}.jpg</code>
-                        </p>
-                        {editingArtist.profileImage && (
-                          <div className="flex items-center space-x-3 p-2 bg-black/30 border border-white/5">
+                  <div className="bg-[#141724] p-5 border border-white/10 space-y-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                      {/* Photo Preview Box */}
+                      <div className="w-32 aspect-[3/4] bg-black border border-white/20 overflow-hidden shrink-0 relative group">
+                        {editingArtist.profileImageUrl || editingArtist.profileImage || editingArtist.image ? (
+                          <>
                             <img
-                              src={editingArtist.profileImage}
-                              alt="Preview"
-                              className="w-10 h-13 object-cover border border-white/10"
+                              src={editingArtist.profileImageUrl || editingArtist.profileImage || editingArtist.image}
+                              alt={editingArtist.nameKo || 'Actor'}
+                              className="w-full h-full object-cover"
                               referrerPolicy="no-referrer"
                             />
-                            <span className="text-xs text-gray-400">공식 이미지 경로가 지정되었습니다.</span>
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-2">
+                              <button
+                                type="button"
+                                onClick={() => profileFileInputRef.current?.click()}
+                                className="w-full py-1 bg-white text-black text-[10px] font-bold uppercase tracking-wider hover:bg-slate-200 transition-colors"
+                              >
+                                변경
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedPhotoFile(null);
+                                  setPhotoPreviewUrl(null);
+                                  setEditingArtist(prev => prev ? ({ ...prev, profileImage: '', profileImageUrl: '', image: '' }) : null);
+                                }}
+                                className="w-full py-1 bg-red-950/80 text-red-300 border border-red-800 text-[10px] font-bold uppercase tracking-wider hover:bg-red-900 transition-colors"
+                              >
+                                삭제
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center text-gray-500 text-[9px] font-mono leading-tight">
+                            <Upload className="w-5 h-5 mb-1 text-gray-600" />
+                            <span>OFFICIAL PROFILE<br />IMAGE NOT<br />UPLOADED</span>
                           </div>
                         )}
                       </div>
-                    )}
+
+                      {/* Upload Controls and Guidance */}
+                      <div className="flex-1 space-y-3">
+                        <div
+                          onDragOver={(e) => { e.preventDefault(); setIsDraggingProfile(true); }}
+                          onDragLeave={() => setIsDraggingProfile(false)}
+                          onDrop={handleProfilePhotoDrop}
+                          onClick={() => profileFileInputRef.current?.click()}
+                          className={`p-4 border-2 border-dashed rounded cursor-pointer transition-all text-center flex flex-col items-center justify-center ${
+                            isDraggingProfile
+                              ? 'border-sky-400 bg-sky-950/30'
+                              : 'border-white/15 bg-black/30 hover:border-sky-400/60 hover:bg-white/5'
+                          }`}
+                        >
+                          <Upload className="w-5 h-5 text-sky-400 mb-1.5" />
+                          <p className="text-xs font-bold text-white mb-0.5">
+                            {isProcessingPhoto ? '사진 업로드 처리 중...' : '클릭하여 PC에서 사진 선택 또는 드래그 앤 드롭'}
+                          </p>
+                          <p className="text-[11px] text-gray-400 font-light">
+                            JPG, PNG, WEBP 지원 (자동 최적화 후 DB에 안전하게 저장됩니다)
+                          </p>
+                        </div>
+
+                        {/* Direct Path / URL alternative input */}
+                        <div className="pt-2">
+                          <label className="block text-[11px] text-gray-400 mb-1">
+                            또는 이미지 직접 경로 / URL 입력:
+                          </label>
+                          <input
+                            type="text"
+                            value={editingArtist.profileImageUrl || editingArtist.profileImage || editingArtist.image || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setEditingArtist(prev => prev ? ({ ...prev, profileImageUrl: val, profileImage: val, image: val }) : null);
+                            }}
+                            placeholder="/images/actors/actor-name.jpg 또는 이미지 URL"
+                            className="w-full bg-[#161926] border border-white/10 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-sky-400 font-mono"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
