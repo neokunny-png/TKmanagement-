@@ -51,9 +51,11 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
       const cleaned = passcode.trim().toLowerCase();
       if (VALID_PASSCODES.includes(cleaned)) {
         if (rememberSession) {
-          sessionStorage.setItem('tk_admin_auth', 'true');
-          sessionStorage.setItem('tk_admin_type', 'passcode');
-          sessionStorage.setItem('tk_admin_email', 'Master Administrator');
+          try {
+            sessionStorage.setItem('tk_admin_auth', 'true');
+            sessionStorage.setItem('tk_admin_type', 'passcode');
+            sessionStorage.setItem('tk_admin_email', 'Master Administrator');
+          } catch {}
         }
         onSuccess('passcode', 'Master Administrator');
       } else {

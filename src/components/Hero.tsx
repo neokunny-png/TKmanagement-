@@ -1,6 +1,5 @@
 import React from 'react';
 import { ArrowRight, ChevronDown, Sparkles } from 'lucide-react';
-import { motion } from 'motion/react';
 
 interface HeroProps {
   onExploreArtists: () => void;
@@ -35,25 +34,15 @@ export const Hero: React.FC<HeroProps> = ({ onExploreArtists, onApplyAudition })
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-8 sm:pb-12 lg:pb-16 w-full flex flex-col justify-between min-h-screen min-h-[100dvh]">
         <div className="flex-1 flex flex-col justify-center max-w-3xl py-6 sm:py-0">
           {/* Tagline Badge */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="inline-flex items-center space-x-2 bg-white/5 border border-white/10 px-3.5 py-1.5 rounded-full w-fit mb-4 sm:mb-6 backdrop-blur-md"
-          >
+          <div className="inline-flex items-center space-x-2 bg-white/5 border border-white/10 px-3.5 py-1.5 rounded-full w-fit mb-4 sm:mb-6 backdrop-blur-md">
             <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
             <span className="text-[11px] sm:text-xs font-semibold tracking-widest text-gray-300 uppercase whitespace-nowrap">
               Actors Management &amp; Casting
             </span>
-          </motion.div>
+          </div>
 
           {/* Slogan */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, delay: 0.1 }}
-            className="space-y-2 mb-4 sm:mb-6"
-          >
+          <div className="space-y-2 mb-4 sm:mb-6">
             <h1 className="font-display text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tighter text-white leading-[1.05] break-words">
               YOUR NEXT SCENE.
               <br />
@@ -61,30 +50,20 @@ export const Hero: React.FC<HeroProps> = ({ onExploreArtists, onApplyAudition })
                 STARTS HERE.
               </span>
             </h1>
-          </motion.div>
+          </div>
 
           {/* Korean & English Subtitle */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, delay: 0.2 }}
-            className="space-y-2 mb-8 sm:mb-10 max-w-xl"
-          >
+          <div className="space-y-2 mb-8 sm:mb-10 max-w-xl">
             <p className="text-sm sm:text-base md:text-lg text-gray-300 font-normal leading-relaxed break-keep">
               새로운 얼굴을 발견하고, 배우의 다음 장면을 만들어갑니다.
             </p>
             <p className="text-xs sm:text-sm text-gray-400 tracking-wide font-light break-keep">
               We discover potential, develop talent, and create the next opportunity.
             </p>
-          </motion.div>
+          </div>
 
           {/* CTAs */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, delay: 0.3 }}
-            className="flex flex-wrap items-center gap-3 sm:gap-4"
-          >
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <button
               id="hero-btn-artists"
               onClick={onExploreArtists}
@@ -102,7 +81,7 @@ export const Hero: React.FC<HeroProps> = ({ onExploreArtists, onApplyAudition })
               <Sparkles className="w-3.5 h-3.5 text-sky-400" />
               <span>신인 오디션 지원하기</span>
             </button>
-          </motion.div>
+          </div>
         </div>
 
         {/* Bottom Bar: Stats snippet + Scroll indicator */}

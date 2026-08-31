@@ -20,12 +20,20 @@ export default function App() {
   const [newsList, setNewsList] = useState<NewsArticle[]>(NEWS_ARTICLES);
   const [activeSection, setActiveSection] = useState<string>('hero');
 
-  // Admin Authentication State (Passcode session based)
+  // Admin Authentication State (Passcode session based with safe browser storage access)
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
-    return sessionStorage.getItem('tk_admin_auth') === 'true';
+    try {
+      return typeof window !== 'undefined' && sessionStorage.getItem('tk_admin_auth') === 'true';
+    } catch {
+      return false;
+    }
   });
   const [adminIdentifier, setAdminIdentifier] = useState<string>(() => {
-    return sessionStorage.getItem('tk_admin_email') || 'Master Administrator';
+    try {
+      return (typeof window !== 'undefined' && sessionStorage.getItem('tk_admin_email')) || 'Master Administrator';
+    } catch {
+      return 'Master Administrator';
+    }
   });
   const [isAdminAuthModalOpen, setIsAdminAuthModalOpen] = useState<boolean>(false);
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
@@ -90,9 +98,11 @@ export default function App() {
   };
 
   const handleLogoutAdmin = () => {
-    sessionStorage.removeItem('tk_admin_auth');
-    sessionStorage.removeItem('tk_admin_type');
-    sessionStorage.removeItem('tk_admin_email');
+    try {
+      sessionStorage.removeItem('tk_admin_auth');
+      sessionStorage.removeItem('tk_admin_type');
+      sessionStorage.removeItem('tk_admin_email');
+    } catch {}
     setIsAdminAuthenticated(false);
     setAdminIdentifier('');
     setIsAdminOpen(false);

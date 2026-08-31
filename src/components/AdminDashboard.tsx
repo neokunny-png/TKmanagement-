@@ -218,9 +218,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const handleSignOut = () => {
-    sessionStorage.removeItem('tk_admin_auth');
-    sessionStorage.removeItem('tk_admin_type');
-    sessionStorage.removeItem('tk_admin_email');
+    try {
+      sessionStorage.removeItem('tk_admin_auth');
+      sessionStorage.removeItem('tk_admin_type');
+      sessionStorage.removeItem('tk_admin_email');
+    } catch {}
     showToast('관리자 세션이 로그아웃되었습니다.');
     if (onLogout) {
       onLogout();

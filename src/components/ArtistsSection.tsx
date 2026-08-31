@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { ArrowRight, Sparkles, UserCheck } from 'lucide-react';
-import { motion } from 'motion/react';
 import { Artist } from '../types';
 
 interface ArtistsSectionProps {
@@ -114,13 +113,9 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
             const engUpper = (artist.nameEn || '').toUpperCase();
 
             return (
-              <motion.div
+              <div
                 key={artist.id}
                 id={`artist-card-${artist.id}`}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: (index % 3) * 0.1 }}
                 onClick={() => onSelectArtist(artist)}
                 className="group relative cursor-pointer overflow-hidden bg-[#111319] border border-white/10 hover:border-white/40 transition-all duration-500"
               >
@@ -168,7 +163,7 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </div>

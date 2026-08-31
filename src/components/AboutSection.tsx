@@ -1,6 +1,5 @@
 import React from 'react';
 import { Compass, Sparkles, Film, Award } from 'lucide-react';
-import { motion } from 'motion/react';
 
 interface AboutSectionProps {
   artistCount: number;
@@ -66,12 +65,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ artistCount }) => {
 
         {/* 3 Large Typographic Stat Numbers */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-24">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="p-8 bg-[#111319] border border-white/10 hover:border-white/25 transition-all group"
-          >
+          <div className="p-8 bg-[#111319] border border-white/10 hover:border-white/25 transition-all group">
             <div className="text-5xl sm:text-6xl font-display font-black text-white group-hover:text-sky-400 transition-colors mb-2">
               {artistCount > 0 ? String(artistCount).padStart(2, '0') : '06'}
             </div>
@@ -81,15 +75,9 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ artistCount }) => {
             <p className="text-xs text-gray-400 leading-relaxed">
               독보적인 잠재력과 캐릭터를 지닌 신예 아티스트
             </p>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className="p-8 bg-[#111319] border border-white/10 hover:border-white/25 transition-all group"
-          >
+          <div className="p-8 bg-[#111319] border border-white/10 hover:border-white/25 transition-all group">
             <div className="text-5xl sm:text-6xl font-display font-black text-white group-hover:text-sky-400 transition-colors mb-2">
               01
             </div>
@@ -99,15 +87,9 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ artistCount }) => {
             <p className="text-xs text-gray-400 leading-relaxed">
               배우 개별 맞춤형 집중 케어 &amp; 캐스팅 지원
             </p>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-            className="p-8 bg-[#111319] border border-white/10 hover:border-white/25 transition-all group"
-          >
+          <div className="p-8 bg-[#111319] border border-white/10 hover:border-white/25 transition-all group">
             <div className="text-5xl sm:text-6xl font-display font-black text-white group-hover:text-sky-400 transition-colors mb-2">
               ∞
             </div>
@@ -117,7 +99,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ artistCount }) => {
             <p className="text-xs text-gray-400 leading-relaxed">
               경계를 넘나드는 무한한 스크린과 무대의 가능성
             </p>
-          </motion.div>
+          </div>
         </div>
 
         {/* 4 Pillars: WE BELIEVE IN POTENTIAL */}
@@ -135,15 +117,11 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ artistCount }) => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {pillars.map((p, idx) => {
+            {pillars.map((p) => {
               const Icon = p.icon;
               return (
-                <motion.div
+                <div
                   key={p.num}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: idx * 0.1 }}
                   className="p-6 bg-[#0E1017] border border-white/5 hover:border-[#182A47] hover:bg-[#121622] transition-all group relative flex flex-col justify-between"
                 >
                   <div>
@@ -167,7 +145,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ artistCount }) => {
                     <span>TK PROCESS</span>
                     <span className="group-hover:translate-x-1 transition-transform text-sky-400">→</span>
                   </div>
-                </motion.div>
+                </div>
               );
             })}
           </div>
