@@ -59,18 +59,18 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAdmin }) => {
               </li>
               <li>
                 <button
-                  onClick={() => onNavigate('audition')}
-                  className="hover:text-white transition-colors"
-                >
-                  AUDITION (신인 오디션)
-                </button>
-              </li>
-              <li>
-                <button
                   onClick={() => onNavigate('news')}
                   className="hover:text-white transition-colors"
                 >
                   NEWS (보도자료)
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => onNavigate('audition')}
+                  className="hover:text-white transition-colors"
+                >
+                  AUDITION (신인 오디션)
                 </button>
               </li>
               <li>

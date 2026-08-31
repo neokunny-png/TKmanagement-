@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
-import { auth } from './lib/firebase';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { AboutSection } from './components/AboutSection';
@@ -14,27 +12,20 @@ import { ProfilePrintSheet } from './components/ProfilePrintSheet';
 import { AdminDashboard } from './components/AdminDashboard';
 import { AdminAuthModal } from './components/AdminAuthModal';
 import { Artist, NewsArticle } from './types';
-import { getArtists, getNewsArticles, subscribeToArtists, subscribeToNews } from './lib/db';
-import { INITIAL_ARTISTS, INITIAL_NEWS } from './data/initialData';
+import { ARTISTS } from './data/artists';
+import { NEWS_ARTICLES } from './data/news';
 
 export default function App() {
-  const [artists, setArtists] = useState<Artist[]>(INITIAL_ARTISTS);
-  const [newsList, setNewsList] = useState<NewsArticle[]>(INITIAL_NEWS);
+  const [artists, setArtists] = useState<Artist[]>(ARTISTS);
+  const [newsList, setNewsList] = useState<NewsArticle[]>(NEWS_ARTICLES);
   const [activeSection, setActiveSection] = useState<string>('hero');
 
-  // Admin Authentication State
+  // Admin Authentication State (Passcode session based)
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
-    return (
-      auth.currentUser !== null ||
-      sessionStorage.getItem('tk_admin_auth') === 'true'
-    );
+    return sessionStorage.getItem('tk_admin_auth') === 'true';
   });
   const [adminIdentifier, setAdminIdentifier] = useState<string>(() => {
-    return (
-      auth.currentUser?.email ||
-      sessionStorage.getItem('tk_admin_email') ||
-      'Master Administrator'
-    );
+    return sessionStorage.getItem('tk_admin_email') || 'Master Administrator';
   });
   const [isAdminAuthModalOpen, setIsAdminAuthModalOpen] = useState<boolean>(false);
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
@@ -43,62 +34,6 @@ export default function App() {
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
   const [printArtist, setPrintArtist] = useState<Artist | null>(null);
   const [preselectedActorForContact, setPreselectedActorForContact] = useState<Artist | null>(null);
-
-  // Sync auth state with Firebase Auth
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setIsAdminAuthenticated(true);
-        setAdminIdentifier(user.email || user.displayName || 'Google Admin');
-      } else {
-        // If not logged into Firebase, check sessionStorage
-        const isSessionAuth = sessionStorage.getItem('tk_admin_auth') === 'true';
-        if (isSessionAuth) {
-          setIsAdminAuthenticated(true);
-          setAdminIdentifier(sessionStorage.getItem('tk_admin_email') || 'Master Administrator');
-        } else {
-          setIsAdminAuthenticated(false);
-          setAdminIdentifier('');
-        }
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // Initialize data and real-time subscription
-  useEffect(() => {
-    // Initial fetch
-    loadInitialData();
-
-    // Real-time listener for artists
-    const unsubscribeArtists = subscribeToArtists((updatedArtists) => {
-      if (updatedArtists && updatedArtists.length > 0) {
-        setArtists(updatedArtists);
-      }
-    });
-
-    // Real-time listener for news
-    const unsubscribeNews = subscribeToNews((updatedNews) => {
-      setNewsList(updatedNews);
-    });
-
-    return () => {
-      if (unsubscribeArtists) unsubscribeArtists();
-      if (unsubscribeNews) unsubscribeNews();
-    };
-  }, []);
-
-  const loadInitialData = async () => {
-    try {
-      const fetchedArtists = await getArtists();
-      setArtists(fetchedArtists);
-      const fetchedNews = await getNewsArticles();
-      setNewsList(fetchedNews);
-    } catch (e) {
-      console.warn('Error loading initial data:', e);
-    }
-  };
 
   // Track active section on scroll
   useEffect(() => {
@@ -145,7 +80,7 @@ export default function App() {
     }
   };
 
-  const handleAuthSuccess = (authType: 'google' | 'passcode', userIdentifier?: string) => {
+  const handleAuthSuccess = (_authType: 'google' | 'passcode', userIdentifier?: string) => {
     setIsAdminAuthenticated(true);
     if (userIdentifier) {
       setAdminIdentifier(userIdentifier);
@@ -154,18 +89,19 @@ export default function App() {
     setIsAdminOpen(true);
   };
 
-  const handleLogoutAdmin = async () => {
-    try {
-      await signOut(auth);
-    } catch (e) {
-      console.warn(e);
-    }
+  const handleLogoutAdmin = () => {
     sessionStorage.removeItem('tk_admin_auth');
     sessionStorage.removeItem('tk_admin_type');
     sessionStorage.removeItem('tk_admin_email');
     setIsAdminAuthenticated(false);
     setAdminIdentifier('');
     setIsAdminOpen(false);
+  };
+
+  const handleRefreshData = () => {
+    // Keep data aligned with static single source of truth
+    setArtists([...ARTISTS]);
+    setNewsList([...NEWS_ARTICLES]);
   };
 
   return (
@@ -195,11 +131,11 @@ export default function App() {
           onSelectArtist={(artist) => setSelectedArtist(artist)}
         />
 
-        {/* 4. Audition */}
-        <AuditionSection />
-
-        {/* 5. News */}
+        {/* 4. News */}
         <NewsSection newsList={newsList} />
+
+        {/* 5. Audition */}
+        <AuditionSection />
 
         {/* 6. Contact */}
         <ContactSection
@@ -251,7 +187,9 @@ export default function App() {
           adminIdentifier={adminIdentifier}
           onClose={() => setIsAdminOpen(false)}
           onLogout={handleLogoutAdmin}
-          onRefreshData={loadInitialData}
+          onUpdateArtists={(updated) => setArtists(updated)}
+          onUpdateNews={(updated) => setNewsList(updated)}
+          onRefreshData={handleRefreshData}
         />
       )}
     </div>

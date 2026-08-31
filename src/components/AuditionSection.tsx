@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, CheckCircle2, Upload, Film, FileCheck, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { submitAuditionApplication } from '../lib/db';
 import { AuditionApplication } from '../types';
 
 export const AuditionSection: React.FC = () => {
@@ -66,7 +65,13 @@ export const AuditionSection: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const app = await submitAuditionApplication({
+      const timestamp = Date.now();
+      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      const applicationNumber = `TK-${new Date().getFullYear()}-${randomSuffix}`;
+
+      const app: AuditionApplication = {
+        id: `audition-${timestamp}`,
+        applicationNumber,
         name: formData.name.trim(),
         birth: formData.birth.trim(),
         gender: formData.gender,
@@ -79,10 +84,12 @@ export const AuditionSection: React.FC = () => {
         specialty: formData.specialty.trim(),
         bio: formData.bio.trim(),
         experience: formData.experience.trim(),
-        photoUrlFace: formData.photoUrlFace.trim() || '/images/actors/choi-eunseo.jpg',
+        photoUrlFace: formData.photoUrlFace.trim() || '',
         photoUrlFull: formData.photoUrlFull.trim(),
-        videoUrl: formData.videoUrl.trim()
-      });
+        videoUrl: formData.videoUrl.trim(),
+        status: 'pending',
+        submittedAt: timestamp
+      };
 
       setSubmittedResult(app);
       setIsSubmitting(false);

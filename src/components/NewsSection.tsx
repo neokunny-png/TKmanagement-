@@ -127,7 +127,7 @@ export const NewsSection: React.FC<NewsSectionProps> = ({ newsList }) => {
                   </h3>
 
                   <p className="text-xs sm:text-sm text-gray-400 font-light line-clamp-2 leading-relaxed">
-                    {article.summary || article.content.slice(0, 100)}
+                    {article.summary || (article.content ? article.content.slice(0, 100) : '')}
                   </p>
                 </div>
 

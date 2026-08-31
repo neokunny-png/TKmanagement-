@@ -33,8 +33,8 @@ export const Header: React.FC<HeaderProps> = ({
   const navItems = [
     { id: 'about', label: 'ABOUT' },
     { id: 'artists', label: 'ARTISTS' },
-    { id: 'audition', label: 'AUDITION' },
     { id: 'news', label: 'NEWS' },
+    { id: 'audition', label: 'AUDITION' },
     { id: 'contact', label: 'CONTACT' },
   ];
 

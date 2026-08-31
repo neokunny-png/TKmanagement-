@@ -8,6 +8,41 @@ interface ArtistsSectionProps {
   onSelectArtist: (artist: Artist) => void;
 }
 
+const ArtistCardImage: React.FC<{
+  src: string;
+  alt: string;
+  nameKo: string;
+}> = ({ src, alt, nameKo }) => {
+  const [hasError, setHasError] = useState(false);
+
+  if (hasError || !src) {
+    return (
+      <div className="w-full h-full bg-[#161922] flex flex-col items-center justify-center p-6 text-center border border-white/5">
+        <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center mb-3 text-gray-500 font-mono text-xs">
+          TK
+        </div>
+        <span className="text-[11px] font-mono tracking-widest text-gray-400 uppercase">
+          IMAGE NOT UPLOADED
+        </span>
+        <span className="text-[10px] text-gray-600 font-mono mt-1">
+          OFFICIAL PROFILE IMAGE
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      onError={() => setHasError(true)}
+      className="w-full h-full object-cover object-center filter grayscale-[20%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700 ease-out"
+      referrerPolicy="no-referrer"
+      loading="lazy"
+    />
+  );
+};
+
 export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
   artists,
   onSelectArtist,
@@ -76,7 +111,7 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
         {/* 3-Column Responsive Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredArtists.map((artist, index) => {
-            const engUpper = artist.nameEn;
+            const engUpper = (artist.nameEn || '').toUpperCase();
 
             return (
               <motion.div
@@ -91,12 +126,10 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
               >
                 {/* Ratio aspect container for crisp editorial portraits (3:4 or 4:5 ratio) */}
                 <div className="aspect-[3/4] w-full overflow-hidden relative bg-neutral-900">
-                  <img
+                  <ArtistCardImage
                     src={artist.profileImage}
                     alt={`${artist.nameKo} (${artist.nameEn})`}
-                    className="w-full h-full object-cover object-center filter grayscale-[20%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700 ease-out"
-                    referrerPolicy="no-referrer"
-                    loading="lazy"
+                    nameKo={artist.nameKo}
                   />
 
                   {/* Dramatic multi-stop gradient for text readability */}
@@ -109,9 +142,11 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
                       <h3 className="text-2xl sm:text-3xl font-display font-black text-white tracking-tight group-hover:text-sky-200 transition-colors">
                         {artist.nameKo}
                       </h3>
-                      <span className="text-xs font-mono tracking-wider text-gray-400">
-                        {artist.birth.substring(0, 4)}
-                      </span>
+                      {artist.birth && (
+                        <span className="text-xs font-mono tracking-wider text-gray-400">
+                          {artist.birth.substring(0, 4)}
+                        </span>
+                      )}
                     </div>
 
                     <p className="text-xs font-mono tracking-widest text-gray-300 uppercase mb-4">

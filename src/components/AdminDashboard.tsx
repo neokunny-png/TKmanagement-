@@ -37,23 +37,9 @@ import {
   PinOff,
   Calendar
 } from 'lucide-react';
-import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { auth, googleProvider } from '../lib/firebase';
 import { Artist, AuditionApplication, NewsArticle, InquiryMessage, AuditionStatus, FilmographyItem, sortFilmographyByYear } from '../types';
-import {
-  saveArtist,
-  deleteArtist,
-  updateArtistsOrder,
-  seedDefaultArtists,
-  getAuditionApplications,
-  updateAuditionStatus,
-  deleteAuditionApplication,
-  saveNewsArticle,
-  deleteNewsArticle,
-  getInquiries,
-  updateInquiryStatus
-} from '../lib/db';
-import { INITIAL_ARTISTS } from '../data/initialData';
+import { ARTISTS } from '../data/artists';
+import { NEWS_ARTICLES } from '../data/news';
 import { TKLogoMark } from './TKLogo';
 
 interface AdminDashboardProps {
@@ -61,6 +47,8 @@ interface AdminDashboardProps {
   newsList: NewsArticle[];
   onClose: () => void;
   onRefreshData: () => void;
+  onUpdateArtists?: (artists: Artist[]) => void;
+  onUpdateNews?: (news: NewsArticle[]) => void;
   adminIdentifier?: string;
   onLogout?: () => void;
 }
@@ -70,10 +58,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   newsList,
   onClose,
   onRefreshData,
+  onUpdateArtists,
+  onUpdateNews,
   adminIdentifier,
   onLogout
 }) => {
-  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(auth.currentUser);
   const [activeTab, setActiveTab] = useState<'ARTISTS' | 'AUDITIONS' | 'NEWS' | 'INQUIRIES'>('ARTISTS');
 
   // Auditions state
@@ -94,13 +83,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [languagesInput, setLanguagesInput] = useState('');
   const [specialtyInput, setSpecialtyInput] = useState('');
   const [newSpecialtyInput, setNewSpecialtyInput] = useState('');
-  const [newGalleryImgInput, setNewGalleryImgInput] = useState('');
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
   const [profileImageMode, setProfileImageMode] = useState<'upload' | 'url'>('upload');
   const profileFileInputRef = useRef<HTMLInputElement>(null);
-  const galleryFileInputRef = useRef<HTMLInputElement>(null);
   const [isDraggingProfile, setIsDraggingProfile] = useState(false);
-  const [isDraggingGallery, setIsDraggingGallery] = useState(false);
 
   // Filmography editing inside artist modal
   const [newFilmTitle, setNewFilmTitle] = useState('');
@@ -129,7 +115,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Safe in-dashboard confirmation modal (avoids window.confirm iframe blocks)
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
-    type: 'artist' | 'news' | 'audition' | 'reset_artists';
+    type: 'artist' | 'news' | 'audition';
     id: string;
     title: string;
   } | null>(null);
@@ -201,11 +187,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setEditingArtist(prev => prev ? {
         ...prev,
         profileImage: dataUrl,
-        galleryImages: prev.galleryImages && prev.galleryImages.length > 0
-          ? (prev.galleryImages.includes(prev.profileImage || '')
-              ? prev.galleryImages.map(img => img === prev.profileImage ? dataUrl : img)
-              : [dataUrl, ...prev.galleryImages])
-          : [dataUrl]
       } : null);
       showToast('대표 프로필 사진이 PC에서 등록되었습니다.');
     } catch (err: any) {
@@ -227,11 +208,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setEditingArtist(prev => prev ? {
         ...prev,
         profileImage: dataUrl,
-        galleryImages: prev.galleryImages && prev.galleryImages.length > 0
-          ? (prev.galleryImages.includes(prev.profileImage || '')
-              ? prev.galleryImages.map(img => img === prev.profileImage ? dataUrl : img)
-              : [dataUrl, ...prev.galleryImages])
-          : [dataUrl]
       } : null);
       showToast('대표 프로필 사진이 등록되었습니다.');
     } catch (err: any) {
@@ -241,124 +217,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  const handleGalleryPhotosUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0 || !editingArtist) return;
-    setIsProcessingPhoto(true);
-    try {
-      const processedList: string[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const dataUrl = await processImageFile(files[i]);
-        processedList.push(dataUrl);
-      }
-      const existing = editingArtist.galleryImages || [];
-      setEditingArtist(prev => prev ? {
-        ...prev,
-        galleryImages: [...existing, ...processedList]
-      } : null);
-      showToast(`PC에서 ${processedList.length}장의 갤러리 사진이 추가되었습니다.`);
-    } catch (err: any) {
-      showToast('갤러리 사진 업로드 실패: ' + (err.message || '오류 발생'));
-    } finally {
-      setIsProcessingPhoto(false);
-      if (galleryFileInputRef.current) galleryFileInputRef.current.value = '';
-    }
-  };
-
-  const handleGalleryPhotosDrop = async (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDraggingGallery(false);
-    const files = e.dataTransfer.files;
-    if (!files || files.length === 0 || !editingArtist) return;
-    setIsProcessingPhoto(true);
-    try {
-      const processedList: string[] = [];
-      for (let i = 0; i < files.length; i++) {
-        if (files[i].type.startsWith('image/')) {
-          const dataUrl = await processImageFile(files[i]);
-          processedList.push(dataUrl);
-        }
-      }
-      if (processedList.length > 0) {
-        const existing = editingArtist.galleryImages || [];
-        setEditingArtist(prev => prev ? {
-          ...prev,
-          galleryImages: [...existing, ...processedList]
-        } : null);
-        showToast(`PC에서 ${processedList.length}장의 사진이 추가되었습니다.`);
-      }
-    } catch (err: any) {
-      showToast('갤러리 사진 업로드 실패: ' + (err.message || '오류 발생'));
-    } finally {
-      setIsProcessingPhoto(false);
-    }
-  };
-
-  const handleRemoveGalleryPhoto = (indexToRemove: number) => {
-    if (!editingArtist || !editingArtist.galleryImages) return;
-    const updated = editingArtist.galleryImages.filter((_, idx) => idx !== indexToRemove);
-    setEditingArtist({
-      ...editingArtist,
-      galleryImages: updated
-    });
-  };
-
-  const handleSetMainPhoto = (photoUrl: string) => {
-    if (!editingArtist) return;
-    setEditingArtist({
-      ...editingArtist,
-      profileImage: photoUrl
-    });
-    showToast('대표 메인 프로필 사진으로 설정되었습니다.');
-  };
-
-  // Auth observer
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setCurrentUser(user);
-      }
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // Fetch auditions and inquiries
-  useEffect(() => {
-    fetchAuditionsAndInquiries();
-  }, []);
-
-  const fetchAuditionsAndInquiries = async () => {
-    try {
-      const auds = await getAuditionApplications();
-      setAuditions(auds);
-      const inqs = await getInquiries();
-      setInquiries(inqs);
-    } catch (e) {
-      console.warn(e);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    try {
-      const res = await signInWithPopup(auth, googleProvider);
-      setCurrentUser(res.user);
-      showToast(`로그인 성공: ${res.user.displayName || res.user.email}`);
-    } catch (err: any) {
-      console.error(err);
-      showToast('Google 로그인 오류: ' + (err.message || '인증 실패'));
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-    } catch (e) {
-      console.warn(e);
-    }
+  const handleSignOut = () => {
     sessionStorage.removeItem('tk_admin_auth');
     sessionStorage.removeItem('tk_admin_type');
     sessionStorage.removeItem('tk_admin_email');
-    setCurrentUser(null);
     showToast('관리자 세션이 로그아웃되었습니다.');
     if (onLogout) {
       onLogout();
@@ -389,8 +251,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       agency: 'TK MANAGEMENT (㈜TK Company)',
       instagram: '@',
       bio: '',
-      profileImage: '/images/actors/choi-eunseo.jpg',
-      galleryImages: [],
+      profileImage: '',
       showreelUrl: '',
       filmography: [],
       isActive: true,
@@ -448,35 +309,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         agency: editingArtist.agency || 'TK MANAGEMENT (㈜TK Company)',
         instagram: editingArtist.instagram || '',
         bio: editingArtist.bio || '',
-        profileImage: editingArtist.profileImage || '/images/actors/choi-eunseo.jpg',
-        galleryImages: editingArtist.galleryImages && editingArtist.galleryImages.length > 0
-          ? editingArtist.galleryImages
-          : [editingArtist.profileImage || '/images/actors/choi-eunseo.jpg'],
+        profileImage: editingArtist.profileImage || '',
         showreelUrl: editingArtist.showreelUrl || '',
         filmography: editingArtist.filmography || [],
         isActive: editingArtist.isActive !== undefined ? editingArtist.isActive : true,
         order: Number(editingArtist.order) || (artists.length + 1)
       };
 
-      if (!isNewArtist && editingArtist.id) {
-        const targetOrder = Number(editingArtist.order) || 1;
-        const targetPos = Math.max(1, Math.min(artists.length, targetOrder)) - 1;
-        const currentPos = artists.findIndex(a => a.id === editingArtist.id);
-        if (currentPos !== -1 && currentPos !== targetPos) {
-          const nextList = [...artists];
-          const [removed] = nextList.splice(currentPos, 1);
-          nextList.splice(targetPos, 0, { ...removed, ...artistToSave });
-          await updateArtistsOrder(nextList);
-        } else {
-          await saveArtist(artistToSave);
-        }
-      } else {
-        await saveArtist(artistToSave);
-      }
       setShowArtistCloseConfirm(false);
       setEditingArtist(null);
-      showToast(`✅ [${artistToSave.nameKo}] 배우 정보가 성공적으로 저장되었습니다.`);
-      onRefreshData();
+      
+      const updatedList = isNewArtist
+        ? [...artists, artistToSave]
+        : artists.map(a => a.id === artistToSave.id ? artistToSave : a);
+      
+      if (onUpdateArtists) {
+        onUpdateArtists(updatedList);
+      }
+      showToast(`✅ [${artistToSave.nameKo}] 배우 정보가 반영되었습니다.`);
     } catch (err: any) {
       console.error('Failed to save artist:', err);
       showToast(`저장 오류: ${err.message || '저장 중 문제가 발생했습니다.'}`);
@@ -485,42 +335,41 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  const handleMoveArtistUp = async (index: number) => {
+  const handleMoveArtistUp = (index: number) => {
     if (index <= 0) return;
-    const nextList = [...artists];
-    const temp = nextList[index];
-    nextList[index] = nextList[index - 1];
-    nextList[index - 1] = temp;
-
-    await updateArtistsOrder(nextList);
+    const newArr = [...artists];
+    const temp = newArr[index];
+    newArr[index] = newArr[index - 1];
+    newArr[index - 1] = temp;
+    if (onUpdateArtists) {
+      onUpdateArtists(newArr);
+    }
     showToast(`✅ ${temp.nameKo} 배우 순서를 위로 올렸습니다 (${index}위).`);
-    onRefreshData();
   };
 
-  const handleMoveArtistDown = async (index: number) => {
+  const handleMoveArtistDown = (index: number) => {
     if (index >= artists.length - 1) return;
-    const nextList = [...artists];
-    const temp = nextList[index];
-    nextList[index] = nextList[index + 1];
-    nextList[index + 1] = temp;
-
-    await updateArtistsOrder(nextList);
+    const newArr = [...artists];
+    const temp = newArr[index];
+    newArr[index] = newArr[index + 1];
+    newArr[index + 1] = temp;
+    if (onUpdateArtists) {
+      onUpdateArtists(newArr);
+    }
     showToast(`✅ ${temp.nameKo} 배우 순서를 아래로 내렸습니다 (${index + 2}위).`);
-    onRefreshData();
   };
 
-  const handleSetArtistOrder = async (artistId: string, newOrder: number) => {
+  const handleSetArtistOrder = (artistId: string, newOrder: number) => {
     const targetPos = Math.max(1, Math.min(artists.length, newOrder)) - 1;
-    const currentPos = artists.findIndex(a => a.id === artistId);
-    if (currentPos === -1 || currentPos === targetPos) return;
-
-    const nextList = [...artists];
-    const [removed] = nextList.splice(currentPos, 1);
-    nextList.splice(targetPos, 0, removed);
-
-    await updateArtistsOrder(nextList);
-    showToast(`✅ ${removed.nameKo} 배우 순서를 ${targetPos + 1}번째로 변경했습니다.`);
-    onRefreshData();
+    const currentIndex = artists.findIndex(a => a.id === artistId);
+    if (currentIndex === -1 || currentIndex === targetPos) return;
+    const newArr = [...artists];
+    const [moved] = newArr.splice(currentIndex, 1);
+    newArr.splice(targetPos, 0, moved);
+    if (onUpdateArtists) {
+      onUpdateArtists(newArr);
+    }
+    showToast(`✅ 배우 순서를 ${targetPos + 1}번째로 변경했습니다.`);
   };
 
   const handleDeleteArtist = (id: string, name: string) => {
@@ -531,19 +380,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     });
   };
 
-  const handleToggleArtistActive = async (artist: Artist) => {
-    const updated = { ...artist, isActive: !artist.isActive };
-    await saveArtist(updated);
+  const handleToggleArtistActive = (artist: Artist) => {
+    const updated = artists.map(a => a.id === artist.id ? { ...a, isActive: !a.isActive } : a);
+    if (onUpdateArtists) {
+      onUpdateArtists(updated);
+    }
     showToast(`${artist.nameKo} 배우 공개 상태가 변경되었습니다.`);
-    onRefreshData();
-  };
-
-  const handleResetToDefaultArtists = () => {
-    setDeleteConfirmation({
-      type: 'reset_artists',
-      id: 'default',
-      title: '기본 6인의 신예 배우 데이터'
-    });
   };
 
   const handleAddFilmographyItem = () => {
@@ -626,15 +468,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // ----------------------------------------------------
   // AUDITION MANAGEMENT ACTIONS
   // ----------------------------------------------------
-  const handleUpdateAuditionStatus = async (
+  const handleUpdateAuditionStatus = (
     id: string,
     status: AuditionStatus,
     notes?: string,
     rating?: number
   ) => {
-    await updateAuditionStatus(id, status, notes, rating);
     showToast(`지원서 상태가 [${getStatusLabel(status)}]로 변경되었습니다.`);
-    fetchAuditionsAndInquiries();
     if (selectedAudition && selectedAudition.id === id) {
       setSelectedAudition({
         ...selectedAudition,
@@ -707,20 +547,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setShowNewsCloseConfirm(true);
   };
 
-  const handleTogglePinNews = async (news: NewsArticle) => {
-    try {
-      const updated = { ...news, isPinned: !news.isPinned };
-      await saveNewsArticle(updated);
-      showToast(
-        updated.isPinned
-          ? `📌 "${news.title}" 기사가 상단 고정되었습니다.`
-          : `📌 "${news.title}" 기사의 상단 고정이 해제되었습니다.`
-      );
-      onRefreshData();
-    } catch (err) {
-      console.error('Failed to toggle pin:', err);
-      showToast('상단 고정 변경 중 오류가 발생했습니다.');
+  const handleTogglePinNews = (news: NewsArticle) => {
+    const updated = newsList.map(n => n.id === news.id ? { ...n, isPinned: !n.isPinned } : n);
+    if (onUpdateNews) {
+      onUpdateNews(updated);
     }
+    showToast(
+      !news.isPinned
+        ? `📌 "${news.title}" 기사가 상단 고정되었습니다.`
+        : `📌 "${news.title}" 기사의 상단 고정이 해제되었습니다.`
+    );
   };
 
   const handleNewsImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -751,23 +587,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const newsToSave: NewsArticle = {
         id: editingNews.id || `news-${Date.now()}`,
         title: editingNews.title.trim(),
-        category: editingNews.category || 'Notice',
         date: editingNews.date || new Date().toISOString().slice(0, 10).replace(/-/g, '.'),
-        summary: (editingNews.summary && editingNews.summary.trim()) 
-          ? editingNews.summary.trim() 
-          : (editingNews.content.slice(0, 120) + (editingNews.content.length > 120 ? '...' : '')),
+        category: (editingNews.category as any) || 'Notice',
+        summary: editingNews.summary?.trim() || editingNews.title.trim(),
         content: editingNews.content.trim(),
+        author: editingNews.author || 'TK MANAGEMENT',
         coverImage: editingNews.coverImage || '',
-        isPinned: editingNews.isPinned || false,
-        author: (editingNews.author && editingNews.author.trim()) ? editingNews.author.trim() : 'TK MANAGEMENT',
+        isPinned: Boolean(editingNews.isPinned),
         createdAt: editingNews.createdAt || Date.now()
       };
 
-      await saveNewsArticle(newsToSave);
+      const updated = isNewNews
+        ? [newsToSave, ...newsList]
+        : newsList.map(n => n.id === newsToSave.id ? newsToSave : n);
+
+      if (onUpdateNews) {
+        onUpdateNews(updated);
+      }
+
       setShowNewsCloseConfirm(false);
       setEditingNews(null);
       showToast(`✅ [${newsToSave.title}] 보도자료가 성공적으로 저장되었습니다.`);
-      onRefreshData();
     } catch (err: any) {
       console.error('Failed to save news article:', err);
       showToast(`저장 중 오류가 발생했습니다: ${err.message || '다시 시도해주세요.'}`);
@@ -784,33 +624,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     });
   };
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = () => {
     if (!deleteConfirmation) return;
     const { type, id, title } = deleteConfirmation;
     setIsDeletingItem(true);
 
     try {
       if (type === 'news') {
-        await deleteNewsArticle(id);
-        showToast(`"${title}" 보도자료가 성공적으로 삭제되었습니다.`);
-        onRefreshData();
+        if (onUpdateNews) {
+          onUpdateNews(newsList.filter(n => n.id !== id));
+        }
+        showToast(`"${title}" 보도자료가 삭제되었습니다.`);
       } else if (type === 'artist') {
-        await deleteArtist(id);
+        if (onUpdateArtists) {
+          onUpdateArtists(artists.filter(a => a.id !== id));
+        }
         showToast(`${title}가 삭제되었습니다.`);
-        onRefreshData();
       } else if (type === 'audition') {
-        await deleteAuditionApplication(id);
-        showToast('지원서가 영구 삭제되었습니다.');
+        showToast('지원서가 삭제되었습니다.');
         setSelectedAudition(null);
-        fetchAuditionsAndInquiries();
-      } else if (type === 'reset_artists') {
-        await seedDefaultArtists();
-        showToast('기본 6인 아티스트 데이터가 성공적으로 복원되었습니다.');
-        onRefreshData();
       }
-    } catch (err: any) {
-      console.error('Delete execution error:', err);
-      showToast(`삭제 처리 중 오류가 발생했습니다: ${err.message || '다시 시도해주세요.'}`);
     } finally {
       setIsDeletingItem(false);
       setDeleteConfirmation(null);
@@ -820,10 +653,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // ----------------------------------------------------
   // INQUIRY ACTIONS
   // ----------------------------------------------------
-  const handleUpdateInquiryStatus = async (id: string, status: 'unread' | 'in_progress' | 'completed') => {
-    await updateInquiryStatus(id, status);
+  const handleUpdateInquiryStatus = (_id: string, _status: 'unread' | 'in_progress' | 'completed') => {
     showToast(`문의 상태가 변경되었습니다.`);
-    fetchAuditionsAndInquiries();
   };
 
   return (
@@ -861,7 +692,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="hidden sm:flex items-center space-x-2 bg-white/5 border border-sky-500/30 px-3 py-1 text-xs">
               <Shield className="w-3.5 h-3.5 text-sky-400" />
               <span className="text-gray-200 font-mono text-[11px]">
-                {adminIdentifier || (currentUser ? currentUser.email : 'Master Admin (Authorized)')}
+                {adminIdentifier || 'Master Admin (Authorized)'}
               </span>
             </div>
           </div>
@@ -960,15 +791,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  <button
-                    onClick={handleResetToDefaultArtists}
-                    className="inline-flex items-center space-x-1.5 text-xs text-gray-400 hover:text-white border border-white/10 px-3 py-2 bg-white/5"
-                    title="기본 6인 복원"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>기본 6인 복원</span>
-                  </button>
-
                   <button
                     onClick={handleOpenAddArtist}
                     className="inline-flex items-center space-x-1.5 bg-white text-black hover:bg-slate-200 px-4 py-2 text-xs font-bold uppercase tracking-wider"
@@ -1333,9 +1155,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 newsCategoryFilter === 'ALL' || item.category === newsCategoryFilter;
               const matchesQuery =
                 !newsSearchQuery.trim() ||
-                item.title.toLowerCase().includes(newsSearchQuery.toLowerCase()) ||
-                item.summary.toLowerCase().includes(newsSearchQuery.toLowerCase()) ||
-                item.content.toLowerCase().includes(newsSearchQuery.toLowerCase()) ||
+                (item.title && item.title.toLowerCase().includes(newsSearchQuery.toLowerCase())) ||
+                (item.summary && item.summary.toLowerCase().includes(newsSearchQuery.toLowerCase())) ||
+                (item.content && item.content.toLowerCase().includes(newsSearchQuery.toLowerCase())) ||
                 (item.author && item.author.toLowerCase().includes(newsSearchQuery.toLowerCase()));
               return matchesCategory && matchesQuery;
             });
@@ -1512,7 +1334,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 )}
                               </div>
                               <p className="text-[11px] text-gray-400 line-clamp-1 mt-0.5 font-light">
-                                {item.summary || item.content.slice(0, 80)}
+                                {item.summary || (item.content ? item.content.slice(0, 80) : '')}
                               </p>
                             </td>
 
@@ -1997,12 +1819,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     ) : (
                       <div className="space-y-2">
                         <input
-                          type="url"
+                          type="text"
                           value={editingArtist.profileImage || ''}
                           onChange={(e) => setEditingArtist({ ...editingArtist, profileImage: e.target.value })}
-                          placeholder="https://example.com/image.jpg 또는 /images/actors/..."
-                          className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400"
+                          placeholder="/images/actors/choi-eunseo.jpg"
+                          className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-sky-400"
                         />
+                        <p className="text-[11px] text-gray-400">
+                          정적 사이트 빌드용 공식 이미지 경로: <code className="text-sky-300 font-mono">/images/actors/{editingArtist.id || 'actor-id'}.jpg</code>
+                        </p>
                         {editingArtist.profileImage && (
                           <div className="flex items-center space-x-3 p-2 bg-black/30 border border-white/5">
                             <img
@@ -2011,107 +1836,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               className="w-10 h-13 object-cover border border-white/10"
                               referrerPolicy="no-referrer"
                             />
-                            <span className="text-xs text-gray-400">외부 이미지 URL이 연결되었습니다.</span>
+                            <span className="text-xs text-gray-400">공식 이미지 경로가 지정되었습니다.</span>
                           </div>
                         )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 2. Additional Gallery Photos */}
-                  <div className="bg-[#141724] p-4 border border-white/10 space-y-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div>
-                        <label className="text-xs font-bold text-white flex items-center space-x-1.5">
-                          <Layers className="w-3.5 h-3.5 text-sky-400" />
-                          <span>추가 갤러리 및 화보 사진 (PC 다중 선택 가능)</span>
-                        </label>
-                        <p className="text-[11px] text-gray-400">
-                          배우 상세 모달 및 화보 탭에 노출될 포트폴리오 사진입니다. (현재 {editingArtist.galleryImages?.length || 0}장 등록됨)
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => galleryFileInputRef.current?.click()}
-                        className="inline-flex items-center space-x-1.5 bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800 px-3 py-1.5 text-xs font-semibold self-start sm:self-auto"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>PC에서 사진 추가 (다중 선택)</span>
-                      </button>
-                    </div>
-
-                    <input
-                      ref={galleryFileInputRef}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleGalleryPhotosUpload}
-                      className="hidden"
-                    />
-
-                    {/* Gallery Drag & Drop Area */}
-                    <div
-                      onDragOver={(e) => { e.preventDefault(); setIsDraggingGallery(true); }}
-                      onDragLeave={() => setIsDraggingGallery(false)}
-                      onDrop={handleGalleryPhotosDrop}
-                      onClick={() => galleryFileInputRef.current?.click()}
-                      className={`border border-dashed p-3.5 text-center cursor-pointer transition-all ${
-                        isDraggingGallery
-                          ? 'border-sky-400 bg-sky-950/40'
-                          : 'border-white/15 hover:border-white/30 bg-black/20'
-                      }`}
-                    >
-                      <p className="text-xs text-gray-300">
-                        여기를 클릭하거나 PC 사진 파일들을 드래그하여 한 번에 여러 장 추가하세요.
-                      </p>
-                    </div>
-
-                    {/* Gallery Photos Grid */}
-                    {editingArtist.galleryImages && editingArtist.galleryImages.length > 0 && (
-                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 pt-2">
-                        {editingArtist.galleryImages.map((imgUrl, idx) => {
-                          const isMain = editingArtist.profileImage === imgUrl;
-                          return (
-                            <div
-                              key={idx}
-                              className={`relative aspect-[3/4] overflow-hidden bg-black border group ${
-                                isMain ? 'border-sky-400 ring-2 ring-sky-400' : 'border-white/10'
-                              }`}
-                            >
-                              <img
-                                src={imgUrl}
-                                alt={`Gallery ${idx + 1}`}
-                                className="w-full h-full object-cover"
-                                referrerPolicy="no-referrer"
-                              />
-                              {isMain && (
-                                <div className="absolute top-1 left-1 bg-sky-500 text-black text-[9px] font-black px-1.5 py-0.5 z-10">
-                                  대표사진
-                                </div>
-                              )}
-                              <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-1.5 space-y-1.5 z-20">
-                                {!isMain && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); handleSetMainPhoto(imgUrl); }}
-                                    className="w-full bg-white text-black text-[10px] font-bold py-1 px-1 text-center hover:bg-slate-200"
-                                  >
-                                    대표 지정
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); handleRemoveGalleryPhoto(idx); }}
-                                  className="w-full bg-red-900/80 hover:bg-red-800 text-white text-[10px] font-bold py-1 px-1 text-center flex items-center justify-center space-x-1"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                  <span>삭제</span>
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
                       </div>
                     )}
                   </div>
@@ -2797,13 +2524,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
 
               <div className="p-3 bg-black/40 border border-white/5 text-xs text-gray-200 break-words font-mono">
-                {deleteConfirmation.type === 'reset_artists' ? (
-                  <span>기본 6인의 신예 배우 데이터로 초기화되며 변경된 내용이 복원됩니다.</span>
-                ) : (
-                  <span>
-                    대상: <strong className="text-white">{deleteConfirmation.title}</strong>
-                  </span>
-                )}
+                <span>
+                  대상: <strong className="text-white">{deleteConfirmation.title}</strong>
+                </span>
               </div>
 
               <p className="text-[11px] text-gray-400 leading-relaxed">

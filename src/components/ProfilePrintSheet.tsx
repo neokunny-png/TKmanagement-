@@ -11,6 +11,8 @@ interface ProfilePrintSheetProps {
 export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({ artist, onClose }) => {
   if (!artist) return null;
 
+  const [imgError, setImgError] = React.useState(false);
+
   const handlePrint = () => {
     window.print();
   };
@@ -74,13 +76,25 @@ export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({ artist, on
           <div className="grid grid-cols-12 gap-6">
             {/* Photo Column */}
             <div className="col-span-12 sm:col-span-5">
-              <div className="aspect-[3/4] w-full border border-gray-300 overflow-hidden bg-gray-100">
-                <img
-                  src={artist.profileImage}
-                  alt={artist.nameKo}
-                  className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
+              <div className="aspect-[3/4] w-full border border-gray-300 overflow-hidden bg-gray-100 flex items-center justify-center">
+                {imgError || !artist.profileImage ? (
+                  <div className="text-center p-4">
+                    <div className="font-mono text-xs font-bold text-gray-500 uppercase">
+                      IMAGE NOT UPLOADED
+                    </div>
+                    <div className="font-mono text-[9px] text-gray-400 mt-1 uppercase">
+                      OFFICIAL PROFILE IMAGE
+                    </div>
+                  </div>
+                ) : (
+                  <img
+                    src={artist.profileImage}
+                    alt={artist.nameKo}
+                    onError={() => setImgError(true)}
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                )}
               </div>
               <div className="mt-2 text-center text-[10px] text-gray-500 font-mono">
                 {artist.nameKo} ({artist.nameEn})

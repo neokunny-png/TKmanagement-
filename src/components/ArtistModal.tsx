@@ -18,13 +18,9 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
 }) => {
   if (!artist) return null;
 
-  const [activeTab, setActiveTab] = useState<'PROFILE' | 'PHOTO' | 'VIDEO' | 'WORKS'>('PROFILE');
-  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
+  const [activeTab, setActiveTab] = useState<'PROFILE' | 'VIDEO' | 'WORKS'>('PROFILE');
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
-
-  const gallery = artist.galleryImages && artist.galleryImages.length > 0
-    ? artist.galleryImages
-    : [artist.profileImage];
+  const [imgError, setImgError] = useState(false);
 
   // Safely parse and convert showreel URLs, removing any legacy sample video
   const getEmbedUrl = (rawUrl?: string): string | null => {
@@ -107,52 +103,49 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[620px]">
             {/* Left Column: Visual Showcase */}
             <div className="lg:col-span-5 relative bg-black/60 p-6 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-white/10">
-            {/* Active Image */}
-            <div className="relative aspect-[3/4] w-full overflow-hidden border border-white/10 bg-neutral-900 shadow-inner group">
-              <img
-                src={gallery[selectedPhotoIndex] || artist.profileImage}
-                alt={artist.nameKo}
-                className="w-full h-full object-cover object-center"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
-              
-              {/* Showreel quick overlay badge */}
-              {validEmbedUrl && (
-                <button
-                  onClick={() => setShowVideoPlayer(true)}
-                  className="absolute bottom-4 left-4 right-4 bg-[#182A47]/90 hover:bg-[#182A47] text-white border border-sky-400/40 py-2.5 px-4 flex items-center justify-center space-x-2 text-xs font-semibold tracking-wider transition-all cursor-pointer"
-                >
-                  <Play className="w-3.5 h-3.5 fill-sky-400 text-sky-400" />
-                  <span>PLAY SHOWREEL (쇼릴 재생)</span>
-                </button>
-              )}
-            </div>
-
-            {/* Thumbnail Navigation */}
-            {gallery.length > 1 && (
-              <div className="mt-4 flex items-center space-x-2 overflow-x-auto pb-1">
-                {gallery.map((imgUrl, idx) => (
+              {/* Official Single Profile Image */}
+              <div className="relative aspect-[3/4] w-full overflow-hidden border border-white/10 bg-neutral-900 shadow-inner group">
+                {imgError || !artist.profileImage ? (
+                  <div className="w-full h-full bg-[#161922] flex flex-col items-center justify-center p-6 text-center">
+                    <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center mb-3 text-gray-500 font-mono text-xs">
+                      TK
+                    </div>
+                    <span className="text-xs font-mono tracking-widest text-gray-400 uppercase">
+                      IMAGE NOT UPLOADED
+                    </span>
+                    <span className="text-[10px] text-gray-600 font-mono mt-1">
+                      OFFICIAL PROFILE IMAGE
+                    </span>
+                  </div>
+                ) : (
+                  <img
+                    src={artist.profileImage}
+                    alt={artist.nameKo}
+                    onError={() => setImgError(true)}
+                    className="w-full h-full object-cover object-center"
+                    referrerPolicy="no-referrer"
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
+                
+                {/* Showreel quick overlay badge */}
+                {validEmbedUrl && (
                   <button
-                    key={idx}
-                    onClick={() => setSelectedPhotoIndex(idx)}
-                    className={`w-14 h-18 shrink-0 overflow-hidden border transition-all ${
-                      selectedPhotoIndex === idx
-                        ? 'border-sky-400 ring-1 ring-sky-400'
-                        : 'border-white/20 opacity-50 hover:opacity-100'
-                    }`}
+                    onClick={() => setShowVideoPlayer(true)}
+                    className="absolute bottom-4 left-4 right-4 bg-[#182A47]/90 hover:bg-[#182A47] text-white border border-sky-400/40 py-2.5 px-4 flex items-center justify-center space-x-2 text-xs font-semibold tracking-wider transition-all cursor-pointer"
                   >
-                    <img
-                      src={imgUrl}
-                      alt={`Thumb ${idx}`}
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
+                    <Play className="w-3.5 h-3.5 fill-sky-400 text-sky-400" />
+                    <span>PLAY SHOWREEL (쇼릴 재생)</span>
                   </button>
-                ))}
+                )}
               </div>
-            )}
-          </div>
+
+              <div className="mt-4 text-center">
+                <span className="text-[11px] font-mono tracking-widest text-gray-400 uppercase">
+                  OFFICIAL PROFILE IMAGE
+                </span>
+              </div>
+            </div>
 
           {/* Right Column: Detailed Actor Bio & Specs */}
           <div className="lg:col-span-7 p-6 sm:p-8 flex flex-col justify-between overflow-y-auto max-h-[750px]">
@@ -210,16 +203,6 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
                   }`}
                 >
                   FILMOGRAPHY ({artist.filmography?.length || 0})
-                </button>
-                <button
-                  onClick={() => setActiveTab('PHOTO')}
-                  className={`pb-2 transition-all relative ${
-                    activeTab === 'PHOTO'
-                      ? 'text-sky-400 font-bold border-b-2 border-sky-400'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  PHOTO GALLERY
                 </button>
                 <button
                   onClick={() => setActiveTab('VIDEO')}
@@ -361,32 +344,7 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
                 </div>
               )}
 
-              {/* Tab 3: Photo Gallery */}
-              {activeTab === 'PHOTO' && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-in fade-in duration-200">
-                  {gallery.map((imgUrl, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => setSelectedPhotoIndex(idx)}
-                      className={`aspect-[3/4] cursor-pointer overflow-hidden border relative group ${
-                        selectedPhotoIndex === idx ? 'border-sky-400' : 'border-white/10'
-                      }`}
-                    >
-                      <img
-                        src={imgUrl}
-                        alt={`${artist.nameKo} ${idx + 1}`}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs text-white font-mono">
-                        VIEW
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Tab 4: Video / Reel */}
+              {/* Tab 3: Video / Reel */}
               {activeTab === 'VIDEO' && (
                 <div className="space-y-4 animate-in fade-in duration-200">
                   {validEmbedUrl ? (

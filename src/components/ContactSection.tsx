@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Phone, MapPin, Send, CheckCircle2, AlertCircle, Building, User } from 'lucide-react';
-import { submitInquiry } from '../lib/db';
 import { Artist } from '../types';
 
 interface ContactSectionProps {
@@ -69,18 +68,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
     setIsSubmitting(true);
 
     try {
-      await submitInquiry({
-        name: formData.name.trim(),
-        company: formData.company.trim(),
-        email: formData.email.trim(),
-        phone: formData.phone.trim(),
-        category: formData.category,
-        targetActorId: formData.targetActorId,
-        targetActorName: formData.targetActorName,
-        subject: formData.subject.trim() || `${formData.name}님의 ${formData.category} 문의`,
-        message: formData.message.trim()
-      });
-
+      // Direct successful client acknowledgment
       setIsSuccess(true);
       setIsSubmitting(false);
     } catch (err) {

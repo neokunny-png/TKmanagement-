@@ -142,10 +142,12 @@ export interface Artist {
   agency?: string;
   instagram?: string;
   profileImage: string;
-  galleryImages: string[];
   showreelUrl?: string;
   bio?: string;
   filmography: FilmographyItem[];
+  career?: string[];
+  awards?: string[];
+  works?: string[];
   isActive: boolean;
   order: number;
   gender: 'Female' | 'Male';
