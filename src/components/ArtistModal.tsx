@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Download, Play, Mail, Instagram, ChevronRight, Award, Film, GraduationCap, Sparkles, FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Download, Play, Mail, Instagram, ChevronRight, ChevronLeft, Award, Film, GraduationCap, Sparkles, FileText, Image as ImageIcon } from 'lucide-react';
 import { Artist, sortFilmographyByYear, getGroupedFilmography } from '../types';
 import { getOfficialActorImage } from '../data/artists';
 import { TKLogoMark } from './TKLogo';
@@ -7,6 +7,7 @@ import { TKLogoMark } from './TKLogo';
 interface ArtistModalProps {
   artist: Artist | null;
   onClose: () => void;
+  onGoHome?: () => void;
   onCastingInquiry: (artist: Artist) => void;
   onOpenPrintSheet: (artist: Artist) => void;
 }
@@ -14,15 +15,58 @@ interface ArtistModalProps {
 export const ArtistModal: React.FC<ArtistModalProps> = ({
   artist,
   onClose,
+  onGoHome,
   onCastingInquiry,
   onOpenPrintSheet,
 }) => {
   if (!artist) return null;
 
-  const photoUrl = artist.profileImageUrl || artist.image || artist.profileImage || null;
+  const profilePhoto = artist.profileImageUrl || artist.image || artist.profileImage || null;
+
+  // Build full photo list: main profile photo + any additional gallery photos
+  const allPhotos: Array<{ id: string; url: string; label: string }> = [];
+  if (profilePhoto) {
+    allPhotos.push({ id: 'main-profile', url: profilePhoto, label: '대표 프로필' });
+  }
+  if (Array.isArray(artist.galleryImages)) {
+    artist.galleryImages.forEach((img, idx) => {
+      if (img && img.url) {
+        allPhotos.push({ id: img.id || `gallery-${idx}`, url: img.url, label: `사진 ${idx + 1}` });
+      }
+    });
+  }
+
+  const [activePhotoIdx, setActivePhotoIdx] = useState(0);
   const [activeTab, setActiveTab] = useState<'PROFILE' | 'VIDEO' | 'WORKS'>('PROFILE');
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
   const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setActivePhotoIdx(0);
+    setImgError(false);
+  }, [artist.id, profilePhoto]);
+
+  const currentPhoto = allPhotos[activePhotoIdx]?.url || profilePhoto || null;
+
+  const handlePrevPhoto = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActivePhotoIdx(prev => (prev > 0 ? prev - 1 : allPhotos.length - 1));
+    setImgError(false);
+  };
+
+  const handleNextPhoto = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActivePhotoIdx(prev => (prev < allPhotos.length - 1 ? prev + 1 : 0));
+    setImgError(false);
+  };
+
+  const handleLogoClick = () => {
+    if (onGoHome) {
+      onGoHome();
+    } else {
+      onClose();
+    }
+  };
 
   // Safely parse and convert showreel URLs, removing any legacy sample video
   const getEmbedUrl = (rawUrl?: string): string | null => {
@@ -77,10 +121,15 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
       >
         {/* Header Action Bar */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-white/10 bg-[#0B0C10] shrink-0">
-          <div className="flex items-center space-x-3">
-            <TKLogoMark className="w-7 h-5 shrink-0" tColor="#FFFFFF" kColor="#38BDF8" />
+          <button
+            type="button"
+            onClick={handleLogoClick}
+            className="flex items-center space-x-3 text-left group focus:outline-none cursor-pointer"
+            title="홈으로 이동"
+          >
+            <TKLogoMark className="w-7 h-5 shrink-0 group-hover:scale-105 transition-transform" tColor="#FFFFFF" kColor="#38BDF8" />
             <div className="flex items-center space-x-2">
-              <span className="text-xs font-bold font-display tracking-widest text-white whitespace-nowrap">
+              <span className="text-xs font-bold font-display tracking-widest text-white whitespace-nowrap group-hover:text-sky-400 transition-colors">
                 TK MANAGEMENT
               </span>
               <span className="text-gray-600 text-xs font-mono">/</span>
@@ -88,7 +137,7 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
                 ARTIST DOSSIER
               </span>
             </div>
-          </div>
+          </button>
 
           <button
             id="btn-close-artist-modal"
@@ -103,11 +152,11 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
         {/* Modal Main Grid */}
         <div className="overflow-y-auto touch-scroll flex-1">
           <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[620px]">
-            {/* Left Column: Visual Showcase */}
-            <div className="lg:col-span-5 relative bg-black/60 p-6 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-white/10">
-              {/* Official Single Profile Image */}
-              <div className="relative aspect-[3/4] w-full overflow-hidden border border-white/10 bg-neutral-900 shadow-inner group">
-                {!photoUrl ? (
+            {/* Left Column: Visual Showcase & Gallery */}
+            <div className="lg:col-span-5 relative bg-black/60 p-5 sm:p-6 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-white/10 space-y-4">
+              {/* Main Photo Viewer Box */}
+              <div className="relative aspect-[3/4] w-full overflow-hidden border border-white/10 bg-neutral-900 shadow-inner group select-none">
+                {!currentPhoto ? (
                   <div className="w-full h-full bg-[#161922] flex flex-col items-center justify-center p-6 text-center select-none">
                     <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center mb-3 text-gray-400 font-mono text-xs">
                       TK
@@ -133,32 +182,109 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
                   </div>
                 ) : (
                   <img
-                    src={photoUrl}
-                    alt={artist.nameKo}
+                    key={currentPhoto}
+                    src={currentPhoto}
+                    alt={`${artist.nameKo} - ${allPhotos[activePhotoIdx]?.label || 'Profile'}`}
                     onError={() => setImgError(true)}
-                    className="w-full h-full object-cover object-center"
+                    className="w-full h-full object-cover object-center transition-all duration-300"
                     referrerPolicy="no-referrer"
                   />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 pointer-events-none" />
-                
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-50 pointer-events-none" />
+
+                {/* Photo Badge & Index Pill */}
+                {allPhotos.length > 1 && (
+                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10 pointer-events-none">
+                    <span className="bg-black/75 border border-white/20 text-white font-mono text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider backdrop-blur-sm">
+                      {allPhotos[activePhotoIdx]?.label || `PHOTO ${activePhotoIdx + 1}`}
+                    </span>
+                    <span className="bg-black/75 border border-white/20 text-sky-400 font-mono text-[10px] px-2 py-0.5 font-bold backdrop-blur-sm">
+                      {activePhotoIdx + 1} / {allPhotos.length}
+                    </span>
+                  </div>
+                )}
+
+                {/* Left / Right Arrow navigation buttons */}
+                {allPhotos.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handlePrevPhoto}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 flex items-center justify-center transition-all opacity-80 hover:opacity-100 hover:scale-110 cursor-pointer z-10"
+                      aria-label="Previous photo"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleNextPhoto}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 flex items-center justify-center transition-all opacity-80 hover:opacity-100 hover:scale-110 cursor-pointer z-10"
+                      aria-label="Next photo"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
+
                 {/* Showreel quick overlay badge */}
                 {validEmbedUrl && (
                   <button
                     onClick={() => setShowVideoPlayer(true)}
-                    className="absolute bottom-4 left-4 right-4 bg-[#182A47]/90 hover:bg-[#182A47] text-white border border-sky-400/40 py-2.5 px-4 flex items-center justify-center space-x-2 text-xs font-semibold tracking-wider transition-all cursor-pointer"
+                    className="absolute bottom-3 left-3 right-3 bg-[#182A47]/90 hover:bg-[#182A47] text-white border border-sky-400/40 py-2 px-3 flex items-center justify-center space-x-2 text-xs font-semibold tracking-wider transition-all cursor-pointer z-10"
                   >
-                    <Play className="w-3.5 h-3.5 fill-sky-400 text-sky-400" />
+                    <Play className="w-3 h-3 fill-sky-400 text-sky-400" />
                     <span>PLAY SHOWREEL (쇼릴 재생)</span>
                   </button>
                 )}
               </div>
 
-              <div className="mt-4 text-center">
-                <span className="text-[11px] font-mono tracking-widest text-gray-400 uppercase">
-                  OFFICIAL PROFILE IMAGE
-                </span>
-              </div>
+              {/* Gallery Thumbnails Strip (if multiple photos exist) */}
+              {allPhotos.length > 1 ? (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] font-mono text-gray-400 px-0.5">
+                    <span>GALLERY ({allPhotos.length} PHOTOS)</span>
+                    <span className="text-sky-400">클릭하여 사진 전환</span>
+                  </div>
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-white/20 touch-scroll">
+                    {allPhotos.map((photo, idx) => {
+                      const isActive = idx === activePhotoIdx;
+                      return (
+                        <button
+                          key={photo.id}
+                          type="button"
+                          onClick={() => {
+                            setActivePhotoIdx(idx);
+                            setImgError(false);
+                          }}
+                          className={`relative aspect-[3/4] w-14 shrink-0 overflow-hidden border transition-all cursor-pointer ${
+                            isActive
+                              ? 'border-sky-400 ring-2 ring-sky-400/50 scale-105 opacity-100 z-10'
+                              : 'border-white/15 opacity-60 hover:opacity-100 hover:border-white/40'
+                          }`}
+                        >
+                          <img
+                            src={photo.url}
+                            alt={`Thumbnail ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                          {idx === 0 && (
+                            <div className="absolute bottom-0 inset-x-0 bg-black/80 text-[8px] font-mono text-center text-white py-0.2">
+                              MAIN
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-1">
+                  <span className="text-[11px] font-mono tracking-widest text-gray-400 uppercase">
+                    OFFICIAL PROFILE IMAGE
+                  </span>
+                </div>
+              )}
             </div>
 
           {/* Right Column: Detailed Actor Bio & Specs */}

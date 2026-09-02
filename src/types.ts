@@ -129,6 +129,13 @@ export function sortFilmographyByCategoryAndYear(items?: FilmographyItem[]): Fil
 
 export const sortFilmographyByYear = sortFilmographyByCategoryAndYear;
 
+export interface ArtistPhoto {
+  id: string;
+  url: string;
+  order: number;
+  createdAt?: string | number;
+}
+
 export interface Artist {
   id: string;
   nameKo: string;
@@ -136,6 +143,7 @@ export interface Artist {
   profileImageUrl?: string | null;
   image?: string | null;
   profileImage?: string | null;
+  galleryImages?: ArtistPhoto[];
   birth?: string; // e.g. "2002.04.18"
   height?: number; // in cm
   weight?: number; // in kg (optional)

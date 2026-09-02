@@ -9,7 +9,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage, ensureFirebaseAuth, handleFirestoreError, OperationType } from '../lib/firebase';
-import { Artist } from '../types';
+import { Artist, ArtistPhoto } from '../types';
 
 const COLLECTION_NAME = 'artists';
 
@@ -26,8 +26,8 @@ export function getCanonicalArtistId(idOrKo: string, nameEn?: string): string {
   if (str.includes('최은서') || str.includes('eunseo') || str.includes('choi-eunseo')) {
     return 'artist-choi-eunseo';
   }
-  if (str.includes('이은수') || str.includes('eunsu') || str.includes('lee-eunsu')) {
-    return 'artist-lee-eunsu';
+  if (str.includes('이은수') || str.includes('eunsoo') || str.includes('eunsu') || str.includes('lee-eunsoo') || str.includes('lee-eunsu')) {
+    return 'artist-lee-eunsoo';
   }
   if (str.includes('박도이') || str.includes('doyi') || str.includes('park-doyi')) {
     return 'artist-park-doyi';
@@ -35,7 +35,7 @@ export function getCanonicalArtistId(idOrKo: string, nameEn?: string): string {
   if (str.includes('박현진') || str.includes('hyunjin') || str.includes('park-hyunjin')) {
     return 'artist-park-hyunjin';
   }
-  if (str.includes('박아론') || str.includes('aron') || str.includes('park-aron')) {
+  if (str.includes('박아론') || str.includes('아론') || str.includes('aron') || str.includes('park-aron')) {
     return 'artist-park-aron';
   }
 
@@ -73,8 +73,8 @@ export function dataUrlToBlob(dataUrl: string): Blob {
  */
 export function compressImage(
   fileOrBlob: File | Blob,
-  maxWidth = 800,
-  quality = 0.82
+  maxDimension = 1000,
+  quality = 0.8
 ): Promise<{ blob: Blob; dataUrl: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -85,9 +85,14 @@ export function compressImage(
         let width = img.width;
         let height = img.height;
 
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
         }
 
         canvas.width = width;
@@ -95,13 +100,27 @@ export function compressImage(
 
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-          const fallbackData = e.target?.result as string;
+          const fallbackData = (e.target?.result as string) || '';
           resolve({ blob: fileOrBlob, dataUrl: fallbackData });
           return;
         }
 
         ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        let dataUrl = canvas.toDataURL('image/jpeg', quality);
+
+        // If dataUrl exceeds 150KB, compress down to 800px max dimension & 0.72 quality
+        if (dataUrl.length > 150000) {
+          const secondCanvas = document.createElement('canvas');
+          const scale = Math.min(1, 800 / Math.max(width, height));
+          secondCanvas.width = Math.round(width * scale);
+          secondCanvas.height = Math.round(height * scale);
+          const secondCtx = secondCanvas.getContext('2d');
+          if (secondCtx) {
+            secondCtx.drawImage(canvas, 0, 0, secondCanvas.width, secondCanvas.height);
+            dataUrl = secondCanvas.toDataURL('image/jpeg', 0.72);
+          }
+        }
+
         canvas.toBlob(
           (blob) => {
             if (blob) {
@@ -125,17 +144,16 @@ export function compressImage(
 /**
  * Upload image to Firebase Storage at `artists/{artistId}/profile.jpg`.
  * Returns public HTTPS download URL if successful.
- * If Storage is unreachable (e.g. storage/retry-limit-exceeded or bucket disabled),
+ * If Storage is unreachable (e.g. timeout or bucket latency),
  * gracefully returns the optimized compressed data URL so actor data is never lost.
  */
 export async function uploadArtistPhoto(artistId: string, fileOrBlob: File | Blob): Promise<string> {
   console.log(`[TK] 3. Optimizing and uploading photo (ID: ${artistId}, Initial Size: ${fileOrBlob.size} bytes)`);
   
-  // Compress image first to ensure fastest upload and guaranteed sub-100KB safety
   let optimizedBlob: Blob = fileOrBlob;
   let optimizedDataUrl: string = '';
   try {
-    const compressed = await compressImage(fileOrBlob, 800, 0.82);
+    const compressed = await compressImage(fileOrBlob, 900, 0.8);
     optimizedBlob = compressed.blob;
     optimizedDataUrl = compressed.dataUrl;
     console.log(`[TK] Photo compressed to: ${(optimizedBlob.size / 1024).toFixed(1)} KB`);
@@ -155,9 +173,8 @@ export async function uploadArtistPhoto(artistId: string, fileOrBlob: File | Blo
 
   try {
     const uploadPromise = uploadBytes(storageRef, optimizedBlob, metadata);
-    // 6-second timeout for storage upload
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Storage upload timeout')), 6000)
+      setTimeout(() => reject(new Error('Storage upload timeout')), 20000)
     );
 
     const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
@@ -167,11 +184,89 @@ export async function uploadArtistPhoto(artistId: string, fileOrBlob: File | Blo
     return downloadUrl;
   } catch (error: any) {
     console.warn('[TK] Firebase Storage direct upload note (falling back to optimized cloud payload):', error?.message || error);
-    // If Storage fails due to retry-limit or network, use the compressed ~50KB dataUrl
     if (optimizedDataUrl) {
       return optimizedDataUrl;
     }
     throw new Error(`Storage upload failed: ${error?.message || '스토리지 업로드 중 오류가 발생했습니다.'}`);
+  }
+}
+
+/**
+ * Upload an additional gallery photo to Firebase Storage at `artists/{artistId}/gallery/{photoId}.jpg`.
+ * Returns the photo metadata { id, url, order, createdAt }.
+ */
+export async function uploadArtistGalleryPhoto(
+  artistId: string,
+  fileOrBlob: File | Blob,
+  order = 0,
+  customPhotoId?: string
+): Promise<{ id: string; url: string; order: number; createdAt: string }> {
+  const cleanId = getCanonicalArtistId(artistId);
+  const photoId = customPhotoId || `photo-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+  
+  console.log(`[TK Gallery] Uploading gallery image (Artist: ${cleanId}, Photo: ${photoId}, Size: ${fileOrBlob.size} bytes)`);
+
+  let optimizedBlob: Blob = fileOrBlob;
+  let optimizedDataUrl: string = '';
+  try {
+    const compressed = await compressImage(fileOrBlob, 1000, 0.8);
+    optimizedBlob = compressed.blob;
+    optimizedDataUrl = compressed.dataUrl;
+  } catch (compErr) {
+    console.warn('Gallery compression note:', compErr);
+  }
+
+  await ensureFirebaseAuth();
+  const storagePath = `artists/${cleanId}/gallery/${photoId}.jpg`;
+  const storageRef = ref(storage, storagePath);
+
+  const metadata = {
+    contentType: 'image/jpeg',
+    cacheControl: 'public, max-age=31536000',
+  };
+
+  try {
+    const uploadPromise = uploadBytes(storageRef, optimizedBlob, metadata);
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Storage upload timeout')), 20000)
+    );
+
+    const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
+    const downloadUrl = await getDownloadURL(uploadResult.ref);
+    console.log('[TK Gallery] Gallery image uploaded to Storage successfully:', downloadUrl);
+    return {
+      id: photoId,
+      url: downloadUrl,
+      order,
+      createdAt: new Date().toISOString(),
+    };
+  } catch (error: any) {
+    console.warn('[TK Gallery] Storage upload fallback note (using optimized payload):', error?.message || error);
+    if (optimizedDataUrl) {
+      return {
+        id: photoId,
+        url: optimizedDataUrl,
+        order,
+        createdAt: new Date().toISOString(),
+      };
+    }
+    throw new Error(`갤러리 사진 업로드 실패: ${error?.message || '스토리지 업로드 중 오류'}`);
+  }
+}
+
+/**
+ * Safely delete an artist's gallery photo from Firebase Storage
+ */
+export async function deleteArtistGalleryPhoto(artistId: string, photoId: string): Promise<void> {
+  try {
+    const cleanId = getCanonicalArtistId(artistId);
+    const storageRef = ref(storage, `artists/${cleanId}/gallery/${photoId}.jpg`);
+    await deleteObject(storageRef);
+    console.log(`[TK Gallery] Deleted gallery photo from Storage: ${cleanId}/gallery/${photoId}.jpg`);
+  } catch (e: any) {
+    if (e?.code !== 'storage/object-not-found') {
+      console.warn('Storage gallery photo deletion note:', e);
+    }
   }
 }
 
@@ -193,6 +288,7 @@ export async function deleteArtistPhoto(artistId: string): Promise<void> {
 /**
  * Sanitize and validate payload before writing to Firestore.
  * - Enforces that profileImageUrl is strictly a valid HTTPS URL or an optimized compressed payload (< 200KB).
+ * - Enforces galleryImages is an array of clean { id, url, order, createdAt } objects with valid URLs.
  * - Completely purges raw File, Blob, and large uncompressed binary objects.
  * - Strips undefined fields.
  */
@@ -202,14 +298,22 @@ export function sanitizeArtistForFirestore(artist: Artist): Record<string, any> 
   let validPhotoUrl: string | null = null;
   const candidateUrl = artist.profileImageUrl || artist.image || artist.profileImage || null;
   
-  if (typeof candidateUrl === 'string') {
-    if (candidateUrl.startsWith('https://')) {
-      validPhotoUrl = candidateUrl;
-    } else if (candidateUrl.startsWith('data:image') && candidateUrl.length < 200000) {
-      // Allow optimized compressed image under 200KB (Firestore document limit is 1,048,576 bytes)
-      validPhotoUrl = candidateUrl;
+  if (typeof candidateUrl === 'string' && candidateUrl.trim()) {
+    const trimmed = candidateUrl.trim();
+    if (!trimmed.startsWith('blob:')) {
+      validPhotoUrl = trimmed;
     }
   }
+
+  // Clean gallery images
+  const cleanGalleryImages = (Array.isArray(artist.galleryImages) ? artist.galleryImages : [])
+    .filter((img) => img && typeof img.url === 'string' && img.url.trim() && !img.url.startsWith('blob:'))
+    .map((img, idx) => ({
+      id: String(img.id || `photo-${idx}`),
+      url: String(img.url).trim(),
+      order: typeof img.order === 'number' ? img.order : idx,
+      createdAt: img.createdAt || new Date().toISOString(),
+    }));
 
   // Clean filmography (no undefined values)
   const cleanFilmography = (artist.filmography || []).map((f, idx) => ({
@@ -226,6 +330,9 @@ export function sanitizeArtistForFirestore(artist: Artist): Record<string, any> 
     nameKo: String(artist.nameKo || '').trim(),
     nameEn: String(artist.nameEn || '').trim(),
     profileImageUrl: validPhotoUrl,
+    image: validPhotoUrl,
+    profileImage: validPhotoUrl,
+    galleryImages: cleanGalleryImages,
     birth: String(artist.birth || ''),
     height: Number(artist.height) || 0,
     weight: typeof artist.weight === 'number' ? artist.weight : 0,
@@ -249,7 +356,7 @@ export function sanitizeArtistForFirestore(artist: Artist): Record<string, any> 
 
   // 1MB Document overflow safety check
   const serialized = JSON.stringify(cleanPayload);
-  if (serialized.length > 500000) {
+  if (serialized.length > 800000) {
     throw new Error('Firestore 문서 크기 한도(1MB)를 초과하여 저장이 차단되었습니다.');
   }
 
@@ -326,6 +433,7 @@ export async function saveArtistToDb(
     profileImageUrl: finalProfileImageUrl,
     image: finalProfileImageUrl,
     profileImage: finalProfileImageUrl,
+    galleryImages: cleanPayload.galleryImages || [],
     filmography: cleanPayload.filmography,
     career: cleanPayload.career,
     awards: cleanPayload.awards,
@@ -341,8 +449,120 @@ export async function saveArtistToDb(
 }
 
 /**
+ * Deduplicates and normalizes artist records.
+ * 1. Groups artists by canonical ID (e.g. artist-park-aron)
+ * 2. If duplicate documents exist for the same canonical actor (e.g. Park Aron A with photo vs Park Aron B without photo):
+ *    - Chooses the record with a valid Storage profile photo and richer content as master
+ *    - Merges any missing filmography/careers/gallery from other records
+ *    - Syncs the master record to the canonical doc ID (artist-park-aron)
+ *    - Safely marks the stale duplicate document IDs for background deletion in Firestore
+ * 3. Returns a clean, deduplicated array with exactly 1 entry per artist.
+ */
+export function normalizeArtists(rawItems: Artist[]): { normalized: Artist[]; duplicatesToDelete: string[] } {
+  const groupMap = new Map<string, Artist[]>();
+  const duplicatesToDelete: string[] = [];
+
+  for (const item of rawItems) {
+    const canonicalKey = getCanonicalArtistId(item.id || '', `${item.nameKo} ${item.nameEn}`);
+    if (!groupMap.has(canonicalKey)) {
+      groupMap.set(canonicalKey, []);
+    }
+    groupMap.get(canonicalKey)!.push(item);
+  }
+
+  const result: Artist[] = [];
+
+  for (const [canonicalId, group] of groupMap.entries()) {
+    if (group.length === 1) {
+      const single = group[0];
+      result.push({
+        ...single,
+        id: single.id || canonicalId,
+      });
+      continue;
+    }
+
+    // Multiple entries for the same artist (e.g. Park Aron A with photo, Park Aron B without photo)
+    // Find the best master record
+    const scoredGroup = group.map(item => {
+      let score = 0;
+      const hasRealPhoto = Boolean(
+        item.profileImageUrl &&
+        (item.profileImageUrl.startsWith('https://') || item.profileImageUrl.startsWith('data:image'))
+      );
+      if (hasRealPhoto) score += 100;
+      if (item.id === canonicalId) score += 50;
+      if (item.galleryImages && item.galleryImages.length > 0) score += item.galleryImages.length * 5;
+      if (item.filmography && item.filmography.length > 0) score += item.filmography.length * 2;
+      if (item.bio && item.bio.length > 0) score += 5;
+      if (item.birth && item.birth.length > 0) score += 2;
+      return { item, score };
+    });
+
+    scoredGroup.sort((a, b) => b.score - a.score);
+    const master = scoredGroup[0].item;
+    const secondaryList = scoredGroup.slice(1).map(s => s.item);
+
+    // Collect duplicates to delete from Firestore (do NOT delete the canonicalId doc)
+    for (const sec of secondaryList) {
+      if (sec.id && sec.id !== canonicalId && sec.id !== master.id) {
+        duplicatesToDelete.push(sec.id);
+      } else if (sec.id && sec.id !== canonicalId) {
+        duplicatesToDelete.push(sec.id);
+      }
+    }
+
+    // Merge any missing fields from secondaries into master
+    const mergedGallery = [...(master.galleryImages || [])];
+    const existingGalleryUrls = new Set(mergedGallery.map(g => g.url));
+
+    for (const sec of secondaryList) {
+      if (Array.isArray(sec.galleryImages)) {
+        for (const g of sec.galleryImages) {
+          if (g.url && !existingGalleryUrls.has(g.url)) {
+            existingGalleryUrls.add(g.url);
+            mergedGallery.push(g);
+          }
+        }
+      }
+    }
+
+    const mergedMaster: Artist = {
+      ...master,
+      id: canonicalId,
+      profileImageUrl: master.profileImageUrl || secondaryList.find(s => s.profileImageUrl)?.profileImageUrl || null,
+      image: master.profileImageUrl || secondaryList.find(s => s.profileImageUrl)?.profileImageUrl || null,
+      profileImage: master.profileImageUrl || secondaryList.find(s => s.profileImageUrl)?.profileImageUrl || null,
+      galleryImages: mergedGallery,
+      birth: master.birth || secondaryList.find(s => s.birth)?.birth || '',
+      height: master.height || secondaryList.find(s => s.height)?.height || 0,
+      education: master.education || secondaryList.find(s => s.education)?.education || '',
+      bio: master.bio || secondaryList.find(s => s.bio)?.bio || '',
+      filmography: (master.filmography && master.filmography.length > 0)
+        ? master.filmography
+        : (secondaryList.find(s => s.filmography && s.filmography.length > 0)?.filmography || []),
+      career: (master.career && master.career.length > 0)
+        ? master.career
+        : (secondaryList.find(s => s.career && s.career.length > 0)?.career || []),
+    };
+
+    result.push(mergedMaster);
+  }
+
+  // Sort by order ascending, then by nameKo
+  result.sort((a, b) => {
+    if ((a.order ?? 99) !== (b.order ?? 99)) {
+      return (a.order ?? 99) - (b.order ?? 99);
+    }
+    return (a.nameKo || '').localeCompare(b.nameKo || '', 'ko');
+  });
+
+  return { normalized: result, duplicatesToDelete };
+}
+
+/**
  * Real-time listener for artists collection from Firestore.
- * If 0 artists are in Firestore, emits an empty array [].
+ * Automatically deduplicates and merges duplicate artist records, ensuring single source of truth.
  */
 export function subscribeArtists(
   onUpdate: (artists: Artist[]) => void,
@@ -356,7 +576,18 @@ export function subscribeArtists(
       const items: Artist[] = [];
       snapshot.forEach((docSnap) => {
         const data = docSnap.data();
-        const photoUrl = data.profileImageUrl || data.image || null;
+        const photoUrl = data.profileImageUrl || data.image || data.profileImage || null;
+
+        const rawGallery = Array.isArray(data.galleryImages) ? data.galleryImages : [];
+        const galleryImages = rawGallery
+          .map((g: any, idx: number) => ({
+            id: String(g.id || `photo-${idx}`),
+            url: String(g.url || ''),
+            order: typeof g.order === 'number' ? g.order : idx,
+            createdAt: g.createdAt || Date.now(),
+          }))
+          .filter((g: any) => Boolean(g.url))
+          .sort((a: any, b: any) => a.order - b.order);
 
         const artist: Artist = {
           id: docSnap.id,
@@ -365,6 +596,7 @@ export function subscribeArtists(
           profileImageUrl: photoUrl,
           image: photoUrl,
           profileImage: photoUrl,
+          galleryImages,
           birth: data.birth || '',
           height: Number(data.height) || 0,
           weight: data.weight ? Number(data.weight) : undefined,
@@ -388,15 +620,19 @@ export function subscribeArtists(
         items.push(artist);
       });
 
-      // Sort by order ascending, then by nameKo
-      items.sort((a, b) => {
-        if ((a.order ?? 99) !== (b.order ?? 99)) {
-          return (a.order ?? 99) - (b.order ?? 99);
-        }
-        return (a.nameKo || '').localeCompare(b.nameKo || '', 'ko');
-      });
+      const { normalized, duplicatesToDelete } = normalizeArtists(items);
 
-      onUpdate(items);
+      // Asynchronously clean up duplicate stray documents from Firestore in the background
+      if (duplicatesToDelete.length > 0) {
+        console.log('[TK] Cleaning up duplicate artist docs from Firestore:', duplicatesToDelete);
+        duplicatesToDelete.forEach(dupDocId => {
+          deleteDoc(doc(db, COLLECTION_NAME, dupDocId)).catch(err => {
+            console.warn('[TK] Duplicate cleanup note:', err);
+          });
+        });
+      }
+
+      onUpdate(normalized);
     },
     (error) => {
       console.error('Error listening to artists:', error);
@@ -419,7 +655,18 @@ export async function getArtistsOnce(): Promise<Artist[]> {
     const items: Artist[] = [];
     snapshot.forEach((docSnap) => {
       const data = docSnap.data();
-      const photoUrl = data.profileImageUrl || data.image || null;
+      const photoUrl = data.profileImageUrl || data.image || data.profileImage || null;
+
+      const rawGallery = Array.isArray(data.galleryImages) ? data.galleryImages : [];
+      const galleryImages = rawGallery
+        .map((g: any, idx: number) => ({
+          id: String(g.id || `photo-${idx}`),
+          url: String(g.url || ''),
+          order: typeof g.order === 'number' ? g.order : idx,
+          createdAt: g.createdAt || Date.now(),
+        }))
+        .filter((g: any) => Boolean(g.url))
+        .sort((a: any, b: any) => a.order - b.order);
 
       items.push({
         id: docSnap.id,
@@ -428,6 +675,7 @@ export async function getArtistsOnce(): Promise<Artist[]> {
         profileImageUrl: photoUrl,
         image: photoUrl,
         profileImage: photoUrl,
+        galleryImages,
         birth: data.birth || '',
         height: Number(data.height) || 0,
         weight: data.weight ? Number(data.weight) : undefined,
@@ -449,22 +697,43 @@ export async function getArtistsOnce(): Promise<Artist[]> {
         updatedAt: data.updatedAt || Date.now(),
       });
     });
-    return items;
+    const { normalized } = normalizeArtists(items);
+    return normalized;
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, COLLECTION_NAME);
   }
 }
 
 /**
- * Delete an artist from Firestore and delete their photo from Firebase Storage
+ * Updates only the galleryImages array of an artist in Firestore
  */
-export async function deleteArtistFromDb(artistId: string): Promise<void> {
+export async function updateArtistGalleryInDb(artistId: string, galleryImages: ArtistPhoto[]): Promise<void> {
   const docId = getCanonicalArtistId(artistId);
   const docRef = doc(db, COLLECTION_NAME, docId);
 
-  // Delete Storage image safely in background
+  const cleanGallery = (galleryImages || []).map((img, idx) => ({
+    id: img.id || `gallery-${idx + 1}-${Date.now()}`,
+    url: String(img.url || ''),
+    order: Number(img.order !== undefined ? img.order : idx),
+    createdAt: img.createdAt || new Date().toISOString(),
+  })).filter(img => img.url && !img.url.startsWith('blob:'));
+
   try {
-    await deleteArtistPhoto(docId);
+    await setDoc(docRef, { galleryImages: cleanGallery, updatedAt: Date.now() }, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `${COLLECTION_NAME}/${docId}`);
+  }
+}
+
+/**
+ * Delete an artist from Firestore by exact document ID
+ */
+export async function deleteArtistFromDb(exactDocId: string): Promise<void> {
+  const docRef = doc(db, COLLECTION_NAME, exactDocId);
+
+  // Safely delete storage photos under artists/${exactDocId}/ if it existed
+  try {
+    await deleteArtistPhoto(exactDocId);
   } catch (e) {
     console.warn('Storage image delete warning:', e);
   }
@@ -472,6 +741,6 @@ export async function deleteArtistFromDb(artistId: string): Promise<void> {
   try {
     await deleteDoc(docRef);
   } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, `${COLLECTION_NAME}/${docId}`);
+    handleFirestoreError(error, OperationType.DELETE, `${COLLECTION_NAME}/${exactDocId}`);
   }
 }

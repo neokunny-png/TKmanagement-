@@ -60,6 +60,38 @@ export default function App() {
   const [printArtist, setPrintArtist] = useState<Artist | null>(null);
   const [preselectedActorForContact, setPreselectedActorForContact] = useState<Artist | null>(null);
 
+  // Body scroll lock management when modals are open
+  useEffect(() => {
+    const isAnyModalOpen = Boolean(selectedArtist || printArtist || isAdminOpen || isAdminAuthModalOpen);
+    if (isAnyModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [selectedArtist, printArtist, isAdminOpen, isAdminAuthModalOpen]);
+
+  // Browser History & Mobile Back Gesture (popstate) Handler
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      // If user swipes back or taps browser back button, close open modals smoothly
+      if (selectedArtist) {
+        setSelectedArtist(null);
+      }
+      if (printArtist) {
+        setPrintArtist(null);
+      }
+      if (isAdminAuthModalOpen) {
+        setIsAdminAuthModalOpen(false);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [selectedArtist, printArtist, isAdminAuthModalOpen]);
+
   // Track active section on scroll
   useEffect(() => {
     let ticking = false;
@@ -90,11 +122,72 @@ export default function App() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const handleSelectArtist = (artist: Artist) => {
+    setSelectedArtist(artist);
+    try {
+      window.history.pushState({ modal: 'artist', id: artist.id }, '', `#artist/${artist.id}`);
+    } catch {}
+  };
+
+  const handleCloseArtistModal = () => {
+    setSelectedArtist(null);
+    try {
+      if (window.location.hash.startsWith('#artist/')) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    } catch {}
+  };
+
+  const handleOpenPrintSheet = (artist: Artist) => {
+    setSelectedArtist(null);
+    setPrintArtist(artist);
+    try {
+      window.history.pushState({ modal: 'print', id: artist.id }, '', `#print/${artist.id}`);
+    } catch {}
+  };
+
+  const handleClosePrintSheet = () => {
+    setPrintArtist(null);
+    try {
+      if (window.location.hash.startsWith('#print/')) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    } catch {}
+  };
+
   const handleNavigate = (sectionId: string) => {
+    setSelectedArtist(null);
+    setPrintArtist(null);
     setActiveSection(sectionId);
+    try {
+      if (window.location.hash) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    } catch {}
     const element = document.getElementById(sectionId);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleNavigateHome = () => {
+    setSelectedArtist(null);
+    setPrintArtist(null);
+    setIsAdminOpen(false);
+    setIsAdminAuthModalOpen(false);
+    setActiveSection('hero');
+    try {
+      if (window.location.hash) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    } catch {}
+    const heroElement = document.getElementById('hero');
+    if (heroElement) {
+      heroElement.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -162,7 +255,7 @@ export default function App() {
         {/* 3. Artists (Core) */}
         <ArtistsSection
           artists={artists}
-          onSelectArtist={(artist) => setSelectedArtist(artist)}
+          onSelectArtist={handleSelectArtist}
         />
 
         {/* 4. News */}
@@ -196,12 +289,10 @@ export default function App() {
       {selectedArtist && (
         <ArtistModal
           artist={selectedArtist}
-          onClose={() => setSelectedArtist(null)}
+          onClose={handleCloseArtistModal}
+          onGoHome={handleNavigateHome}
           onCastingInquiry={handleCastingInquiry}
-          onOpenPrintSheet={(artist) => {
-            setSelectedArtist(null);
-            setPrintArtist(artist);
-          }}
+          onOpenPrintSheet={handleOpenPrintSheet}
         />
       )}
 
@@ -209,7 +300,8 @@ export default function App() {
       {printArtist && (
         <ProfilePrintSheet
           artist={printArtist}
-          onClose={() => setPrintArtist(null)}
+          onClose={handleClosePrintSheet}
+          onGoHome={handleNavigateHome}
         />
       )}
 

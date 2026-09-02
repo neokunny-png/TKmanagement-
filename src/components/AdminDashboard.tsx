@@ -37,12 +37,15 @@ import {
   PinOff,
   Calendar
 } from 'lucide-react';
-import { Artist, AuditionApplication, NewsArticle, InquiryMessage, AuditionStatus, FilmographyItem, sortFilmographyByYear } from '../types';
+import { Artist, ArtistPhoto, AuditionApplication, NewsArticle, InquiryMessage, AuditionStatus, FilmographyItem, sortFilmographyByYear } from '../types';
 import {
   saveArtistToDb,
   deleteArtistFromDb,
   uploadArtistPhoto,
+  uploadArtistGalleryPhoto,
+  deleteArtistGalleryPhoto,
   deleteArtistPhoto,
+  updateArtistGalleryInDb,
   getCanonicalArtistId,
   dataUrlToBlob
 } from '../services/artistService';
@@ -99,6 +102,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const profileFileInputRef = useRef<HTMLInputElement>(null);
   const [isDraggingProfile, setIsDraggingProfile] = useState(false);
 
+  // Gallery Photos state
+  const galleryFileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+  const [galleryUploadProgress, setGalleryUploadProgress] = useState<string>('');
+  const [isDraggingGallery, setIsDraggingGallery] = useState(false);
+
   // Filmography editing inside artist modal
   const [newFilmTitle, setNewFilmTitle] = useState('');
   const [newFilmRole, setNewFilmRole] = useState('');
@@ -129,6 +138,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     type: 'artist' | 'news' | 'audition';
     id: string;
     title: string;
+    hasPhoto?: boolean;
+    extra?: string;
   } | null>(null);
   const [isDeletingItem, setIsDeletingItem] = useState(false);
 
@@ -266,6 +277,126 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  // ----------------------------------------------------
+  // GALLERY PHOTO MANAGEMENT (Multi-Photo)
+  // ----------------------------------------------------
+  const handleGalleryPhotosSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !editingArtist) return;
+    await processAndUploadGalleryFiles(Array.from(files));
+    if (galleryFileInputRef.current) {
+      galleryFileInputRef.current.value = '';
+    }
+  };
+
+  const handleGalleryPhotoDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingGallery(false);
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0 || !editingArtist) return;
+    await processAndUploadGalleryFiles(Array.from(files));
+  };
+
+  const processAndUploadGalleryFiles = async (fileList: File[]) => {
+    if (!editingArtist) return;
+    const imageFiles = fileList.filter(f => f.type.startsWith('image/'));
+    if (imageFiles.length === 0) {
+      showToast('⚠️ 이미지 파일(JPG, PNG, WEBP 등)만 등록 가능합니다.');
+      return;
+    }
+
+    const artistId = getCanonicalArtistId(
+      editingArtist.id || '',
+      `${editingArtist.nameKo || ''} ${editingArtist.nameEn || ''}`
+    );
+
+    setIsUploadingGallery(true);
+    const currentGallery = editingArtist.galleryImages ? [...editingArtist.galleryImages] : [];
+    const uploadedPhotos: ArtistPhoto[] = [];
+
+    for (let i = 0; i < imageFiles.length; i++) {
+      const file = imageFiles[i];
+      setGalleryUploadProgress(`사진 ${i + 1}/${imageFiles.length}장 Firebase Storage 업로드 중...`);
+      try {
+        const photoResult = await uploadArtistGalleryPhoto(
+          artistId,
+          file,
+          currentGallery.length + uploadedPhotos.length
+        );
+        uploadedPhotos.push(photoResult);
+      } catch (err: any) {
+        console.error('Gallery item upload error:', err);
+        showToast(`⚠️ 사진 ${file.name} 업로드 실패: ${err.message || '오류'}`);
+      }
+    }
+
+    if (uploadedPhotos.length > 0) {
+      const mergedGallery = [...currentGallery, ...uploadedPhotos];
+      setEditingArtist(prev => prev ? ({
+        ...prev,
+        galleryImages: mergedGallery
+      }) : null);
+      showToast(`📸 ${uploadedPhotos.length}장의 갤러리 사진이 등록되었습니다.`);
+
+      // Auto-sync updated gallery to Firestore if editing an existing artist
+      if (!isNewArtist && editingArtist.nameKo) {
+        updateArtistGalleryInDb(artistId, mergedGallery).catch(syncErr => {
+          console.warn('Auto-sync gallery to DB note:', syncErr);
+        });
+      }
+    }
+
+    setIsUploadingGallery(false);
+    setGalleryUploadProgress('');
+  };
+
+  const handleDeleteGalleryPhoto = async (photoId: string) => {
+    if (!editingArtist) return;
+    const artistId = getCanonicalArtistId(
+      editingArtist.id || '',
+      `${editingArtist.nameKo || ''} ${editingArtist.nameEn || ''}`
+    );
+
+    const currentGallery = editingArtist.galleryImages ? [...editingArtist.galleryImages] : [];
+    const filtered = currentGallery.filter(p => p.id !== photoId);
+
+    setEditingArtist(prev => prev ? ({
+      ...prev,
+      galleryImages: filtered
+    }) : null);
+
+    // Delete in background from storage
+    deleteArtistGalleryPhoto(artistId, photoId).catch(err => {
+      console.warn('Storage deletion background note:', err);
+    });
+
+    // Auto-sync updated gallery to Firestore if editing an existing artist
+    if (!isNewArtist && editingArtist.nameKo) {
+      updateArtistGalleryInDb(artistId, filtered).catch(syncErr => {
+        console.warn('Auto-sync gallery delete to DB note:', syncErr);
+      });
+    }
+
+    showToast('🗑️ 갤러리 사진이 삭제되었습니다.');
+  };
+
+  const handleMoveGalleryPhoto = (index: number, direction: 'prev' | 'next') => {
+    if (!editingArtist) return;
+    const list = editingArtist.galleryImages ? [...editingArtist.galleryImages] : [];
+    const targetIndex = direction === 'prev' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= list.length) return;
+
+    const temp = list[index];
+    list[index] = list[targetIndex];
+    list[targetIndex] = temp;
+
+    const updatedList = list.map((item, idx) => ({ ...item, order: idx }));
+    setEditingArtist(prev => prev ? ({
+      ...prev,
+      galleryImages: updatedList
+    }) : null);
+  };
+
   const handleSignOut = () => {
     try {
       sessionStorage.removeItem('tk_admin_auth');
@@ -359,9 +490,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       // Keep existing photo URL if no new file is selected
       const existingPhotoUrl = (editingArtist.profileImageUrl && !editingArtist.profileImageUrl.startsWith('blob:'))
         ? editingArtist.profileImageUrl
-        : (editingArtist.image && !editingArtist.image.startsWith('blob:'))
-          ? editingArtist.image
-          : null;
+        : (editingArtist.profileImage && !editingArtist.profileImage.startsWith('blob:'))
+          ? editingArtist.profileImage
+          : (editingArtist.image && !editingArtist.image.startsWith('blob:'))
+            ? editingArtist.image
+            : null;
 
       const artistToSave: Artist = {
         id: canonicalId,
@@ -377,6 +510,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         instagram: editingArtist.instagram || '',
         bio: editingArtist.bio || '',
         profileImageUrl: existingPhotoUrl,
+        galleryImages: editingArtist.galleryImages || [],
         showreelUrl: editingArtist.showreelUrl || '',
         filmography: editingArtist.filmography || [],
         isActive: editingArtist.isActive !== undefined ? editingArtist.isActive : true,
@@ -479,11 +613,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  const handleDeleteArtist = (id: string, name: string) => {
+  const handleDeleteArtist = (artist: Artist) => {
+    const hasPhoto = Boolean(
+      artist.profileImageUrl || artist.image || artist.profileImage
+    );
     setDeleteConfirmation({
       type: 'artist',
-      id,
-      title: `${name} 배우`
+      id: artist.id,
+      title: `${artist.nameKo}${artist.nameEn ? ` (${artist.nameEn})` : ''}`,
+      hasPhoto,
+      extra: `고유 ID: ${artist.id}`
     });
   };
 
@@ -1024,7 +1163,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDeleteArtist(artist.id, artist.nameKo)}
+                            onClick={() => handleDeleteArtist(artist)}
                             className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/40"
                             title="삭제"
                           >
@@ -1929,6 +2068,121 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </div>
                     </div>
                   </div>
+
+                  {/* ======================================================== */}
+                  {/* ADDITIONAL GALLERY PHOTOS SECTION (Multi-Photo) */}
+                  {/* ======================================================== */}
+                  <div className="pt-4 border-t border-white/10 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <label className="block text-gray-200 font-medium text-xs">
+                          추가 갤러리 사진 (Additional Gallery Photos)
+                        </label>
+                        <span className="text-xs bg-sky-950 text-sky-300 border border-sky-800 px-2 py-0.5 font-mono">
+                          총 {editingArtist.galleryImages?.length || 0}장 등록됨
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-gray-400 font-mono">
+                        {isUploadingGallery ? galleryUploadProgress : '화보, B컷, 스틸컷 등 여러 장 추가'}
+                      </span>
+                    </div>
+
+                    {/* Hidden multi-file input */}
+                    <input
+                      type="file"
+                      ref={galleryFileInputRef}
+                      accept="image/*"
+                      multiple
+                      onChange={handleGalleryPhotosSelect}
+                      className="hidden"
+                    />
+
+                    {/* Multi-photo upload dropzone */}
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setIsDraggingGallery(true); }}
+                      onDragLeave={() => setIsDraggingGallery(false)}
+                      onDrop={handleGalleryPhotoDrop}
+                      onClick={() => !isUploadingGallery && galleryFileInputRef.current?.click()}
+                      className={`p-4 border-2 border-dashed rounded cursor-pointer transition-all text-center flex flex-col items-center justify-center ${
+                        isDraggingGallery
+                          ? 'border-sky-400 bg-sky-950/40'
+                          : isUploadingGallery
+                            ? 'border-sky-500 bg-sky-950/20 cursor-wait'
+                            : 'border-white/15 bg-black/30 hover:border-sky-400/60 hover:bg-white/5'
+                      }`}
+                    >
+                      <Upload className={`w-5 h-5 mb-1.5 ${isUploadingGallery ? 'text-sky-400 animate-bounce' : 'text-sky-400'}`} />
+                      <p className="text-xs font-bold text-white mb-0.5">
+                        {isUploadingGallery
+                          ? (galleryUploadProgress || '사진 Firebase Storage 업로드 중...')
+                          : '+ 사진 추가 (여러 장 동시 선택 가능) 또는 드래그 앤 드롭'}
+                      </p>
+                      <p className="text-[11px] text-gray-400 font-light">
+                        선택 즉시 Firebase Storage에 개별 업로드되어 안전하게 저장됩니다.
+                      </p>
+                    </div>
+
+                    {/* Gallery Photos Grid List */}
+                    {editingArtist.galleryImages && editingArtist.galleryImages.length > 0 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3 pt-2">
+                        {editingArtist.galleryImages.map((photo, pIdx) => (
+                          <div
+                            key={photo.id || pIdx}
+                            className="group relative aspect-[3/4] bg-black border border-white/20 overflow-hidden flex flex-col justify-between"
+                          >
+                            <img
+                              src={photo.url}
+                              alt={`Gallery ${pIdx + 1}`}
+                              className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+
+                            {/* Order Badge */}
+                            <div className="absolute top-1 left-1 bg-black/80 border border-white/20 text-white font-mono text-[10px] px-1.5 py-0.5 font-bold z-10">
+                              #{pIdx + 1}
+                            </div>
+
+                            {/* Hover / Touch Controls */}
+                            <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2 z-20">
+                              <div className="flex items-center justify-between">
+                                <button
+                                  type="button"
+                                  disabled={pIdx === 0}
+                                  onClick={(e) => { e.stopPropagation(); handleMoveGalleryPhoto(pIdx, 'prev'); }}
+                                  className="p-1 bg-white/20 hover:bg-white text-white hover:text-black transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                  title="앞으로 이동"
+                                >
+                                  <ArrowUp className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={pIdx === (editingArtist.galleryImages?.length || 0) - 1}
+                                  onClick={(e) => { e.stopPropagation(); handleMoveGalleryPhoto(pIdx, 'next'); }}
+                                  className="p-1 bg-white/20 hover:bg-white text-white hover:text-black transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                  title="뒤로 이동"
+                                >
+                                  <ArrowDown className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handleDeleteGalleryPhoto(photo.id); }}
+                                className="w-full py-1 bg-red-900/90 hover:bg-red-800 text-white text-[10px] font-bold uppercase tracking-wider flex items-center justify-center space-x-1 border border-red-700 transition-colors"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>삭제</span>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="bg-[#12141e] border border-dashed border-white/10 p-4 text-center text-gray-500 text-xs">
+                        등록된 추가 갤러리 사진이 없습니다. 위 영역을 클릭하여 사진을 추가할 수 있습니다.
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -2610,10 +2864,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               </div>
 
-              <div className="p-3 bg-black/40 border border-white/5 text-xs text-gray-200 break-words font-mono">
-                <span>
+              <div className="p-3 bg-black/40 border border-white/5 text-xs text-gray-200 break-words font-mono space-y-1.5">
+                <div>
                   대상: <strong className="text-white">{deleteConfirmation.title}</strong>
-                </span>
+                </div>
+                {deleteConfirmation.type === 'artist' && (
+                  <>
+                    <div className="text-sky-300 text-[11px]">
+                      문서 ID: <span className="font-bold underline">{deleteConfirmation.id}</span>
+                    </div>
+                    <div className="text-[11px]">
+                      사진 상태:{' '}
+                      {deleteConfirmation.hasPhoto ? (
+                        <span className="text-emerald-400 font-bold">📸 등록된 프로필 사진 있음 (삭제 주의)</span>
+                      ) : (
+                        <span className="text-yellow-400">⚠️ 등록된 사진 없음 (빈 레코드)</span>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
               <p className="text-[11px] text-gray-400 leading-relaxed">

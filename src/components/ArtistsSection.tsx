@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowRight, UserCheck, Users } from 'lucide-react';
 import { Artist } from '../types';
 
@@ -12,6 +12,10 @@ const ArtistCardImage: React.FC<{
   alt: string;
 }> = ({ src, alt }) => {
   const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [src]);
 
   if (!src) {
     return (

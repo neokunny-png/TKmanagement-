@@ -7,16 +7,29 @@ import { TKLogoMark } from './TKLogo';
 interface ProfilePrintSheetProps {
   artist: Artist | null;
   onClose: () => void;
+  onGoHome?: () => void;
 }
 
-export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({ artist, onClose }) => {
+export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({ artist, onClose, onGoHome }) => {
   if (!artist) return null;
 
   const photoUrl = artist.profileImageUrl || artist.image || artist.profileImage || null;
   const [imgError, setImgError] = React.useState(false);
 
+  React.useEffect(() => {
+    setImgError(false);
+  }, [photoUrl, artist.id]);
+
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleLogoClick = () => {
+    if (onGoHome) {
+      onGoHome();
+    } else {
+      onClose();
+    }
   };
 
   return (
@@ -27,11 +40,16 @@ export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({ artist, on
       <div className="relative w-full max-w-4xl bg-white text-black shadow-2xl p-6 sm:p-10 my-auto rounded-none">
         {/* Top Control Bar (Hidden during actual print) */}
         <div className="print:hidden flex items-center justify-between pb-6 mb-6 border-b border-gray-200">
-          <div className="flex items-center space-x-2 text-xs font-mono text-gray-500">
-            <span className="font-bold text-black">TK MANAGEMENT</span>
+          <button
+            type="button"
+            onClick={handleLogoClick}
+            className="flex items-center space-x-2 text-xs font-mono text-gray-500 hover:text-black transition-colors cursor-pointer group focus:outline-none"
+            title="홈으로 이동"
+          >
+            <span className="font-bold text-black group-hover:text-blue-900 transition-colors">TK MANAGEMENT</span>
             <span>/</span>
             <span>CASTING BIO-SHEET PREVIEW</span>
-          </div>
+          </button>
 
           <div className="flex items-center space-x-3">
             <button
@@ -54,19 +72,24 @@ export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({ artist, on
         <div className="space-y-8 print:space-y-6">
           {/* Header Banner */}
           <div className="flex items-center justify-between border-b-2 border-black pb-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 flex items-center justify-center">
+            <button
+              type="button"
+              onClick={handleLogoClick}
+              className="flex items-center space-x-3 text-left focus:outline-none cursor-pointer group"
+              title="홈으로 이동"
+            >
+              <div className="w-10 h-10 flex items-center justify-center group-hover:scale-105 transition-transform">
                 <TKLogoMark className="w-9 h-9" tColor="#000000" kColor="#1E3A8A" />
               </div>
               <div>
-                <h1 className="text-xl font-black tracking-widest leading-none font-display text-black">
+                <h1 className="text-xl font-black tracking-widest leading-none font-display text-black group-hover:text-blue-950 transition-colors">
                   TK MANAGEMENT
                 </h1>
                 <span className="text-[10px] tracking-wider text-gray-500 font-mono">
                   ㈜TK Company Actors Division
                 </span>
               </div>
-            </div>
+            </button>
 
             <div className="text-right text-[10px] font-mono text-gray-600">
               <div>OFFICIAL ACTOR PROFILE</div>

@@ -9,8 +9,7 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
-  Sparkles,
-  HelpCircle
+  Sparkles
 } from 'lucide-react';
 import { TKLogoMark } from './TKLogo';
 
@@ -33,7 +32,6 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
   const [rememberSession, setRememberSession] = useState(true);
   const [isVerifyingPasscode, setIsVerifyingPasscode] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [showHint, setShowHint] = useState(false);
 
   if (!isOpen) return null;
 
@@ -59,7 +57,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
         }
         onSuccess('passcode', 'Master Administrator');
       } else {
-        setErrorMessage('비밀번호가 일치하지 않습니다. (기본 코드: tk7788)');
+        setErrorMessage('비밀번호가 일치하지 않습니다. 다시 확인해주세요.');
         setIsVerifyingPasscode(false);
       }
     }, 300);
@@ -108,7 +106,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
           </div>
         )}
 
-        {/* Method 2: Passcode Form */}
+        {/* Passcode Form */}
         <form onSubmit={handlePasscodeLogin} className="space-y-4">
           <div>
             <div className="flex items-center justify-between mb-1.5">
@@ -116,21 +114,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                 <Key className="w-3.5 h-3.5 text-sky-400" />
                 <span>관리자 마스터 비밀번호</span>
               </label>
-              <button
-                type="button"
-                onClick={() => setShowHint(!showHint)}
-                className="text-[11px] text-sky-400 hover:text-sky-300 flex items-center space-x-1 font-mono"
-              >
-                <HelpCircle className="w-3 h-3" />
-                <span>힌트 확인</span>
-              </button>
             </div>
-
-            {showHint && (
-              <div className="mb-2 p-2 bg-sky-950/60 border border-sky-600/40 text-[11px] text-sky-300 font-mono">
-                💡 기본 마스터 비밀번호: <strong className="text-white">tk7788</strong>
-              </div>
-            )}
 
             <div className="relative">
               <input
