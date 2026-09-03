@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Phone, MapPin, Send, CheckCircle2, AlertCircle, Building, User } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, CheckCircle2, AlertCircle, Building, User, Loader2 } from 'lucide-react';
 import { Artist, CompanyInfo } from '../types';
 import { DEFAULT_COMPANY_INFO } from '../services/companyService';
+import { submitContactInquiry } from '../services/inquiryService';
 
 interface ContactSectionProps {
   artists: Artist[];
@@ -75,12 +76,23 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Direct successful client acknowledgment
+      await submitContactInquiry({
+        name: formData.name.trim(),
+        company: formData.company.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        category: formData.category,
+        targetActorId: formData.targetActorId,
+        targetActorName: formData.targetActorName,
+        subject: formData.subject.trim(),
+        message: formData.message.trim()
+      });
+
       setIsSuccess(true);
       setIsSubmitting(false);
-    } catch (err) {
-      console.error(err);
-      setErrorMsg('문의 전송 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    } catch (err: any) {
+      console.error('[TK Contact] Submit error:', err);
+      setErrorMsg(err?.message || '접수 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
       setIsSubmitting(false);
     }
   };

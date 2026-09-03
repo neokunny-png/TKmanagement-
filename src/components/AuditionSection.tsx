@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Sparkles, CheckCircle2, Upload, Film, FileCheck, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Sparkles, CheckCircle2, Upload, Film, FileCheck, ArrowRight, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { AuditionApplication } from '../types';
+import { submitAuditionApplication } from '../services/inquiryService';
 
 interface AuditionSectionProps {
   id?: string;
@@ -70,13 +71,7 @@ export const AuditionSection: React.FC<AuditionSectionProps> = ({ id = 'audition
     setIsSubmitting(true);
 
     try {
-      const timestamp = Date.now();
-      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-      const applicationNumber = `TK-${new Date().getFullYear()}-${randomSuffix}`;
-
-      const app: AuditionApplication = {
-        id: `audition-${timestamp}`,
-        applicationNumber,
+      const savedInquiry = await submitAuditionApplication({
         name: formData.name.trim(),
         birth: formData.birth.trim(),
         gender: formData.gender,
@@ -92,8 +87,28 @@ export const AuditionSection: React.FC<AuditionSectionProps> = ({ id = 'audition
         photoUrlFace: formData.photoUrlFace.trim() || '',
         photoUrlFull: formData.photoUrlFull.trim(),
         videoUrl: formData.videoUrl.trim(),
+      });
+
+      const app: AuditionApplication = {
+        id: savedInquiry.id,
+        applicationNumber: savedInquiry.applicationNumber || `TK-${new Date().getFullYear()}-0000`,
+        name: savedInquiry.name,
+        birth: savedInquiry.birth || '',
+        gender: savedInquiry.gender || 'Female',
+        phone: savedInquiry.phone,
+        email: savedInquiry.email,
+        height: savedInquiry.height || '',
+        weight: savedInquiry.weight || '',
+        instagram: savedInquiry.instagram,
+        youtube: savedInquiry.youtube,
+        specialty: savedInquiry.specialty || '',
+        bio: savedInquiry.bio || '',
+        experience: savedInquiry.experience,
+        photoUrlFace: savedInquiry.photoUrlFace,
+        photoUrlFull: savedInquiry.photoUrlFull,
+        videoUrl: savedInquiry.videoUrl,
         status: 'pending',
-        submittedAt: timestamp
+        submittedAt: savedInquiry.createdAt
       };
 
       setSubmittedResult(app);
@@ -105,9 +120,9 @@ export const AuditionSection: React.FC<AuditionSectionProps> = ({ id = 'audition
         spread: 70,
         origin: { y: 0.6 }
       });
-    } catch (err) {
-      console.error(err);
-      setErrorMsg('오디션 지원서 전송 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    } catch (err: any) {
+      console.error('[TK Audition] Application submit error:', err);
+      setErrorMsg(err?.message || '접수 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
       setIsSubmitting(false);
     }
   };

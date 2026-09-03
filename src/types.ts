@@ -219,6 +219,48 @@ export interface InquiryMessage {
   createdAt: number;
 }
 
+export type InquiryType = 'AUDITION' | 'CONTACT';
+export type UnifiedInquiryStatus = 'NEW' | 'READ' | 'CONTACTED' | 'COMPLETED';
+
+export interface InquiryItem {
+  id: string;
+  type: InquiryType;
+  status: UnifiedInquiryStatus;
+  createdAt: number;
+  emailStatus?: 'SENT' | 'FAILED' | 'PENDING';
+
+  // Common contact info
+  name: string;
+  phone: string;
+  email: string;
+
+  // Contact specific
+  company?: string;
+  category?: 'Casting' | 'Business' | 'Media' | 'General' | string;
+  targetActorId?: string;
+  targetActorName?: string;
+  subject?: string;
+  message?: string;
+
+  // Audition specific
+  applicationNumber?: string;
+  birth?: string;
+  gender?: 'Female' | 'Male';
+  height?: string;
+  weight?: string;
+  instagram?: string;
+  youtube?: string;
+  specialty?: string;
+  bio?: string;
+  experience?: string;
+  photoUrlFace?: string;
+  photoUrlFull?: string;
+  videoUrl?: string;
+  adminNotes?: string;
+  rating?: number;
+  updatedAt?: number;
+}
+
 export interface CompanyInfo {
   companyName: string;
   brandName: string;

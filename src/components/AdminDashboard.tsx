@@ -39,9 +39,12 @@ import {
   Building2,
   Key,
   Info,
-  RefreshCw
+  RefreshCw,
+  Send,
+  MessageSquare,
+  BookOpen
 } from 'lucide-react';
-import { Artist, ArtistPhoto, AuditionApplication, NewsArticle, InquiryMessage, AuditionStatus, FilmographyItem, CompanyInfo, sortFilmographyByYear } from '../types';
+import { Artist, ArtistPhoto, AuditionApplication, NewsArticle, InquiryMessage, AuditionStatus, FilmographyItem, CompanyInfo, sortFilmographyByYear, InquiryItem, UnifiedInquiryStatus } from '../types';
 import {
   saveArtistToDb,
   deleteArtistFromDb,
@@ -51,14 +54,23 @@ import {
   deleteArtistPhoto,
   updateArtistGalleryInDb,
   getCanonicalArtistId,
-  dataUrlToBlob
+  dataUrlToBlob,
+  updateArtistBioInDb
 } from '../services/artistService';
 import { saveNewsToDb, deleteNewsFromDb } from '../services/newsService';
 import { subscribeCompanyInfo, saveCompanyInfo, DEFAULT_COMPANY_INFO } from '../services/companyService';
 import { changeMasterPassword } from '../services/adminAuthService';
+import {
+  subscribeToInquiries,
+  updateInquiryStatusInDb,
+  deleteInquiryFromDb,
+  updateInquiryAdminNotesInDb
+} from '../services/inquiryService';
+import { getInquiryMailtoUrl, sendInquiryEmailNotification } from '../services/notificationService';
 import { ARTISTS } from '../data/artists';
 import { NEWS_ARTICLES } from '../data/news';
 import { TKLogoMark } from './TKLogo';
+import { AdminInquiriesTab } from './AdminInquiriesTab';
 
 interface AdminDashboardProps {
   artists: Artist[];
@@ -120,8 +132,39 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [auditionNotes, setAuditionNotes] = useState('');
   const [auditionRating, setAuditionRating] = useState<number>(5);
 
-  // Inquiries state
+  // Inquiries state (Legacy & Unified)
   const [inquiries, setInquiries] = useState<InquiryMessage[]>([]);
+  const [unifiedInquiries, setUnifiedInquiries] = useState<InquiryItem[]>([]);
+  const [inquiryTypeFilter, setInquiryTypeFilter] = useState<'ALL' | 'AUDITION' | 'CONTACT'>('ALL');
+  const [inquiryStatusFilter, setInquiryStatusFilter] = useState<'ALL' | UnifiedInquiryStatus>('ALL');
+  const [inquirySearchQuery, setInquirySearchQuery] = useState('');
+  const [selectedInquiryItem, setSelectedInquiryItem] = useState<InquiryItem | null>(null);
+  const [inquiryAdminNotes, setInquiryAdminNotes] = useState('');
+  const [inquiryRating, setInquiryRating] = useState<number>(5);
+  const [isUpdatingInquiry, setIsUpdatingInquiry] = useState(false);
+
+  // Subscribe to real-time unified inquiries
+  useEffect(() => {
+    const unsub = subscribeToInquiries((items) => {
+      setUnifiedInquiries(items);
+      setSelectedInquiryItem((prev) => {
+        if (!prev) return null;
+        const fresh = items.find((i) => i.id === prev.id);
+        return fresh || prev;
+      });
+    });
+    return () => unsub();
+  }, []);
+
+  const newInquiriesCount = unifiedInquiries.filter((i) => i.status === 'NEW').length;
+
+  // Quick Artist Bio Editing Modal State
+  const [bioQuickModalArtist, setBioQuickModalArtist] = useState<Artist | null>(null);
+  const [bioQuickModalText, setBioQuickModalText] = useState('');
+  const [isSavingQuickBio, setIsSavingQuickBio] = useState(false);
+
+  // Inquiries delete confirmation state
+  const [inquiryToDelete, setInquiryToDelete] = useState<InquiryItem | null>(null);
 
   // Artist editing modal state
   const [editingArtist, setEditingArtist] = useState<Partial<Artist> | null>(null);
@@ -264,6 +307,85 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       );
     } finally {
       setIsChangingPassword(false);
+    }
+  };
+
+  // Handle Quick Artist Bio Editing
+  const handleOpenQuickBioModal = (artist: Artist) => {
+    setBioQuickModalArtist(artist);
+    setBioQuickModalText(artist.bio || '');
+  };
+
+  const handleSaveQuickBio = async () => {
+    if (!bioQuickModalArtist) return;
+    setIsSavingQuickBio(true);
+    try {
+      await updateArtistBioInDb(bioQuickModalArtist.id, bioQuickModalText);
+      
+      const updatedArtists = artists.map((a) =>
+        a.id === bioQuickModalArtist.id ? { ...a, bio: bioQuickModalText } : a
+      );
+      if (onUpdateArtists) {
+        onUpdateArtists(updatedArtists);
+      }
+      showToast(`${bioQuickModalArtist.nameKo} 배우의 소개글(BIO)이 성공적으로 수정 및 저장되었습니다.`);
+      setBioQuickModalArtist(null);
+    } catch (err: any) {
+      console.error('[TK Bio] Update error:', err);
+      showToast('소개글 저장 실패: ' + (err?.message || '오류 발생'));
+    } finally {
+      setIsSavingQuickBio(false);
+    }
+  };
+
+  // Handle Unified Inquiries Status Change
+  const handleUpdateInquiryStatus = async (id: string, newStatus: UnifiedInquiryStatus) => {
+    setIsUpdatingInquiry(true);
+    try {
+      await updateInquiryStatusInDb(id, newStatus);
+      showToast(`문의 상태가 [${newStatus}]으로 변경되었습니다.`);
+      if (selectedInquiryItem && selectedInquiryItem.id === id) {
+        setSelectedInquiryItem((prev) => prev ? { ...prev, status: newStatus } : null);
+      }
+    } catch (err: any) {
+      console.error('[TK Inquiry] Status update error:', err);
+      showToast('상태 변경 중 오류: ' + (err?.message || '잠시 후 다시 시도해주세요.'));
+    } finally {
+      setIsUpdatingInquiry(false);
+    }
+  };
+
+  // Handle Saving Admin Notes for an Inquiry
+  const handleSaveInquiryNotes = async (id: string) => {
+    try {
+      await updateInquiryAdminNotesInDb(id, inquiryAdminNotes, inquiryRating);
+      showToast('심사평 및 관리자 메모가 저장되었습니다.');
+      if (selectedInquiryItem && selectedInquiryItem.id === id) {
+        setSelectedInquiryItem((prev) => prev ? { ...prev, adminNotes: inquiryAdminNotes, rating: inquiryRating } : null);
+      }
+    } catch (err: any) {
+      console.error('[TK Inquiry] Save notes error:', err);
+      showToast('메모 저장 실패: ' + (err?.message || '오류 발생'));
+    }
+  };
+
+  // Handle Inquiries Deletion
+  const handleRequestDeleteInquiry = (item: InquiryItem) => {
+    setInquiryToDelete(item);
+  };
+
+  const handlePerformDeleteInquiry = async () => {
+    if (!inquiryToDelete) return;
+    try {
+      await deleteInquiryFromDb(inquiryToDelete.id);
+      showToast(`[${inquiryToDelete.name}] 지원/문의 내역이 삭제되었습니다.`);
+      if (selectedInquiryItem?.id === inquiryToDelete.id) {
+        setSelectedInquiryItem(null);
+      }
+      setInquiryToDelete(null);
+    } catch (err: any) {
+      console.error('[TK Inquiry] Delete error:', err);
+      showToast('삭제 중 오류: ' + (err?.message || '잠시 후 다시 시도해주세요.'));
     }
   };
 
@@ -1024,13 +1146,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  // ----------------------------------------------------
-  // INQUIRY ACTIONS
-  // ----------------------------------------------------
-  const handleUpdateInquiryStatus = (_id: string, _status: 'unread' | 'in_progress' | 'completed') => {
-    showToast(`문의 상태가 변경되었습니다.`);
-  };
-
   return (
     <div
       id="admin-dashboard-overlay"
@@ -1118,6 +1233,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </button>
 
           <button
+            onClick={() => {
+              setActiveTab('INQUIRIES');
+              setInquiryTypeFilter('ALL');
+            }}
+            className={`py-3.5 px-4 font-bold border-b-2 flex items-center space-x-2 transition-all whitespace-nowrap ${
+              activeTab === 'INQUIRIES' || activeTab === 'AUDITIONS'
+                ? 'text-sky-400 border-sky-400 bg-white/5'
+                : 'text-gray-400 border-transparent hover:text-white'
+            }`}
+          >
+            <Mail className="w-4 h-4" />
+            <span>INQUIRIES {newInquiriesCount > 0 ? `(${newInquiriesCount})` : ''}</span>
+            {newInquiriesCount > 0 && (
+              <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.2 font-black rounded-full animate-pulse">
+                {newInquiriesCount}
+              </span>
+            )}
+          </button>
+
+          <button
             onClick={() => setActiveTab('COMPANY')}
             className={`py-3.5 px-4 font-bold border-b-2 flex items-center space-x-2 transition-all whitespace-nowrap ${
               activeTab === 'COMPANY'
@@ -1139,35 +1274,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           >
             <Key className="w-4 h-4" />
             <span>CHANGE PASSWORD</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('AUDITIONS')}
-            className={`py-3.5 px-4 font-bold border-b-2 flex items-center space-x-2 transition-all whitespace-nowrap ${
-              activeTab === 'AUDITIONS'
-                ? 'text-sky-400 border-sky-400 bg-white/5'
-                : 'text-gray-400 border-transparent hover:text-white'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span>오디션 지원자 ({auditions.length})</span>
-            {auditions.filter(a => a.status === 'pending').length > 0 && (
-              <span className="bg-amber-500 text-black text-[10px] px-1.5 py-0.2 font-black rounded-full">
-                {auditions.filter(a => a.status === 'pending').length}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('INQUIRIES')}
-            className={`py-3.5 px-4 font-bold border-b-2 flex items-center space-x-2 transition-all whitespace-nowrap ${
-              activeTab === 'INQUIRIES'
-                ? 'text-sky-400 border-sky-400 bg-white/5'
-                : 'text-gray-400 border-transparent hover:text-white'
-            }`}
-          >
-            <Mail className="w-4 h-4" />
-            <span>캐스팅 문의 ({inquiries.length})</span>
           </button>
         </div>
 
@@ -1294,18 +1400,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             {artist.isActive ? '공개중' : '비공개'}
                           </button>
                         </td>
-                        <td className="p-3 text-right space-x-2">
+                        <td className="p-3 text-right space-x-1.5 whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenQuickBioModal(artist)}
+                            className="p-1.5 text-sky-400 hover:text-sky-300 hover:bg-sky-950/60 border border-sky-800/60 rounded transition-colors inline-flex items-center space-x-1"
+                            title="배우 소개글 (INTRODUCTION / BIO) 직접 수정"
+                          >
+                            <BookOpen className="w-3.5 h-3.5" />
+                            <span className="text-[10px] font-mono font-bold">소개글(BIO)</span>
+                          </button>
                           <button
                             onClick={() => handleOpenEditArtist(artist)}
-                            className="p-1.5 text-gray-300 hover:text-white hover:bg-white/10"
-                            title="수정"
+                            className="p-1.5 text-gray-300 hover:text-white hover:bg-white/10 rounded transition-colors"
+                            title="전체 프로필 수정"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteArtist(artist)}
-                            className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/40"
-                            title="삭제"
+                            className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/40 rounded transition-colors"
+                            title="배우 삭제"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -1319,235 +1434,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           )}
 
           {/* ======================================================== */}
-          {/* TAB 2: AUDITIONS MANAGEMENT */}
+          {/* TAB 2: INQUIRIES & AUDITIONS MANAGEMENT                  */}
           {/* ======================================================== */}
-          {activeTab === 'AUDITIONS' && (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#141724] p-4 border border-white/10">
-                <div>
-                  <h3 className="text-base font-bold text-white">
-                    신인 배우 오디션 지원자 심사 및 관리
-                  </h3>
-                  <p className="text-xs text-gray-400">
-                    실시간으로 접수된 온라인 지원서를 열람하고 합격/불합격 여부 및 심사평을 관리합니다.
-                  </p>
-                </div>
-
-                {/* Filter Status Buttons */}
-                <div className="flex flex-wrap gap-1 text-xs font-mono">
-                  {(['ALL', 'pending', 'reviewed', 'interview', 'passed', 'rejected'] as const).map((st) => (
-                    <button
-                      key={st}
-                      onClick={() => setAuditionFilter(st)}
-                      className={`px-3 py-1.5 border ${
-                        auditionFilter === st
-                          ? 'bg-white text-black font-bold'
-                          : 'bg-[#11131A] text-gray-400 border-white/10 hover:text-white'
-                      }`}
-                    >
-                      {st === 'ALL' ? '전체' : getStatusLabel(st as AuditionStatus)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Auditions Grid / Table */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                {/* List Column */}
-                <div className="lg:col-span-6 space-y-3 max-h-[550px] overflow-y-auto pr-2">
-                  {auditions
-                    .filter(a => auditionFilter === 'ALL' || a.status === auditionFilter)
-                    .map((aud) => (
-                      <div
-                        key={aud.id}
-                        onClick={() => {
-                          setSelectedAudition(aud);
-                          setAuditionNotes(aud.adminNotes || '');
-                          setAuditionRating(aud.rating || 5);
-                        }}
-                        className={`p-4 border transition-all cursor-pointer ${
-                          selectedAudition?.id === aud.id
-                            ? 'bg-[#161B2E] border-sky-400'
-                            : 'bg-[#11131A] border-white/10 hover:border-white/25'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <span className="text-[10px] font-mono text-gray-400 block">
-                              {aud.applicationNumber} • {new Date(aud.submittedAt).toLocaleDateString()}
-                            </span>
-                            <h4 className="text-base font-bold text-white">
-                              {aud.name} ({aud.gender === 'Female' ? '여' : '남'}, {aud.birth})
-                            </h4>
-                          </div>
-                          <span className={`text-[10px] font-mono px-2 py-0.5 border ${getStatusBadgeClass(aud.status)}`}>
-                            {getStatusLabel(aud.status)}
-                          </span>
-                        </div>
-
-                        <div className="text-xs text-gray-300 flex items-center space-x-3 mb-2 font-mono">
-                          <span>{aud.phone}</span>
-                          <span>•</span>
-                          <span>{aud.email}</span>
-                        </div>
-
-                        <p className="text-xs text-gray-400 line-clamp-2">
-                          {aud.bio || aud.specialty || '자기소개 없음'}
-                        </p>
-                      </div>
-                    ))}
-
-                  {auditions.length === 0 && (
-                    <div className="text-center py-16 bg-[#11131A] border border-white/10 text-gray-500 text-xs font-mono">
-                      현재 접수된 오디션 지원서가 없습니다.
-                    </div>
-                  )}
-                </div>
-
-                {/* Detail Inspection Column */}
-                <div className="lg:col-span-6 bg-[#11131A] border border-white/10 p-6 max-h-[550px] overflow-y-auto">
-                  {selectedAudition ? (
-                    <div className="space-y-6">
-                      <div className="flex items-start justify-between border-b border-white/10 pb-4">
-                        <div>
-                          <span className="text-xs font-mono text-sky-400">
-                            {selectedAudition.applicationNumber}
-                          </span>
-                          <h3 className="text-2xl font-bold text-white font-display">
-                            {selectedAudition.name}
-                          </h3>
-                          <p className="text-xs text-gray-400">
-                            {selectedAudition.gender === 'Female' ? '여성' : '남성'} • {selectedAudition.birth} ({selectedAudition.height || '-'}, {selectedAudition.weight || '-'})
-                          </p>
-                        </div>
-
-                        <div className="text-right">
-                          <button
-                            onClick={() => handleDeleteAudition(selectedAudition.id, selectedAudition.name)}
-                            className="p-1.5 text-red-400 hover:text-red-300 border border-red-900/50 bg-red-950/20"
-                            title="지원서 삭제"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Photo Showcase */}
-                      {selectedAudition.photoUrlFace && (
-                        <div>
-                          <span className="text-[10px] font-mono text-gray-400 uppercase block mb-1.5">
-                            제출된 프로필 사진
-                          </span>
-                          <div className="aspect-[3/4] max-w-[200px] overflow-hidden border border-white/10 bg-neutral-900">
-                            <img
-                              src={selectedAudition.photoUrlFace}
-                              alt={selectedAudition.name}
-                              className="w-full h-full object-cover"
-                              referrerPolicy="no-referrer"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Contact Info */}
-                      <div className="grid grid-cols-2 gap-4 text-xs font-mono bg-[#141724] p-3.5 border border-white/5">
-                        <div>
-                          <span className="text-gray-500 block text-[10px]">연락처</span>
-                          <span className="text-white font-bold">{selectedAudition.phone}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-500 block text-[10px]">이메일</span>
-                          <span className="text-white font-bold">{selectedAudition.email}</span>
-                        </div>
-                        {selectedAudition.instagram && (
-                          <div>
-                            <span className="text-gray-500 block text-[10px]">인스타그램</span>
-                            <span className="text-sky-300">{selectedAudition.instagram}</span>
-                          </div>
-                        )}
-                        {selectedAudition.youtube && (
-                          <div>
-                            <span className="text-gray-500 block text-[10px]">영상 링크</span>
-                            <a
-                              href={selectedAudition.youtube}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-sky-400 underline flex items-center space-x-1"
-                            >
-                              <span>영상 확인하기</span>
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Specialty & Bio */}
-                      <div className="space-y-3 text-xs">
-                        <div>
-                          <span className="font-bold text-gray-400 block mb-1">특기 및 매력 포인트:</span>
-                          <p className="text-gray-200 bg-[#141724] p-3 border border-white/5">
-                            {selectedAudition.specialty || '기재 안됨'}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-bold text-gray-400 block mb-1">자기소개 및 지원 동기:</span>
-                          <p className="text-gray-200 bg-[#141724] p-3 border border-white/5 whitespace-pre-line leading-relaxed">
-                            {selectedAudition.bio || '기재 안됨'}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Status Changing & Examiner Notes */}
-                      <div className="pt-4 border-t border-white/10 space-y-4">
-                        <span className="text-xs font-mono font-bold text-sky-400 uppercase block">
-                          심사 결과 판정 및 캐스팅 메모
-                        </span>
-
-                        <div className="flex flex-wrap gap-2">
-                          {(['pending', 'reviewed', 'interview', 'passed', 'rejected'] as const).map((st) => (
-                            <button
-                              key={st}
-                              onClick={() => handleUpdateAuditionStatus(selectedAudition.id, st, auditionNotes, auditionRating)}
-                              className={`px-3 py-1.5 text-xs font-mono border transition-all ${
-                                selectedAudition.status === st
-                                  ? 'bg-sky-500 text-black font-bold border-sky-400'
-                                  : 'bg-[#141724] text-gray-400 border-white/10 hover:text-white'
-                              }`}
-                            >
-                              {getStatusLabel(st)}
-                            </button>
-                          ))}
-                        </div>
-
-                        <div>
-                          <label className="block text-xs text-gray-400 mb-1">
-                            내부 캐스팅 디렉터 심사평:
-                          </label>
-                          <textarea
-                            rows={2}
-                            value={auditionNotes}
-                            onChange={(e) => setAuditionNotes(e.target.value)}
-                            placeholder="마스크 특징, 연기톤, 추천 배역 등 메모 입력"
-                            className="w-full bg-[#161924] border border-white/10 p-2.5 text-xs text-white focus:outline-none focus:border-sky-400"
-                          />
-                        </div>
-
-                        <button
-                          onClick={() => handleUpdateAuditionStatus(selectedAudition.id, selectedAudition.status, auditionNotes, auditionRating)}
-                          className="bg-white text-black hover:bg-slate-200 px-4 py-2 text-xs font-bold uppercase tracking-wider"
-                        >
-                          심사평 저장
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-24 text-gray-500 text-xs font-mono">
-                      왼쪽 목록에서 확인하실 지원서를 선택해주세요.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+          {(activeTab === 'INQUIRIES' || activeTab === 'AUDITIONS') && (
+            <AdminInquiriesTab
+              unifiedInquiries={unifiedInquiries}
+              inquiryTypeFilter={inquiryTypeFilter}
+              setInquiryTypeFilter={setInquiryTypeFilter}
+              inquiryStatusFilter={inquiryStatusFilter}
+              setInquiryStatusFilter={setInquiryStatusFilter}
+              inquirySearchQuery={inquirySearchQuery}
+              setInquirySearchQuery={setInquirySearchQuery}
+              selectedInquiryItem={selectedInquiryItem}
+              setSelectedInquiryItem={setSelectedInquiryItem}
+              inquiryAdminNotes={inquiryAdminNotes}
+              setInquiryAdminNotes={setInquiryAdminNotes}
+              inquiryRating={inquiryRating}
+              setInquiryRating={setInquiryRating}
+              isUpdatingInquiry={isUpdatingInquiry}
+              handleUpdateInquiryStatus={handleUpdateInquiryStatus}
+              handleSaveInquiryNotes={handleSaveInquiryNotes}
+              handleRequestDeleteInquiry={handleRequestDeleteInquiry}
+              showToast={showToast}
+            />
           )}
 
           {/* ======================================================== */}
@@ -1776,101 +1685,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             );
           })()}
-
-          {/* ======================================================== */}
-          {/* TAB 4: INQUIRIES MANAGEMENT */}
-          {/* ======================================================== */}
-          {activeTab === 'INQUIRIES' && (
-            <div className="space-y-6">
-              <div className="bg-[#141724] p-4 border border-white/10">
-                <h3 className="text-base font-bold text-white">
-                  캐스팅 제안 및 비즈니스 문의 내역
-                </h3>
-                <p className="text-xs text-gray-400">
-                  웹사이트 CONTACT 폼을 통해 접수된 제작사/방송사/광고주의 제안 목록입니다.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                {inquiries.map((inq) => (
-                  <div
-                    key={inq.id}
-                    className="p-5 bg-[#11131A] border border-white/10 space-y-3"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
-                      <div>
-                        <span className="text-[10px] font-mono bg-[#182A47] text-sky-300 px-2 py-0.5 border border-sky-400/30 mr-2">
-                          {inq.category}
-                        </span>
-                        <span className="font-bold text-white text-sm">{inq.subject}</span>
-                      </div>
-                      <span className="text-xs font-mono text-gray-400">
-                        {new Date(inq.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono text-gray-300 bg-[#141724] p-3">
-                      <div>
-                        <span className="text-gray-500 block text-[10px]">보낸 사람</span>
-                        <span>{inq.name} ({inq.company || '개인'})</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500 block text-[10px]">연락처 / 이메일</span>
-                        <span>{inq.phone} • {inq.email}</span>
-                      </div>
-                      {inq.targetActorName && (
-                        <div>
-                          <span className="text-gray-500 block text-[10px]">대상 배우</span>
-                          <span className="text-sky-300 font-bold">{inq.targetActorName}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <p className="text-xs text-gray-200 whitespace-pre-line leading-relaxed bg-[#161924] p-3 border border-white/5">
-                      {inq.message}
-                    </p>
-
-                    <div className="flex items-center justify-between pt-2">
-                      <div className="flex items-center space-x-2 text-xs font-mono">
-                        <span className="text-gray-400">상태:</span>
-                        <button
-                          onClick={() => handleUpdateInquiryStatus(inq.id, 'unread')}
-                          className={`px-2 py-0.5 border ${inq.status === 'unread' ? 'bg-amber-500 text-black font-bold' : 'text-gray-400 border-white/10'}`}
-                        >
-                          미확인
-                        </button>
-                        <button
-                          onClick={() => handleUpdateInquiryStatus(inq.id, 'in_progress')}
-                          className={`px-2 py-0.5 border ${inq.status === 'in_progress' ? 'bg-sky-500 text-black font-bold' : 'text-gray-400 border-white/10'}`}
-                        >
-                          검토/진행중
-                        </button>
-                        <button
-                          onClick={() => handleUpdateInquiryStatus(inq.id, 'completed')}
-                          className={`px-2 py-0.5 border ${inq.status === 'completed' ? 'bg-emerald-500 text-black font-bold' : 'text-gray-400 border-white/10'}`}
-                        >
-                          답변 완료
-                        </button>
-                      </div>
-                      <a
-                        href={`mailto:${inq.email}?subject=RE: ${encodeURIComponent(inq.subject)}`}
-                        className="text-xs font-bold text-sky-400 hover:text-sky-300 flex items-center space-x-1"
-                      >
-                        <Mail className="w-3.5 h-3.5" />
-                        <span>이메일로 바로 회신하기</span>
-                      </a>
-                    </div>
-                  </div>
-                ))}
-
-                {inquiries.length === 0 && (
-                  <div className="text-center py-16 bg-[#11131A] border border-white/10 text-gray-500 text-xs font-mono">
-                    접수된 캐스팅 및 비즈니스 문의가 없습니다.
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* ======================================================== */}
           {/* TAB: COMPANY INFORMATION */}
@@ -2815,14 +2629,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-gray-300 font-medium mb-1">배우 소개글 (Bio)</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-gray-300 font-medium">배우 소개글 (INTRODUCTION / BIO)</label>
+                    {editingArtist.id && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!editingArtist.id) return;
+                          try {
+                            await updateArtistBioInDb(editingArtist.id, editingArtist.bio || '');
+                            const updated = artists.map(a => a.id === editingArtist.id ? { ...a, bio: editingArtist.bio || '' } : a);
+                            if (onUpdateArtists) onUpdateArtists(updated);
+                            showToast(`"${editingArtist.nameKo || '배우'}"의 소개글(BIO)이 성공적으로 단독 저장되었습니다.`);
+                          } catch (err: any) {
+                            showToast('소개글 저장 실패: ' + (err?.message || '오류 발생'));
+                          }
+                        }}
+                        className="text-[11px] font-mono text-sky-400 hover:text-sky-300 border border-sky-800 bg-sky-950/70 px-2.5 py-1 transition-colors flex items-center space-x-1"
+                      >
+                        <BookOpen className="w-3 h-3" />
+                        <span>소개글(BIO)만 즉시 저장</span>
+                      </button>
+                    )}
+                  </div>
                   <textarea
-                    rows={2}
+                    rows={4}
                     value={editingArtist.bio || ''}
                     onChange={(e) => setEditingArtist({ ...editingArtist, bio: e.target.value })}
-                    placeholder="배우의 분위기 및 장점 설명"
-                    className="w-full bg-[#161926] border border-white/10 p-2.5 text-white focus:outline-none"
+                    placeholder="배우의 연기 철학, 작품 속 분위기, 대표 캐릭터성 및 매력을 자유롭게 작성하세요. 줄바꿈이 홈페이지 배우 상세 뷰에 그대로 유지되어 반영됩니다."
+                    className="w-full bg-[#161926] border border-white/10 p-3 text-xs text-white focus:outline-none focus:border-sky-400 leading-relaxed font-sans"
                   />
+                  <div className="flex items-center justify-between mt-1 text-[11px] text-gray-500 font-mono">
+                    <span>홈페이지 배우 상세 모달 상단에 노출되는 공식 소개글입니다.</span>
+                    <span>{(editingArtist.bio || '').length}자 입력됨</span>
+                  </div>
                 </div>
 
                 {/* Filmography Manager inside Artist Form */}

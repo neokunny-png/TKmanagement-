@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   setDoc,
+  updateDoc,
   deleteDoc,
   onSnapshot,
   getDocs,
@@ -742,5 +743,25 @@ export async function deleteArtistFromDb(exactDocId: string): Promise<void> {
     await deleteDoc(docRef);
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${COLLECTION_NAME}/${exactDocId}`);
+  }
+}
+
+/**
+ * Specifically updates only the actor's INTRODUCTION / BIO field in Firestore.
+ * Preserves all other actor data (name, photos, filmography, etc.) intact.
+ */
+export async function updateArtistBioInDb(artistId: string, bio: string): Promise<void> {
+  const cleanId = getCanonicalArtistId(artistId);
+  const docRef = doc(db, COLLECTION_NAME, cleanId);
+
+  try {
+    await updateDoc(docRef, {
+      bio: (bio || '').trim(),
+      updatedAt: Date.now()
+    });
+    console.log(`[TK] Successfully updated bio for actor doc: ${cleanId}`);
+  } catch (error: any) {
+    console.error(`[TK] Failed to update bio for ${cleanId}:`, error);
+    handleFirestoreError(error, OperationType.UPDATE, `${COLLECTION_NAME}/${cleanId}`);
   }
 }

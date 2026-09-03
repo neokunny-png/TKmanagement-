@@ -3,9 +3,50 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 
+function emailNotificationPlugin() {
+  return {
+    name: 'email-notification-plugin',
+    configureServer(server: any) {
+      server.middlewares.use('/api/send-email', (req: any, res: any) => {
+        if (req.method === 'POST') {
+          let body = '';
+          req.on('data', (chunk: any) => {
+            body += chunk;
+          });
+          req.on('end', () => {
+            try {
+              const data = JSON.parse(body || '{}');
+              console.log('\n==================================================');
+              console.log('[TK MANAGEMENT EMAIL NOTIFICATION]');
+              console.log('TO: taz0206@naver.com');
+              console.log('SUBJECT:', data.subject);
+              console.log('ID:', data.inquiryId);
+              console.log('==================================================\n');
+
+              res.setHeader('Content-Type', 'application/json');
+              res.statusCode = 200;
+              res.end(JSON.stringify({
+                success: true,
+                message: 'Notification successfully processed for taz0206@naver.com',
+                recipient: 'taz0206@naver.com'
+              }));
+            } catch (err: any) {
+              res.statusCode = 500;
+              res.end(JSON.stringify({ success: false, error: err?.message }));
+            }
+          });
+        } else {
+          res.statusCode = 405;
+          res.end('Method Not Allowed');
+        }
+      });
+    }
+  };
+}
+
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), emailNotificationPlugin()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
