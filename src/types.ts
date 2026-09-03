@@ -218,3 +218,28 @@ export interface InquiryMessage {
   status: 'unread' | 'in_progress' | 'completed';
   createdAt: number;
 }
+
+export interface CompanyInfo {
+  companyName: string;
+  brandName: string;
+  ceo: string;
+  privacyOfficer: string;
+  businessNumber: string;
+  entertainmentRegistration: string;
+  address: string;
+  addressEn?: string;
+  tel: string;
+  fax: string;
+  email: string;
+  description: string;
+  sloganKo?: string;
+  sloganEn?: string;
+  copyright?: string;
+  updatedAt?: number;
+}
+
+export interface AdminAuthSettings {
+  passwordHash: string;
+  salt: string;
+  updatedAt: number;
+}

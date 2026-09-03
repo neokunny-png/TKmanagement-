@@ -3,7 +3,12 @@ import { Sparkles, CheckCircle2, Upload, Film, FileCheck, ArrowRight, ShieldChec
 import confetti from 'canvas-confetti';
 import { AuditionApplication } from '../types';
 
-export const AuditionSection: React.FC = () => {
+interface AuditionSectionProps {
+  id?: string;
+  isMobileView?: boolean;
+}
+
+export const AuditionSection: React.FC<AuditionSectionProps> = ({ id = 'audition', isMobileView = false }) => {
   const [formData, setFormData] = useState({
     name: '',
     birth: '',
@@ -130,7 +135,7 @@ export const AuditionSection: React.FC = () => {
   };
 
   return (
-    <section id="audition" className="relative py-28 bg-[#0E1017] border-t border-white/10">
+    <section id={id} className={`relative ${isMobileView ? 'py-14 sm:py-20' : 'py-28'} bg-[#0E1017] border-t border-white/10`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header & Manifesto */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-20 items-start">

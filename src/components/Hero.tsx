@@ -1,32 +1,120 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowRight, ChevronDown, Sparkles } from 'lucide-react';
+import { Artist } from '../types';
+import { ARTISTS } from '../data/artists';
+import { subscribeArtists } from '../services/artistService';
 
 interface HeroProps {
+  artists?: Artist[];
   onExploreArtists: () => void;
   onApplyAudition: () => void;
 }
 
-export const Hero: React.FC<HeroProps> = ({ onExploreArtists, onApplyAudition }) => {
+export const Hero: React.FC<HeroProps> = ({
+  artists: propArtists,
+  onExploreArtists,
+  onApplyAudition,
+}) => {
+  const [activeList, setActiveList] = useState<Artist[]>(() => {
+    if (propArtists && propArtists.length > 0) return propArtists;
+    return ARTISTS;
+  });
+
+  useEffect(() => {
+    if (propArtists && propArtists.length > 0) {
+      setActiveList(propArtists);
+    }
+  }, [propArtists]);
+
+  useEffect(() => {
+    if (!propArtists || propArtists.length === 0) {
+      const unsub = subscribeArtists((list) => {
+        if (list && list.length > 0) {
+          setActiveList(list);
+        }
+      });
+      return () => unsub();
+    }
+  }, [propArtists]);
+
+  // Only public/active artists with a valid profile image, sorted strictly by order
+  const heroArtists = activeList
+    .filter(
+      (a) =>
+        a.isActive !== false &&
+        Boolean(a.profileImage || a.profileImageUrl || a.image)
+    )
+    .sort((a, b) => {
+      const orderA = typeof a.order === 'number' ? a.order : 99;
+      const orderB = typeof b.order === 'number' ? b.order : 99;
+      if (orderA !== orderB) return orderA - orderB;
+      return (a.nameKo || '').localeCompare(b.nameKo || '', 'ko');
+    });
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Auto-rotate registered actors every 4.5 seconds
+  useEffect(() => {
+    if (heroArtists.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % heroArtists.length);
+    }, 4500);
+
+    return () => clearInterval(interval);
+  }, [heroArtists.length]);
+
+  // Keep index in safe range when list changes
+  useEffect(() => {
+    if (currentIndex >= heroArtists.length && heroArtists.length > 0) {
+      setCurrentIndex(0);
+    }
+  }, [currentIndex, heroArtists.length]);
+
+  const currentActor = heroArtists[currentIndex] || null;
+
   return (
     <section
       id="hero"
       className="relative min-h-screen min-h-[100dvh] w-full max-w-full flex items-center justify-center overflow-hidden bg-[#0B0C10]"
     >
-      {/* Background Editorial Visual with cinematic layers */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
-        <img
-          src="/images/hero/hero-bg.jpg"
-          alt="TK Management Hero Actor"
-          className="w-full h-full object-cover object-center filter grayscale-[35%] brightness-[0.45] scale-105 transition-transform duration-1000 ease-out"
-          referrerPolicy="no-referrer"
-        />
+      {/* Background Editorial Visual: Uses ONLY officially registered active actors from Firestore */}
+      <div className="absolute inset-0 z-0 overflow-hidden bg-[#0B0C10]">
+        {heroArtists.length > 0 ? (
+          heroArtists.map((artist, idx) => {
+            const photoSrc =
+              artist.profileImage || artist.profileImageUrl || artist.image || '';
+            if (!photoSrc) return null;
+            const isCurrent = idx === currentIndex;
+
+            return (
+              <div
+                key={artist.id || idx}
+                className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                  isCurrent ? 'opacity-100 z-1' : 'opacity-0 z-0 pointer-events-none'
+                }`}
+              >
+                <img
+                  src={photoSrc}
+                  alt={`${artist.nameKo} (${artist.nameEn})`}
+                  className="w-full h-full object-cover object-top sm:object-center filter grayscale-[30%] brightness-[0.45] scale-105 transition-transform duration-7000 ease-out"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            );
+          })
+        ) : (
+          /* 0 Registered Actors: Clean dark background with ZERO external/placeholder images */
+          <div className="absolute inset-0 bg-[#0B0C10]" />
+        )}
+
         {/* Cinematic gradient overlays */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0B0C10] via-[#0B0C10]/60 to-[#0B0C10]/80" />
-        <div className="absolute inset-0 bg-radial-at-c from-transparent via-[#0B0C10]/40 to-[#0B0C10]/95" />
+        <div className="absolute inset-0 z-2 bg-gradient-to-t from-[#0B0C10] via-[#0B0C10]/60 to-[#0B0C10]/80 pointer-events-none" />
+        <div className="absolute inset-0 z-2 bg-radial-at-c from-transparent via-[#0B0C10]/40 to-[#0B0C10]/95 pointer-events-none" />
       </div>
 
       {/* Decorative subtle T K typographic watermark */}
-      <div className="absolute right-0 top-1/3 -translate-y-1/2 select-none pointer-events-none opacity-[0.04] text-[200px] sm:text-[280px] lg:text-[420px] font-display font-black leading-none text-white z-0 max-w-full overflow-hidden">
+      <div className="absolute right-0 top-1/3 -translate-y-1/2 select-none pointer-events-none opacity-[0.04] text-[200px] sm:text-[280px] lg:text-[420px] font-display font-black leading-none text-white z-2 max-w-full overflow-hidden">
         TK
       </div>
 
@@ -84,14 +172,32 @@ export const Hero: React.FC<HeroProps> = ({ onExploreArtists, onApplyAudition })
           </div>
         </div>
 
-        {/* Bottom Bar: Stats snippet + Scroll indicator */}
+        {/* Bottom Bar: Stats snippet + Actor Indicator + Scroll indicator */}
         <div className="pt-6 sm:pt-8 border-t border-white/10 flex items-center justify-between text-xs tracking-wider text-gray-400 pb-[env(safe-area-inset-bottom,0px)]">
-          <div className="flex items-center space-x-4 sm:space-x-6">
+          <div className="flex items-center space-x-4 sm:space-x-6 flex-wrap gap-y-2">
             <div className="text-[11px] sm:text-xs">
               <span className="text-white font-bold">TK MANAGEMENT</span>
               <span className="mx-2 text-white/20">|</span>
               <span className="text-gray-400">SEOUL</span>
             </div>
+
+            {/* Subtle active actor spotlight indicator if artists exist */}
+            {currentActor && (
+              <div className="flex items-center space-x-2 text-[11px] font-mono bg-white/5 border border-white/10 px-2.5 py-1 backdrop-blur-sm">
+                <span className="text-white font-medium">{currentActor.nameKo}</span>
+                {currentActor.nameEn && (
+                  <span className="text-gray-400 text-[10px] uppercase hidden sm:inline">
+                    {currentActor.nameEn}
+                  </span>
+                )}
+                {heroArtists.length > 1 && (
+                  <span className="text-sky-400 text-[10px] font-bold">
+                    ({currentIndex + 1}/{heroArtists.length})
+                  </span>
+                )}
+              </div>
+            )}
+
             <div className="hidden md:block text-gray-400 text-xs">
               BOUTIQUE ACTORS AGENCY
             </div>

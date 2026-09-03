@@ -3,9 +3,11 @@ import { Compass, Sparkles, Film, Award } from 'lucide-react';
 
 interface AboutSectionProps {
   artistCount: number;
+  id?: string;
+  isMobileView?: boolean;
 }
 
-export const AboutSection: React.FC<AboutSectionProps> = ({ artistCount }) => {
+export const AboutSection: React.FC<AboutSectionProps> = ({ artistCount, id = 'about', isMobileView = false }) => {
   const pillars = [
     {
       num: '01',
@@ -38,7 +40,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ artistCount }) => {
   ];
 
   return (
-    <section id="about" className="relative py-28 bg-[#0B0C10] border-t border-white/10 overflow-hidden">
+    <section id={id} className={`relative ${isMobileView ? 'py-14 sm:py-20' : 'py-28'} bg-[#0B0C10] border-t border-white/10 overflow-hidden`}>
       {/* Background Graphic Accents */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-[#182A47]/20 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-sky-900/10 rounded-full blur-3xl pointer-events-none" />

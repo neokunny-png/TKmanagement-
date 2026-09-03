@@ -35,9 +35,13 @@ import {
   HelpCircle,
   Pin,
   PinOff,
-  Calendar
+  Calendar,
+  Building2,
+  Key,
+  Info,
+  RefreshCw
 } from 'lucide-react';
-import { Artist, ArtistPhoto, AuditionApplication, NewsArticle, InquiryMessage, AuditionStatus, FilmographyItem, sortFilmographyByYear } from '../types';
+import { Artist, ArtistPhoto, AuditionApplication, NewsArticle, InquiryMessage, AuditionStatus, FilmographyItem, CompanyInfo, sortFilmographyByYear } from '../types';
 import {
   saveArtistToDb,
   deleteArtistFromDb,
@@ -50,6 +54,8 @@ import {
   dataUrlToBlob
 } from '../services/artistService';
 import { saveNewsToDb, deleteNewsFromDb } from '../services/newsService';
+import { subscribeCompanyInfo, saveCompanyInfo, DEFAULT_COMPANY_INFO } from '../services/companyService';
+import { changeMasterPassword } from '../services/adminAuthService';
 import { ARTISTS } from '../data/artists';
 import { NEWS_ARTICLES } from '../data/news';
 import { TKLogoMark } from './TKLogo';
@@ -63,6 +69,8 @@ interface AdminDashboardProps {
   onUpdateNews?: (news: NewsArticle[]) => void;
   adminIdentifier?: string;
   onLogout?: () => void;
+  companyInfo?: CompanyInfo;
+  onUpdateCompanyInfo?: (info: CompanyInfo) => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -73,9 +81,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onUpdateArtists,
   onUpdateNews,
   adminIdentifier,
-  onLogout
+  onLogout,
+  companyInfo: initialCompanyInfo,
+  onUpdateCompanyInfo
 }) => {
-  const [activeTab, setActiveTab] = useState<'ARTISTS' | 'AUDITIONS' | 'NEWS' | 'INQUIRIES'>('ARTISTS');
+  const [activeTab, setActiveTab] = useState<'ARTISTS' | 'NEWS' | 'COMPANY' | 'PASSWORD' | 'AUDITIONS' | 'INQUIRIES'>('ARTISTS');
+
+  // Company Information Management State
+  const [companyForm, setCompanyForm] = useState<CompanyInfo>(initialCompanyInfo || DEFAULT_COMPANY_INFO);
+  const [isSavingCompany, setIsSavingCompany] = useState(false);
+  const [companySaveSuccess, setCompanySaveSuccess] = useState(false);
+  const [companySaveError, setCompanySaveError] = useState('');
+
+  // Subscribe to real-time company settings updates
+  useEffect(() => {
+    const unsub = subscribeCompanyInfo((info) => {
+      setCompanyForm(info);
+      if (onUpdateCompanyInfo) onUpdateCompanyInfo(info);
+    });
+    return () => unsub();
+  }, [onUpdateCompanyInfo]);
+
+  // Password Change Management State
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState('');
+  const [passwordChangeError, setPasswordChangeError] = useState('');
 
   // Auditions state
   const [auditions, setAuditions] = useState<AuditionApplication[]>([]);
@@ -149,6 +185,86 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3500);
+  };
+
+  // Save company information to Firestore (settings/company)
+  const handleSaveCompanyInfo = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setIsSavingCompany(true);
+    setCompanySaveError('');
+    setCompanySaveSuccess(false);
+
+    try {
+      await saveCompanyInfo(companyForm);
+      setCompanySaveSuccess(true);
+      showToast('회사 정보(COMPANY INFORMATION)가 저장되어 실시간 반영되었습니다.');
+      setTimeout(() => setCompanySaveSuccess(false), 4000);
+    } catch (err: any) {
+      console.error('Failed to save company info:', err);
+      setCompanySaveError(
+        '회사 정보 저장 중 오류가 발생했습니다: ' +
+          (err?.message || '잠시 후 다시 시도해주세요.')
+      );
+    } finally {
+      setIsSavingCompany(false);
+    }
+  };
+
+  // Reset company information form to defaults
+  const handleResetCompanyToDefault = () => {
+    setCompanyForm(DEFAULT_COMPANY_INFO);
+    setCompanySaveSuccess(false);
+    setCompanySaveError('');
+    showToast('기본 정보로 입력창이 초기화되었습니다. 상단의 [저장] 버튼을 누르면 확정됩니다.');
+  };
+
+  // Handle administrator password change
+  const handleChangeAdminPassword = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setPasswordChangeError('');
+    setPasswordChangeSuccess('');
+
+    if (!currentPassword) {
+      setPasswordChangeError('현재 비밀번호를 입력해주세요.');
+      return;
+    }
+
+    if (!newPassword) {
+      setPasswordChangeError('새 비밀번호를 입력해주세요.');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setPasswordChangeError('비밀번호는 최소 8자 이상이어야 합니다.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordChangeError('새 비밀번호와 확인 비밀번호가 일치하지 않습니다.');
+      return;
+    }
+
+    setIsChangingPassword(true);
+
+    try {
+      const result = await changeMasterPassword(currentPassword, newPassword, confirmPassword);
+      if (result.success) {
+        setPasswordChangeSuccess(result.message);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        showToast('관리자 비밀번호가 성공적으로 변경되었습니다. 다음 로그인부터 즉시 적용됩니다.');
+      } else {
+        setPasswordChangeError(result.message);
+      }
+    } catch (err: any) {
+      setPasswordChangeError(
+        '비밀번호 변경 처리 중 오류가 발생했습니다: ' +
+          (err?.message || '잠시 후 다시 시도해주세요.')
+      );
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   // Helper to compress & optimize image from PC (smart auto-scaling to prevent storage limits)
@@ -979,7 +1095,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="flex border-b border-white/10 bg-[#121520] px-6 shrink-0 overflow-x-auto text-xs font-mono tracking-wider">
           <button
             onClick={() => setActiveTab('ARTISTS')}
-            className={`py-3.5 px-4 font-bold border-b-2 flex items-center space-x-2 transition-all ${
+            className={`py-3.5 px-4 font-bold border-b-2 flex items-center space-x-2 transition-all whitespace-nowrap ${
               activeTab === 'ARTISTS'
                 ? 'text-sky-400 border-sky-400 bg-white/5'
                 : 'text-gray-400 border-transparent hover:text-white'
@@ -990,15 +1106,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </button>
 
           <button
+            onClick={() => setActiveTab('NEWS')}
+            className={`py-3.5 px-4 font-bold border-b-2 flex items-center space-x-2 transition-all whitespace-nowrap ${
+              activeTab === 'NEWS'
+                ? 'text-sky-400 border-sky-400 bg-white/5'
+                : 'text-gray-400 border-transparent hover:text-white'
+            }`}
+          >
+            <Newspaper className="w-4 h-4" />
+            <span>NEWS ({newsList.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('COMPANY')}
+            className={`py-3.5 px-4 font-bold border-b-2 flex items-center space-x-2 transition-all whitespace-nowrap ${
+              activeTab === 'COMPANY'
+                ? 'text-sky-400 border-sky-400 bg-white/5'
+                : 'text-gray-400 border-transparent hover:text-white'
+            }`}
+          >
+            <Building2 className="w-4 h-4" />
+            <span>COMPANY INFORMATION</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('PASSWORD')}
+            className={`py-3.5 px-4 font-bold border-b-2 flex items-center space-x-2 transition-all whitespace-nowrap ${
+              activeTab === 'PASSWORD'
+                ? 'text-sky-400 border-sky-400 bg-white/5'
+                : 'text-gray-400 border-transparent hover:text-white'
+            }`}
+          >
+            <Key className="w-4 h-4" />
+            <span>CHANGE PASSWORD</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('AUDITIONS')}
-            className={`py-3.5 px-4 font-bold border-b-2 flex items-center space-x-2 transition-all ${
+            className={`py-3.5 px-4 font-bold border-b-2 flex items-center space-x-2 transition-all whitespace-nowrap ${
               activeTab === 'AUDITIONS'
                 ? 'text-sky-400 border-sky-400 bg-white/5'
                 : 'text-gray-400 border-transparent hover:text-white'
             }`}
           >
             <FileText className="w-4 h-4" />
-            <span>오디션 지원자 관리 ({auditions.length})</span>
+            <span>오디션 지원자 ({auditions.length})</span>
             {auditions.filter(a => a.status === 'pending').length > 0 && (
               <span className="bg-amber-500 text-black text-[10px] px-1.5 py-0.2 font-black rounded-full">
                 {auditions.filter(a => a.status === 'pending').length}
@@ -1007,20 +1159,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </button>
 
           <button
-            onClick={() => setActiveTab('NEWS')}
-            className={`py-3.5 px-4 font-bold border-b-2 flex items-center space-x-2 transition-all ${
-              activeTab === 'NEWS'
-                ? 'text-sky-400 border-sky-400 bg-white/5'
-                : 'text-gray-400 border-transparent hover:text-white'
-            }`}
-          >
-            <Newspaper className="w-4 h-4" />
-            <span>NEWS / 보도자료 ({newsList.length})</span>
-          </button>
-
-          <button
             onClick={() => setActiveTab('INQUIRIES')}
-            className={`py-3.5 px-4 font-bold border-b-2 flex items-center space-x-2 transition-all ${
+            className={`py-3.5 px-4 font-bold border-b-2 flex items-center space-x-2 transition-all whitespace-nowrap ${
               activeTab === 'INQUIRIES'
                 ? 'text-sky-400 border-sky-400 bg-white/5'
                 : 'text-gray-400 border-transparent hover:text-white'
@@ -1729,6 +1869,484 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB: COMPANY INFORMATION */}
+          {/* ======================================================== */}
+          {activeTab === 'COMPANY' && (
+            <div className="space-y-6 max-w-5xl">
+              {/* Header Box */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#141724] p-4 sm:p-5 border border-white/10">
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <Building2 className="w-5 h-5 text-sky-400" />
+                    <h3 className="text-base font-bold text-white">
+                      COMPANY INFORMATION (회사 정보 관리)
+                    </h3>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    홈페이지 하단(Footer), CONTACT 문의 페이지 및 공식 안내에 노출되는 회사 정보를 직접 수정합니다.
+                  </p>
+                </div>
+
+                <div className="flex items-center space-x-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleResetCompanyToDefault}
+                    className="inline-flex items-center space-x-1 px-3 py-2 text-xs font-mono text-gray-400 hover:text-white border border-white/10 hover:bg-white/5 transition-colors cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>기본값 복원</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveCompanyInfo}
+                    disabled={isSavingCompany}
+                    className="inline-flex items-center space-x-1.5 bg-sky-400 hover:bg-sky-300 text-black font-bold px-4 py-2 text-xs font-mono transition-colors shadow-lg shadow-sky-950/50 disabled:opacity-50 cursor-pointer"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{isSavingCompany ? '저장 중...' : '변경사항 저장'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Status alerts */}
+              {companySaveSuccess && (
+                <div className="p-3.5 bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-xs flex items-center space-x-2 animate-in fade-in">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                  <span>회사 정보가 성공적으로 저장되었습니다. 홈페이지 전체에 즉시 실시간 반영됩니다.</span>
+                </div>
+              )}
+              {companySaveError && (
+                <div className="p-3.5 bg-red-950/60 border border-red-500/50 text-red-300 text-xs flex items-center space-x-2 animate-in fade-in">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-red-400" />
+                  <span>{companySaveError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSaveCompanyInfo} className="space-y-6">
+                {/* 1. Legal / Corporate Identity */}
+                <div className="bg-[#11131A] p-5 border border-white/10 space-y-4">
+                  <h4 className="text-xs font-mono font-bold text-sky-400 uppercase tracking-wider flex items-center space-x-2">
+                    <span>1. 법인 및 브랜드 기본 정보</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <label className="block text-gray-300 font-medium mb-1">
+                        회사명 / 상호명 *
+                      </label>
+                      <input
+                        type="text"
+                        value={companyForm.companyName}
+                        onChange={(e) => setCompanyForm({ ...companyForm, companyName: e.target.value })}
+                        placeholder="예: ㈜TK Company (티케이컴퍼니)"
+                        className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
+                        required
+                      />
+                      <span className="text-[10px] text-gray-500 mt-0.5 block">
+                        사업자등록상의 공식 법인 상호명입니다.
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-medium mb-1">
+                        브랜드명 *
+                      </label>
+                      <input
+                        type="text"
+                        value={companyForm.brandName}
+                        onChange={(e) => setCompanyForm({ ...companyForm, brandName: e.target.value })}
+                        placeholder="예: TK MANAGEMENT (티케이 매니지먼트)"
+                        className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
+                        required
+                      />
+                      <span className="text-[10px] text-gray-500 mt-0.5 block">
+                        대외적으로 노출되는 공식 에이전시 브랜드명입니다.
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-medium mb-1">
+                        대표이사 (CEO) *
+                      </label>
+                      <input
+                        type="text"
+                        value={companyForm.ceo}
+                        onChange={(e) => setCompanyForm({ ...companyForm, ceo: e.target.value })}
+                        placeholder="예: 조태경"
+                        className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-medium mb-1">
+                        개인정보보호책임자 (CPO) *
+                      </label>
+                      <input
+                        type="text"
+                        value={companyForm.privacyOfficer}
+                        onChange={(e) => setCompanyForm({ ...companyForm, privacyOfficer: e.target.value })}
+                        placeholder="예: 조태경"
+                        className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-medium mb-1">
+                        사업자등록번호 *
+                      </label>
+                      <input
+                        type="text"
+                        value={companyForm.businessNumber}
+                        onChange={(e) => setCompanyForm({ ...companyForm, businessNumber: e.target.value })}
+                        placeholder="예: 211-88-92410"
+                        className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-medium mb-1">
+                        대중문화예술기획업 등록번호 *
+                      </label>
+                      <input
+                        type="text"
+                        value={companyForm.entertainmentRegistration}
+                        onChange={(e) => setCompanyForm({ ...companyForm, entertainmentRegistration: e.target.value })}
+                        placeholder="예: 제2025-서울강남-0418호"
+                        className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Contact & Address */}
+                <div className="bg-[#11131A] p-5 border border-white/10 space-y-4">
+                  <h4 className="text-xs font-mono font-bold text-sky-400 uppercase tracking-wider flex items-center space-x-2">
+                    <span>2. 소재지 및 대표 연락처</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <div className="sm:col-span-2">
+                      <label className="block text-gray-300 font-medium mb-1">
+                        본사 주소 (국문) *
+                      </label>
+                      <input
+                        type="text"
+                        value={companyForm.address}
+                        onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })}
+                        placeholder="예: 서울특별시 마포구 마포나루길 442 마포인트 3층"
+                        className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
+                        required
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-gray-300 font-medium mb-1">
+                        본사 주소 (영문 Address)
+                      </label>
+                      <input
+                        type="text"
+                        value={companyForm.addressEn || ''}
+                        onChange={(e) => setCompanyForm({ ...companyForm, addressEn: e.target.value })}
+                        placeholder="예: 3F Mapoint, 442 Maponaru-gil, Mapo-gu, Seoul, Korea"
+                        className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-medium mb-1">
+                        대표 전화 (TEL) *
+                      </label>
+                      <input
+                        type="text"
+                        value={companyForm.tel}
+                        onChange={(e) => setCompanyForm({ ...companyForm, tel: e.target.value })}
+                        placeholder="예: 02-540-8820"
+                        className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-medium mb-1">
+                        팩스 번호 (FAX)
+                      </label>
+                      <input
+                        type="text"
+                        value={companyForm.fax}
+                        onChange={(e) => setCompanyForm({ ...companyForm, fax: e.target.value })}
+                        placeholder="예: 02-540-8821"
+                        className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-gray-300 font-medium mb-1">
+                        공식 이메일 (캐스팅 / 섭외 상시 접수 EMAIL) *
+                      </label>
+                      <input
+                        type="email"
+                        value={companyForm.email}
+                        onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })}
+                        placeholder="예: taz0206@naver.com"
+                        className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
+                        required
+                      />
+                      <span className="text-[10px] text-gray-500 mt-0.5 block">
+                        푸터 및 문의하기 섹션에 노출되며 이메일 링크가 연결됩니다.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Slogans & Descriptions */}
+                <div className="bg-[#11131A] p-5 border border-white/10 space-y-4">
+                  <h4 className="text-xs font-mono font-bold text-sky-400 uppercase tracking-wider flex items-center space-x-2">
+                    <span>3. 슬로건 및 공식 설명 문구</span>
+                  </h4>
+
+                  <div className="space-y-4 text-xs">
+                    <div>
+                      <label className="block text-gray-300 font-medium mb-1">
+                        영문 슬로건 (Slogan EN)
+                      </label>
+                      <input
+                        type="text"
+                        value={companyForm.sloganEn || ''}
+                        onChange={(e) => setCompanyForm({ ...companyForm, sloganEn: e.target.value })}
+                        placeholder="예: YOUR NEXT SCENE. STARTS HERE."
+                        className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-medium mb-1">
+                        국문 슬로건 (Slogan KO)
+                      </label>
+                      <input
+                        type="text"
+                        value={companyForm.sloganKo || ''}
+                        onChange={(e) => setCompanyForm({ ...companyForm, sloganKo: e.target.value })}
+                        placeholder="예: 새로운 얼굴을 발견하고, 배우의 다음 장면을 만들어가는 프리미엄 액터스 매니지먼트."
+                        className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-medium mb-1">
+                        회사 상세 소개 문구 / 미션 설명
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={companyForm.description}
+                        onChange={(e) => setCompanyForm({ ...companyForm, description: e.target.value })}
+                        placeholder="회사 소개 및 지향점 입력"
+                        className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 leading-relaxed"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-medium mb-1">
+                        저작권 표기 문구 (Copyright)
+                      </label>
+                      <input
+                        type="text"
+                        value={companyForm.copyright || ''}
+                        onChange={(e) => setCompanyForm({ ...companyForm, copyright: e.target.value })}
+                        placeholder="예: © 2026 TK Company Co., Ltd. All Rights Reserved."
+                        className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Save Action */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                  <p className="text-[11px] text-gray-500 font-mono">
+                    저장 즉시 Firebase Firestore에 영구 보존되며 실시간으로 웹사이트에 동기화됩니다.
+                  </p>
+                  <button
+                    type="submit"
+                    disabled={isSavingCompany}
+                    className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-sky-400 hover:bg-sky-300 text-black font-bold px-6 py-2.5 text-xs font-mono transition-all shadow-lg shadow-sky-950/50 cursor-pointer disabled:opacity-50"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{isSavingCompany ? '저장 처리 중...' : 'COMPANY INFORMATION 저장하기'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB: CHANGE PASSWORD */}
+          {/* ======================================================== */}
+          {activeTab === 'PASSWORD' && (
+            <div className="space-y-6 max-w-xl">
+              {/* Header */}
+              <div className="bg-[#141724] p-5 border border-white/10">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-8 h-8 rounded bg-sky-950/60 border border-sky-800/60 flex items-center justify-center text-sky-400">
+                    <Key className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white font-display">
+                      CHANGE PASSWORD (관리자 비밀번호 변경)
+                    </h3>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      관리자 시스템 로그인에 사용되는 마스터 비밀번호를 직접 안전하게 변경합니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status messages */}
+              {passwordChangeSuccess && (
+                <div className="p-4 bg-emerald-950/70 border border-emerald-500/60 text-emerald-300 text-xs flex items-center space-x-3 animate-in fade-in">
+                  <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-400" />
+                  <div>
+                    <div className="font-bold">{passwordChangeSuccess}</div>
+                    <div className="text-[11px] text-emerald-400/80 mt-0.5">
+                      다음 관리자 로그인 시 변경된 새 비밀번호를 입력해주세요.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {passwordChangeError && (
+                <div className="p-4 bg-red-950/70 border border-red-500/60 text-red-300 text-xs flex items-center space-x-3 animate-in fade-in">
+                  <AlertTriangle className="w-5 h-5 shrink-0 text-red-400" />
+                  <span className="font-medium">{passwordChangeError}</span>
+                </div>
+              )}
+
+              {/* Form */}
+              <form onSubmit={handleChangeAdminPassword} className="bg-[#11131A] p-6 border border-white/10 space-y-5 text-xs">
+                {/* 1. Current Password */}
+                <div>
+                  <label className="block text-gray-300 font-medium mb-1.5">
+                    현재 비밀번호 (Current Password) *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showCurrentPass ? 'text' : 'password'}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="기존 관리자 비밀번호 입력"
+                      className="w-full bg-[#161926] border border-white/10 px-3.5 py-2.5 pr-10 text-white focus:outline-none focus:border-sky-400 font-mono text-sm"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPass(!showCurrentPass)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white cursor-pointer"
+                      tabIndex={-1}
+                    >
+                      {showCurrentPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <span className="text-[10px] text-gray-500 mt-1 block">
+                    초기 기본 비밀번호: tk7788 또는 기존에 설정한 관리자 비밀번호
+                  </span>
+                </div>
+
+                {/* 2. New Password */}
+                <div>
+                  <label className="block text-gray-300 font-medium mb-1.5">
+                    새 비밀번호 (New Password) *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showNewPass ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="8자 이상의 새 비밀번호"
+                      className="w-full bg-[#161926] border border-white/10 px-3.5 py-2.5 pr-10 text-white focus:outline-none focus:border-sky-400 font-mono text-sm"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPass(!showNewPass)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white cursor-pointer"
+                      tabIndex={-1}
+                    >
+                      {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <div className="flex items-center space-x-2 mt-1.5 text-[11px]">
+                    <span className={`font-mono ${newPassword.length >= 8 ? 'text-emerald-400' : 'text-gray-500'}`}>
+                      {newPassword.length >= 8 ? '✓' : '•'} 최소 8자 이상 ({newPassword.length}/8)
+                    </span>
+                  </div>
+                </div>
+
+                {/* 3. Confirm New Password */}
+                <div>
+                  <label className="block text-gray-300 font-medium mb-1.5">
+                    새 비밀번호 확인 (Confirm New Password) *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showConfirmPass ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="새 비밀번호 재입력"
+                      className="w-full bg-[#161926] border border-white/10 px-3.5 py-2.5 pr-10 text-white focus:outline-none focus:border-sky-400 font-mono text-sm"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPass(!showConfirmPass)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white cursor-pointer"
+                      tabIndex={-1}
+                    >
+                      {showConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {confirmPassword && (
+                    <span className={`text-[11px] font-mono mt-1 block ${newPassword === confirmPassword ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {newPassword === confirmPassword ? '✓ 새 비밀번호와 일치합니다.' : '✗ 새 비밀번호와 일치하지 않습니다.'}
+                    </span>
+                  )}
+                </div>
+
+                {/* Security Notice Box */}
+                <div className="p-3.5 bg-black/40 border border-white/5 space-y-1 text-[11px] text-gray-400 font-mono">
+                  <div className="text-white font-bold flex items-center space-x-1.5">
+                    <Shield className="w-3.5 h-3.5 text-sky-400" />
+                    <span>보안 수칙 및 암호화 안내</span>
+                  </div>
+                  <div>• 비밀번호는 서버나 데이터베이스에 평문(Plaintext)으로 저장되지 않습니다.</div>
+                  <div>• 표준 SHA-256 해시 및 독립 Salt 암호화 방식으로 보호됩니다.</div>
+                  <div>• 변경 후 다음 로그인부터 즉시 적용됩니다.</div>
+                </div>
+
+                {/* Submit Button */}
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={isChangingPassword}
+                    className="w-full py-3 bg-sky-400 hover:bg-sky-300 text-black font-mono font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-sky-950/50 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isChangingPassword ? (
+                      <span>비밀번호 검증 및 변경 중...</span>
+                    ) : (
+                      <>
+                        <Key className="w-4 h-4" />
+                        <span>관리자 비밀번호 변경 완료</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           )}
         </div>

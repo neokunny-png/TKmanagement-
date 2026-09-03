@@ -12,15 +12,13 @@ import {
   Sparkles
 } from 'lucide-react';
 import { TKLogoMark } from './TKLogo';
+import { verifyMasterPasscode } from '../services/adminAuthService';
 
 interface AdminAuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (authType: 'google' | 'passcode', userIdentifier?: string) => void;
 }
-
-// Master passcodes accepted for quick manager access
-const VALID_PASSCODES = ['tk7788', 'admin2026', 'taz0206', 'tkcompany'];
 
 export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
   isOpen,
@@ -35,19 +33,19 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handlePasscodeLogin = (e?: React.FormEvent) => {
+  const handlePasscodeLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!passcode.trim()) {
-      setErrorMessage('관리자 마스터 패스코드를 입력해주세요.');
+      setErrorMessage('관리자 마스터 비밀번호를 입력해주세요.');
       return;
     }
 
     setIsVerifyingPasscode(true);
     setErrorMessage('');
 
-    setTimeout(() => {
-      const cleaned = passcode.trim().toLowerCase();
-      if (VALID_PASSCODES.includes(cleaned)) {
+    try {
+      const isValid = await verifyMasterPasscode(passcode);
+      if (isValid) {
         if (rememberSession) {
           try {
             sessionStorage.setItem('tk_admin_auth', 'true');
@@ -60,7 +58,10 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
         setErrorMessage('비밀번호가 일치하지 않습니다. 다시 확인해주세요.');
         setIsVerifyingPasscode(false);
       }
-    }, 300);
+    } catch {
+      setErrorMessage('인증 확인 중 오류가 발생했습니다. 다시 시도해주세요.');
+      setIsVerifyingPasscode(false);
+    }
   };
 
   return (

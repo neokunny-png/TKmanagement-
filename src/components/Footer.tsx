@@ -1,13 +1,20 @@
 import React from 'react';
 import { Shield, ArrowUp } from 'lucide-react';
 import { TKLogo } from './TKLogo';
+import { CompanyInfo } from '../types';
+import { DEFAULT_COMPANY_INFO } from '../services/companyService';
 
 interface FooterProps {
+  companyInfo?: CompanyInfo;
   onNavigate: (sectionId: string) => void;
   onOpenAdmin: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAdmin }) => {
+export const Footer: React.FC<FooterProps> = ({
+  companyInfo = DEFAULT_COMPANY_INFO,
+  onNavigate,
+  onOpenAdmin,
+}) => {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -26,12 +33,12 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAdmin }) => {
             />
 
             <p className="text-xs text-gray-400 max-w-sm leading-relaxed font-light">
-              YOUR NEXT SCENE. STARTS HERE. <br />
-              새로운 얼굴을 발견하고, 배우의 다음 장면을 만들어가는 프리미엄 액터스 매니지먼트.
+              {companyInfo.sloganEn || 'YOUR NEXT SCENE. STARTS HERE.'} <br />
+              {companyInfo.sloganKo || '새로운 얼굴을 발견하고, 배우의 다음 장면을 만들어가는 프리미엄 액터스 매니지먼트.'}
             </p>
 
             <div className="text-[11px] font-mono text-gray-400 pt-2">
-              CASTING &amp; 섭외 담당 : taz0206@naver.com
+              CASTING &amp; 섭외 담당 : {companyInfo.email || 'taz0206@naver.com'}
             </div>
           </div>
 
@@ -89,20 +96,20 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenAdmin }) => {
             <h4 className="text-xs font-mono text-white uppercase tracking-widest font-bold mb-3">
               COMPANY INFORMATION
             </h4>
-            <div>상호명 : ㈜TK Company (티케이컴퍼니)</div>
-            <div>브랜드 : TK MANAGEMENT (티케이 매니지먼트)</div>
-            <div>대표이사 : 조태경 | 개인정보보호책임자 : 조태경</div>
-            <div>사업자등록번호 : 211-88-92410</div>
-            <div>대중문화예술기획업 등록번호 : 제2025-서울강남-0418호</div>
-            <div>주소 : 서울특별시 마포구 마포나루길 442 마포인트 3층</div>
-            <div>대표전화 : 02-540-8820 | 팩스 : 02-540-8821</div>
+            <div>상호명 : {companyInfo.companyName}</div>
+            <div>브랜드 : {companyInfo.brandName}</div>
+            <div>대표이사 : {companyInfo.ceo} | 개인정보보호책임자 : {companyInfo.privacyOfficer}</div>
+            <div>사업자등록번호 : {companyInfo.businessNumber}</div>
+            <div>대중문화예술기획업 등록번호 : {companyInfo.entertainmentRegistration}</div>
+            <div>주소 : {companyInfo.address}</div>
+            <div>대표전화 : {companyInfo.tel} | 팩스 : {companyInfo.fax}</div>
           </div>
         </div>
 
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-gray-400">
           <div>
-            &copy; 2026 TK Company Co., Ltd. All Rights Reserved.
+            {companyInfo.copyright || '© 2026 TK Company Co., Ltd. All Rights Reserved.'}
           </div>
 
           <div className="flex items-center space-x-6">

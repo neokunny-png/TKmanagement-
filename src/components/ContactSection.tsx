@@ -1,17 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Phone, MapPin, Send, CheckCircle2, AlertCircle, Building, User } from 'lucide-react';
-import { Artist } from '../types';
+import { Artist, CompanyInfo } from '../types';
+import { DEFAULT_COMPANY_INFO } from '../services/companyService';
 
 interface ContactSectionProps {
   artists: Artist[];
   preselectedActor: Artist | null;
   onClearPreselectedActor: () => void;
+  id?: string;
+  isMobileView?: boolean;
+  companyInfo?: CompanyInfo;
 }
 
 export const ContactSection: React.FC<ContactSectionProps> = ({
   artists,
   preselectedActor,
-  onClearPreselectedActor
+  onClearPreselectedActor,
+  id = 'contact',
+  isMobileView = false,
+  companyInfo = DEFAULT_COMPANY_INFO,
 }) => {
   const [formData, setFormData] = useState({
     name: '',
@@ -95,7 +102,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
   };
 
   return (
-    <section id="contact" className="relative py-28 bg-[#0B0C10] border-t border-white/10">
+    <section id={id} className={`relative ${isMobileView ? 'py-14 sm:py-20' : 'py-28'} bg-[#0B0C10] border-t border-white/10`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Title */}
         <div className="mb-16 border-b border-white/10 pb-8">
@@ -133,10 +140,10 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
                     E-MAIL / 캐스팅 및 섭외 담당자 안내
                   </span>
                   <a
-                    href="mailto:taz0206@naver.com"
+                    href={`mailto:${companyInfo.email || 'taz0206@naver.com'}`}
                     className="text-sm font-bold text-white hover:text-sky-300 transition-colors font-mono"
                   >
-                    taz0206@naver.com
+                    {companyInfo.email || 'taz0206@naver.com'}
                   </a>
                   <span className="block text-gray-400 text-[11px] mt-0.5">
                     캐스팅 및 섭외 제안 상시 접수
@@ -153,10 +160,10 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
                     TEL / 대표 전화
                   </span>
                   <span className="text-sm font-bold text-white font-mono">
-                    02-540-8820
+                    {companyInfo.tel || '02-540-8820'}
                   </span>
                   <span className="block text-gray-400 text-[11px] mt-0.5">
-                    FAX : 02-540-8821 (평일 10:00 - 18:00)
+                    FAX : {companyInfo.fax || '02-540-8821'} (평일 10:00 - 18:00)
                   </span>
                 </div>
               </div>
@@ -170,21 +177,23 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
                     HEADQUARTERS / 본사 위치
                   </span>
                   <span className="text-xs sm:text-sm text-gray-200 font-medium leading-relaxed block">
-                    서울특별시 마포구 마포나루길 442 마포인트 3층 (주)TK Company
+                    {companyInfo.address} ({companyInfo.companyName})
                   </span>
-                  <span className="text-[11px] text-gray-500 font-mono block mt-1">
-                    3F Mapoint, 442 Maponaru-gil, Mapo-gu, Seoul, Korea
-                  </span>
+                  {companyInfo.addressEn && (
+                    <span className="text-[11px] text-gray-500 font-mono block mt-1">
+                      {companyInfo.addressEn}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Corporate Summary Box */}
             <div className="p-5 bg-[#121622] border border-[#182A47] text-[11px] text-gray-400 space-y-1 font-mono">
-              <div className="text-white font-bold mb-1">㈜TK Company</div>
-              <div>사업자등록번호: 211-88-92410</div>
-              <div>대중문화예술기획업 등록: 제2025-서울강남-0418호</div>
-              <div>대표이사: 조태경</div>
+              <div className="text-white font-bold mb-1">{companyInfo.companyName}</div>
+              <div>사업자등록번호: {companyInfo.businessNumber}</div>
+              <div>대중문화예술기획업 등록: {companyInfo.entertainmentRegistration}</div>
+              <div>대표이사: {companyInfo.ceo}</div>
             </div>
           </div>
 

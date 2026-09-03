@@ -74,6 +74,39 @@
         "createdAt": { "type": "number" }
       },
       "required": ["id", "name", "email", "message"]
+    },
+    "CompanyInfo": {
+      "title": "CompanyInfo",
+      "description": "Official company information for TK Company",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string" },
+        "brandName": { "type": "string" },
+        "ceo": { "type": "string" },
+        "privacyOfficer": { "type": "string" },
+        "businessNumber": { "type": "string" },
+        "entertainmentRegistration": { "type": "string" },
+        "address": { "type": "string" },
+        "addressEn": { "type": "string" },
+        "tel": { "type": "string" },
+        "fax": { "type": "string" },
+        "email": { "type": "string" },
+        "description": { "type": "string" },
+        "sloganKo": { "type": "string" },
+        "sloganEn": { "type": "string" },
+        "copyright": { "type": "string" },
+        "updatedAt": { "type": "number" }
+      }
+    },
+    "AdminAuthSettings": {
+      "title": "AdminAuthSettings",
+      "description": "Secure hashed administrator credentials",
+      "type": "object",
+      "properties": {
+        "passwordHash": { "type": "string" },
+        "salt": { "type": "string" },
+        "updatedAt": { "type": "number" }
+      }
     }
   },
   "firestore": {
@@ -92,6 +125,10 @@
     "/inquiries/{inquiryId}": {
       "schema": "InquiryMessage",
       "description": "Collection of contact inquiries"
+    },
+    "/settings/{settingId}": {
+      "schema": "CompanyInfo",
+      "description": "System settings including company info and admin auth credentials"
     }
   }
 }
