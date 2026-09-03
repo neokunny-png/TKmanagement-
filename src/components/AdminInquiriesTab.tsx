@@ -366,10 +366,11 @@ export const AdminInquiriesTab: React.FC<AdminInquiriesTabProps> = ({
                           e.stopPropagation();
                           handleRequestDeleteInquiry(item);
                         }}
-                        className="p-1 text-gray-500 hover:text-red-400 transition-colors"
-                        title="문의 삭제"
+                        className="inline-flex items-center space-x-1 px-2.5 py-1 text-[11px] font-mono font-bold text-red-400 hover:text-white bg-red-950/40 hover:bg-red-600 border border-red-800/60 rounded transition-all cursor-pointer"
+                        title="문의 삭제 (DELETE)"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3 h-3" />
+                        <span>DELETE</span>
                       </button>
                     </div>
                   </div>
@@ -411,11 +412,11 @@ export const AdminInquiriesTab: React.FC<AdminInquiriesTabProps> = ({
                 <button
                   type="button"
                   onClick={() => handleRequestDeleteInquiry(selectedInquiryItem)}
-                  className="p-1.5 text-gray-400 hover:text-red-400 border border-white/10 hover:border-red-500/40 rounded transition-colors text-xs flex items-center space-x-1"
+                  className="px-3 py-1.5 bg-red-950/60 hover:bg-red-600 text-red-300 hover:text-white border border-red-800/80 hover:border-red-600 rounded transition-all text-xs font-mono font-bold flex items-center space-x-1.5 cursor-pointer shadow-sm"
                   title="이 문의 영구 삭제"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span className="font-mono">삭제</span>
+                  <span>DELETE INQUIRY</span>
                 </button>
               </div>
 
@@ -715,6 +716,22 @@ export const AdminInquiriesTab: React.FC<AdminInquiriesTabProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* Bottom Quick Action: DELETE INQUIRY */}
+              <div className="pt-4 border-t border-white/10 flex items-center justify-between">
+                <span className="text-[11px] font-mono text-gray-500">
+                  접수 ID: {selectedInquiryItem.id}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleRequestDeleteInquiry(selectedInquiryItem)}
+                  className="px-3 py-1.5 bg-red-950/40 hover:bg-red-600 text-red-300 hover:text-white border border-red-800/60 hover:border-red-600 rounded text-xs font-mono font-bold flex items-center space-x-1.5 transition-colors cursor-pointer"
+                  title="이 문의 영구 삭제"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>DELETE INQUIRY</span>
+                </button>
+              </div>
             </div>
           ) : (
             <div className="text-center py-32 text-gray-500 text-xs font-mono space-y-2">

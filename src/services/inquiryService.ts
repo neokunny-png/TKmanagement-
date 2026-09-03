@@ -380,18 +380,30 @@ export async function updateInquiryStatusInDb(
  * Deletes an inquiry document from Firestore
  */
 export async function deleteInquiryFromDb(id: string): Promise<void> {
+  let inqDeleted = false;
+  let inqError: any = null;
+
   try {
     await deleteDoc(doc(db, INQUIRIES_COLLECTION, id));
-    console.log(`[TK Inquiry] Deleted inquiry: ${id}`);
+    inqDeleted = true;
+    console.log(`[TK Inquiry] Deleted inquiry from inquiries collection: ${id}`);
   } catch (err: any) {
-    console.warn('[TK Inquiry] Inquiries delete note:', err);
+    inqError = err;
+    console.warn('[TK Inquiry] Inquiries collection delete note:', err);
   }
 
-  // Also attempt delete from legacy auditions collection
+  // Also attempt delete from legacy auditions collection if present
   try {
     await deleteDoc(doc(db, AUDITIONS_COLLECTION, id));
-  } catch (audErr) {
-    // ignore
+    inqDeleted = true;
+    console.log(`[TK Inquiry] Deleted inquiry from auditions collection: ${id}`);
+  } catch (audErr: any) {
+    // ignore if auditions collection didn't have this document
+  }
+
+  if (!inqDeleted && inqError) {
+    handleFirestoreError(inqError, OperationType.DELETE, `${INQUIRIES_COLLECTION}/${id}`);
+    throw inqError;
   }
 }
 
