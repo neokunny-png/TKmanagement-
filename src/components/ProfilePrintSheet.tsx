@@ -1,5 +1,7 @@
-import React from 'react';
-import { X, Printer } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Printer, Download, AlertCircle, CheckCircle2 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { Artist, CompanyInfo, getGroupedFilmography } from '../types';
 import { DEFAULT_COMPANY_INFO } from '../services/companyService';
 import { TKLogoMark } from './TKLogo';
@@ -20,14 +22,236 @@ export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({
   if (!artist) return null;
 
   const photoUrl = artist.profileImageUrl || artist.image || artist.profileImage || null;
-  const [imgError, setImgError] = React.useState(false);
+  const [imgError, setImgError] = useState(false);
+  const [base64Photo, setBase64Photo] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [feedbackType, setFeedbackType] = useState<'error' | 'success' | null>(null);
 
-  React.useEffect(() => {
+  // Pre-fetch or convert photo to Base64 to guarantee zero CORS/taint issues in html2canvas
+  useEffect(() => {
     setImgError(false);
+    setBase64Photo(null);
+
+    if (!photoUrl) return;
+
+    if (photoUrl.startsWith('data:')) {
+      setBase64Photo(photoUrl);
+      return;
+    }
+
+    let isMounted = true;
+    // Attempt to pre-fetch photo as Base64 for bulletproof PDF generation
+    const fetchBase64 = async () => {
+      try {
+        const res = await fetch(photoUrl, { mode: 'cors' });
+        if (!res.ok) throw new Error('Fetch failed');
+        const blob = await res.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (isMounted && reader.result) {
+            setBase64Photo(reader.result as string);
+          }
+        };
+        reader.readAsDataURL(blob);
+      } catch {
+        // Fallback: draw image to an offscreen canvas
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth || img.width;
+            canvas.height = img.naturalHeight || img.height;
+            const ctx = canvas.getContext('2d');
+            if (ctx && isMounted) {
+              ctx.drawImage(img, 0, 0);
+              setBase64Photo(canvas.toDataURL('image/jpeg', 0.92));
+            }
+          } catch {
+            // Tainted or CORS-blocked, html2canvas will fallback to original img
+          }
+        };
+        img.src = photoUrl;
+      }
+    };
+
+    fetchBase64();
+
+    return () => {
+      isMounted = false;
+    };
   }, [photoUrl, artist.id]);
 
+  // PRINT Handler
   const handlePrint = () => {
-    window.print();
+    setFeedbackMessage(null);
+    setFeedbackType(null);
+
+    try {
+      // Temporarily release body scroll locks if active
+      const prevOverflow = document.body.style.overflow;
+      const prevPosition = document.body.style.position;
+      const prevTop = document.body.style.top;
+      const prevWidth = document.body.style.width;
+
+      document.body.style.overflow = 'visible';
+      document.body.style.position = 'static';
+      document.body.style.top = '0';
+      document.body.style.width = 'auto';
+
+      if (typeof window !== 'undefined') {
+        window.focus();
+      }
+
+      // Allow browser reflow before invoking print dialog
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          try {
+            window.print();
+          } catch (err: any) {
+            console.error('[TK] window.print() failed:', err);
+            setFeedbackMessage(
+              '브라우저 인쇄 창을 열지 못했습니다. 보안 설정(iframe 등)으로 제한된 경우, 상단의 [DOWNLOAD PDF] 버튼을 이용해 PDF를 다운로드한 후 인쇄해 주세요.'
+            );
+            setFeedbackType('error');
+          } finally {
+            // Restore body layout styles after print invocation
+            setTimeout(() => {
+              document.body.style.overflow = prevOverflow;
+              document.body.style.position = prevPosition;
+              document.body.style.top = prevTop;
+              document.body.style.width = prevWidth;
+            }, 500);
+          }
+        }, 100);
+      });
+    } catch (err: any) {
+      console.error('[TK] Print setup error:', err);
+      setFeedbackMessage('인쇄 기능을 호출하는 중 오류가 발생했습니다. [DOWNLOAD PDF] 버튼을 이용해 주세요.');
+      setFeedbackType('error');
+    }
+  };
+
+  // DOWNLOAD PDF Handler
+  const handleDownloadPdf = async () => {
+    if (isGeneratingPdf || !artist) return;
+
+    setIsGeneratingPdf(true);
+    setFeedbackMessage(null);
+    setFeedbackType(null);
+
+    try {
+      const element = document.getElementById('profile-printable-content');
+      if (!element) {
+        throw new Error('인쇄용 콘텐츠 요소를 찾을 수 없습니다.');
+      }
+
+      // Generate crisp 2x Retina canvas
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: 1024,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.getElementById('profile-printable-content');
+          if (clonedElement) {
+            clonedElement.style.width = '800px';
+            clonedElement.style.maxWidth = '800px';
+            clonedElement.style.margin = '0 auto';
+            clonedElement.style.padding = '32px';
+            clonedElement.style.background = '#ffffff';
+            clonedElement.style.color = '#000000';
+          }
+          // Inject preloaded base64 photo into clone if available
+          if (base64Photo) {
+            const clonedImg = clonedDoc.getElementById('profile-actor-photo') as HTMLImageElement;
+            if (clonedImg) {
+              clonedImg.src = base64Photo;
+            }
+          }
+        }
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
+
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const marginX = 10;
+      const marginTop = 12;
+      const marginBottom = 12;
+      const maxContentWidth = pageWidth - marginX * 2; // 190mm
+      const maxContentHeight = pageHeight - marginTop - marginBottom; // 273mm
+
+      const canvasRatio = canvas.height / canvas.width;
+      let finalWidth = maxContentWidth;
+      let finalHeight = finalWidth * canvasRatio;
+
+      // Fit single page if height is within reasonable bounds (up to 1.25x max height)
+      if (finalHeight > maxContentHeight && finalHeight <= maxContentHeight * 1.25) {
+        const scale = maxContentHeight / finalHeight;
+        finalWidth = finalWidth * scale;
+        finalHeight = maxContentHeight;
+        const offsetX = (pageWidth - finalWidth) / 2;
+        pdf.addImage(imgData, 'JPEG', offsetX, marginTop, finalWidth, finalHeight, undefined, 'FAST');
+      } else if (finalHeight <= maxContentHeight) {
+        const offsetX = (pageWidth - finalWidth) / 2;
+        pdf.addImage(imgData, 'JPEG', offsetX, marginTop, finalWidth, finalHeight, undefined, 'FAST');
+      } else {
+        // Multi-page clean pagination for actors with extensive works
+        let heightLeft = finalHeight;
+        let position = marginTop;
+
+        pdf.addImage(imgData, 'JPEG', marginX, position, finalWidth, finalHeight, undefined, 'FAST');
+        heightLeft -= maxContentHeight;
+
+        while (heightLeft > 0) {
+          position = marginTop - (finalHeight - heightLeft);
+          pdf.addPage();
+          pdf.addImage(imgData, 'JPEG', marginX, position, finalWidth, finalHeight, undefined, 'FAST');
+          heightLeft -= maxContentHeight;
+        }
+      }
+
+      // Construct standard file name with actor's name
+      const rawName = artist.nameKo || artist.nameEn || 'ACTOR';
+      const safeName = rawName.trim().replace(/[\/\\:*?"<>|]/g, '').replace(/\s+/g, '_');
+      const fileName = `TK_MANAGEMENT_${safeName}_PROFILE.pdf`;
+
+      // Save PDF
+      try {
+        pdf.save(fileName);
+      } catch {
+        const blob = pdf.output('blob');
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 1000);
+      }
+
+      setFeedbackMessage(`${fileName} 다운로드가 완료되었습니다.`);
+      setFeedbackType('success');
+    } catch (err: any) {
+      console.error('[TK] PDF generation failed:', err);
+      setFeedbackMessage('PDF 생성에 실패했습니다. 잠시 후 다시 시도해주시거나 [PRINT] 기능을 이용해주세요.');
+      setFeedbackType('error');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const handleLogoClick = () => {
@@ -48,7 +272,7 @@ export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({
         className="relative w-full max-w-4xl bg-white text-black shadow-2xl p-4 sm:p-8 md:p-10 my-2 sm:my-auto rounded-none"
       >
         {/* Top Control Bar (Hidden during actual print) */}
-        <div className="print:hidden flex items-center justify-between pb-4 sm:pb-6 mb-4 sm:mb-6 border-b border-gray-200 gap-2">
+        <div className="print:hidden flex items-center justify-between pb-4 sm:pb-6 mb-4 sm:mb-6 border-b border-gray-200 gap-2 flex-wrap sm:flex-nowrap">
           <button
             type="button"
             onClick={handleLogoClick}
@@ -61,16 +285,35 @@ export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({
           </button>
 
           <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
+            {/* PRINT Button */}
             <button
+              id="btn-print-profile-action"
               onClick={handlePrint}
-              className="inline-flex items-center space-x-1.5 bg-black text-white hover:bg-neutral-800 active:scale-95 px-3 sm:px-4 py-2 text-xs font-bold uppercase tracking-wider cursor-pointer whitespace-nowrap min-h-[38px]"
+              className="inline-flex items-center space-x-1.5 bg-white text-black border border-black hover:bg-neutral-100 active:scale-95 px-3 sm:px-4 py-2 text-xs font-bold uppercase tracking-wider cursor-pointer whitespace-nowrap min-h-[38px] transition-colors shadow-sm"
+              title="브라우저 인쇄 대화상자 열기"
             >
               <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>인쇄 / PDF 저장</span>
+              <span>PRINT (인쇄)</span>
             </button>
+
+            {/* DOWNLOAD PDF Button */}
+            <button
+              id="btn-download-pdf-action"
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+              className={`inline-flex items-center space-x-1.5 bg-black text-white hover:bg-neutral-800 active:scale-95 px-3 sm:px-4 py-2 text-xs font-bold uppercase tracking-wider whitespace-nowrap min-h-[38px] transition-colors shadow-sm ${
+                isGeneratingPdf ? 'opacity-75 cursor-wait' : 'cursor-pointer'
+              }`}
+              title="공식 프로필 PDF 다운로드"
+            >
+              <Download className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isGeneratingPdf ? 'animate-bounce' : ''}`} />
+              <span>{isGeneratingPdf ? 'GENERATING...' : 'DOWNLOAD PDF'}</span>
+            </button>
+
+            {/* Close Button */}
             <button
               onClick={onClose}
-              className="p-1.5 sm:p-2 text-gray-400 hover:text-black hover:bg-gray-100 cursor-pointer min-h-[38px] min-w-[38px] flex items-center justify-center"
+              className="p-1.5 sm:p-2 text-gray-400 hover:text-black hover:bg-gray-100 cursor-pointer min-h-[38px] min-w-[38px] flex items-center justify-center transition-colors"
               aria-label="닫기"
             >
               <X className="w-5 h-5" />
@@ -78,8 +321,35 @@ export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({
           </div>
         </div>
 
+        {/* User Feedback Message Banner (Hidden during print) */}
+        {feedbackMessage && (
+          <div
+            className={`print:hidden mb-4 p-3 text-xs flex items-center justify-between gap-2 border ${
+              feedbackType === 'error'
+                ? 'bg-red-50 text-red-800 border-red-200'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+            }`}
+          >
+            <div className="flex items-center space-x-2 min-w-0">
+              {feedbackType === 'error' ? (
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              )}
+              <span className="break-keep">{feedbackMessage}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFeedbackMessage(null)}
+              className="text-gray-400 hover:text-gray-700 p-1"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* Printable Paper Area (Styled for crisp A4 & Casting Director use) */}
-        <div className="space-y-6 sm:space-y-8 print:space-y-6">
+        <div id="profile-printable-content" className="space-y-6 sm:space-y-8 print:space-y-6 bg-white text-black">
           {/* Header Banner */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b-2 border-black pb-3 sm:pb-4 gap-2 print:flex-row print:items-center">
             <button
@@ -132,9 +402,11 @@ export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({
                   </div>
                 ) : (
                   <img
-                    src={photoUrl}
+                    id="profile-actor-photo"
+                    src={base64Photo || photoUrl}
                     alt={artist.nameKo}
                     onError={() => setImgError(true)}
+                    crossOrigin="anonymous"
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
                   />
@@ -160,15 +432,21 @@ export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({
               </div>
 
               {/* Physical Spec Grid */}
-              <div className="grid grid-cols-3 gap-2 border-y border-gray-200 py-2 sm:py-3 text-center text-xs font-mono">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 border-y border-gray-200 py-2 sm:py-3 text-center text-xs font-mono">
                 <div>
                   <span className="text-[10px] text-gray-500 block">생년월일</span>
-                  <span className="font-bold text-xs sm:text-sm">{artist.birth}</span>
+                  <span className="font-bold text-xs sm:text-sm">{artist.birth || '-'}</span>
                 </div>
                 <div>
                   <span className="text-[10px] text-gray-500 block">신장</span>
-                  <span className="font-bold text-xs sm:text-sm">{artist.height}cm</span>
+                  <span className="font-bold text-xs sm:text-sm">{artist.height ? `${artist.height}cm` : '-'}</span>
                 </div>
+                {artist.weight ? (
+                  <div>
+                    <span className="text-[10px] text-gray-500 block">체중</span>
+                    <span className="font-bold text-xs sm:text-sm">{artist.weight}kg</span>
+                  </div>
+                ) : null}
                 <div>
                   <span className="text-[10px] text-gray-500 block">성별</span>
                   <span className="font-bold text-xs sm:text-sm">{artist.gender === 'Female' ? '여성' : '남성'}</span>
@@ -179,7 +457,7 @@ export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({
               <div className="space-y-1.5 sm:space-y-2 text-xs">
                 <div className="flex items-baseline">
                   <span className="w-16 sm:w-20 font-bold text-gray-700 shrink-0">학 력</span>
-                  <span className="text-gray-900 break-words flex-1">{artist.education}</span>
+                  <span className="text-gray-900 break-words flex-1">{artist.education || '-'}</span>
                 </div>
                 {artist.instagram && (
                   <div className="flex items-baseline">

@@ -118,7 +118,7 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 12mm 15mm;
+    margin: 10mm 12mm;
   }
 
   html, body {
@@ -126,9 +126,34 @@
     color: #000000 !important;
     width: 100% !important;
     height: auto !important;
-    min-height: 0 !important;
+    min-height: auto !important;
     margin: 0 !important;
     padding: 0 !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+
+  /* Completely hide main website components, navigation, and background during print */
+  #root > div > *:not(#profile-print-overlay),
+  header,
+  nav,
+  footer,
+  #hero,
+  #about,
+  #artists,
+  #news,
+  #audition,
+  #contact,
+  #artist-modal,
+  #admin-dashboard,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  #root, #root > div {
+    background: #ffffff !important;
+    min-height: auto !important;
+    height: auto !important;
     overflow: visible !important;
     position: static !important;
   }
@@ -142,6 +167,8 @@
     margin: 0 !important;
     display: block !important;
     overflow: visible !important;
+    min-height: auto !important;
+    width: 100% !important;
   }
 
   #profile-print-sheet {
