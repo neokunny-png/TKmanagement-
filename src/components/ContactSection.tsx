@@ -117,11 +117,11 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
     <section id={id} className={`relative ${isMobileView ? 'py-14 sm:py-20' : 'py-28'} bg-[#0B0C10] border-t border-white/10`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Title */}
-        <div className="mb-16 border-b border-white/10 pb-8">
-          <span className="text-xs font-mono tracking-widest text-sky-400 uppercase block mb-3">
+        <div className="mb-10 sm:mb-16 border-b border-white/10 pb-6 sm:pb-8">
+          <span className="text-[11px] sm:text-xs font-mono tracking-widest text-sky-400 uppercase block mb-2 sm:mb-3">
             BUSINESS &amp; CASTING INQUIRY
           </span>
-          <h2 className="text-4xl sm:text-5xl font-display font-black text-white tracking-tighter">
+          <h2 className="text-[clamp(2rem,9vw,3.75rem)] sm:text-5xl md:text-6xl font-display font-black text-white tracking-tight sm:tracking-tighter whitespace-nowrap leading-none">
             CONTACT.
           </h2>
           <p className="text-xs sm:text-sm text-gray-400 mt-2">
@@ -153,7 +153,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
                   </span>
                   <a
                     href={`mailto:${companyInfo.email || 'taz0206@naver.com'}`}
-                    className="text-sm font-bold text-white hover:text-sky-300 transition-colors font-mono"
+                    className="text-sm font-bold text-white hover:text-sky-300 transition-colors font-mono break-all"
                   >
                     {companyInfo.email || 'taz0206@naver.com'}
                   </a>
@@ -188,11 +188,11 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
                   <span className="text-[10px] font-mono text-gray-500 uppercase block">
                     HEADQUARTERS / 본사 위치
                   </span>
-                  <span className="text-xs sm:text-sm text-gray-200 font-medium leading-relaxed block">
+                  <span className="text-xs sm:text-sm text-gray-200 font-medium leading-relaxed block break-keep">
                     {companyInfo.address} ({companyInfo.companyName})
                   </span>
                   {companyInfo.addressEn && (
-                    <span className="text-[11px] text-gray-500 font-mono block mt-1">
+                    <span className="text-[11px] text-gray-500 font-mono block mt-1 break-words">
                       {companyInfo.addressEn}
                     </span>
                   )}
@@ -201,7 +201,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
             </div>
 
             {/* Corporate Summary Box */}
-            <div className="p-5 bg-[#121622] border border-[#182A47] text-[11px] text-gray-400 space-y-1 font-mono">
+            <div className="p-4 sm:p-5 bg-[#121622] border border-[#182A47] text-[11px] text-gray-400 space-y-1 font-mono break-words">
               <div className="text-white font-bold mb-1">{companyInfo.companyName}</div>
               <div>사업자등록번호: {companyInfo.businessNumber}</div>
               <div>대중문화예술기획업 등록: {companyInfo.entertainmentRegistration}</div>
@@ -210,7 +210,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
           </div>
 
           {/* Right Column: Contact Inquiry Form */}
-          <div className="lg:col-span-7 bg-[#111319] border border-white/15 p-6 sm:p-8">
+          <div className="lg:col-span-7 bg-[#111319] border border-white/15 p-5 sm:p-8">
             {isSuccess ? (
               <div className="text-center py-12 space-y-4 animate-in fade-in duration-300">
                 <div className="w-14 h-14 rounded-full bg-sky-500/20 border border-sky-400 flex items-center justify-center text-sky-300 mx-auto">

@@ -550,6 +550,7 @@ export default function App() {
       {printArtist && (
         <ProfilePrintSheet
           artist={printArtist}
+          companyInfo={companyInfo}
           onClose={handleClosePrintSheet}
           onGoHome={handleNavigateHome}
         />
