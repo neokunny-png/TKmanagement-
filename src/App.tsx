@@ -107,12 +107,33 @@ export default function App() {
   useEffect(() => {
     const isAnyModalOpen = Boolean(selectedArtist || printArtist || isAdminOpen || isAdminAuthModalOpen);
     if (isAnyModalOpen) {
+      const scrollY = window.scrollY;
       document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.dataset.savedScrollY = String(scrollY);
     } else {
+      const savedY = parseInt(document.body.dataset.savedScrollY || '0', 10);
       document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      if (document.body.dataset.savedScrollY !== undefined) {
+        delete document.body.dataset.savedScrollY;
+        window.scrollTo({ top: savedY, behavior: 'instant' });
+      }
     }
     return () => {
+      const savedY = parseInt(document.body.dataset.savedScrollY || '0', 10);
       document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      if (document.body.dataset.savedScrollY !== undefined) {
+        delete document.body.dataset.savedScrollY;
+        window.scrollTo({ top: savedY, behavior: 'instant' });
+      }
     };
   }, [selectedArtist, printArtist, isAdminOpen, isAdminAuthModalOpen]);
 
@@ -345,19 +366,19 @@ export default function App() {
         />
 
         {/* Mobile Navigation Strip (Visible on mobile only, in exact order: ABOUT → ARTISTS → NEWS → AUDITION → CONTACT) */}
-        <div className="md:hidden sticky top-[57px] z-30 bg-[#0B0C10]/95 backdrop-blur-md border-y border-white/10 px-2.5 py-2 shadow-lg shadow-black/40">
+        <div className="md:hidden sticky top-[57px] z-30 bg-[#0B0C10]/95 backdrop-blur-md border-y border-white/10 px-1.5 py-2 shadow-lg shadow-black/40">
           <div className="flex items-center justify-between gap-1 max-w-md mx-auto">
             <button
               id="mobile-nav-about"
               onClick={() => handleNavigate('about')}
-              className="flex-1 py-1.5 px-1 text-center text-xs font-mono font-semibold tracking-wider text-gray-300 hover:text-white active:bg-white/10 transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center"
+              className="flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider text-gray-300 hover:text-white active:bg-white/10 transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap"
             >
               ABOUT
             </button>
             <button
               id="mobile-nav-artists"
               onClick={() => handleNavigate('artists')}
-              className={`flex-1 py-1.5 px-1 text-center text-xs font-mono font-semibold tracking-wider transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center ${
+              className={`flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap ${
                 activeSection === 'artists'
                   ? 'text-sky-400 bg-sky-950/50 border border-sky-800/60 font-bold'
                   : 'text-gray-300 hover:text-white'
@@ -368,7 +389,7 @@ export default function App() {
             <button
               id="mobile-nav-news"
               onClick={() => handleNavigate('news')}
-              className={`flex-1 py-1.5 px-1 text-center text-xs font-mono font-semibold tracking-wider transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center ${
+              className={`flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap ${
                 activeSection === 'news'
                   ? 'text-sky-400 bg-sky-950/50 border border-sky-800/60 font-bold'
                   : 'text-gray-300 hover:text-white'
@@ -379,14 +400,14 @@ export default function App() {
             <button
               id="mobile-nav-audition"
               onClick={() => handleNavigate('audition')}
-              className="flex-1 py-1.5 px-1 text-center text-xs font-mono font-semibold tracking-wider text-gray-300 hover:text-white active:bg-white/10 transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center"
+              className="flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider text-gray-300 hover:text-white active:bg-white/10 transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap"
             >
               AUDITION
             </button>
             <button
               id="mobile-nav-contact"
               onClick={() => handleNavigate('contact')}
-              className="flex-1 py-1.5 px-1 text-center text-xs font-mono font-semibold tracking-wider text-gray-300 hover:text-white active:bg-white/10 transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center"
+              className="flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider text-gray-300 hover:text-white active:bg-white/10 transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap"
             >
               CONTACT
             </button>

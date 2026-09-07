@@ -73,7 +73,7 @@ export const Header: React.FC<HeaderProps> = ({
               key={item.id}
               id={`nav-link-${item.id}`}
               onClick={() => handleNavClick(item.id)}
-              className={`text-xs tracking-widest font-medium transition-all relative py-1 hover:text-white cursor-pointer ${
+              className={`text-xs tracking-widest font-medium transition-all relative py-1 hover:text-white cursor-pointer whitespace-nowrap ${
                 activeSection === item.id ? 'text-white' : 'text-gray-400'
               }`}
             >
@@ -131,7 +131,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               key={item.id}
               onClick={() => handleNavClick(item.id)}
-              className={`block w-full text-left py-2.5 text-sm tracking-widest font-medium border-b border-white/5 cursor-pointer ${
+              className={`block w-full text-left py-2.5 text-sm tracking-widest font-medium border-b border-white/5 cursor-pointer whitespace-nowrap ${
                 activeSection === item.id ? 'text-sky-400 font-bold' : 'text-gray-300'
               }`}
             >
