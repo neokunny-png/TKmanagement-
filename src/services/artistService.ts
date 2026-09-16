@@ -21,7 +21,7 @@ export function getCanonicalArtistId(idOrKo: string, nameEn?: string): string {
   const str = `${idOrKo || ''} ${nameEn || ''}`.toLowerCase();
 
   // Official actor IDs
-  if (str.includes('박민욱') || str.includes('minwook') || str.includes('park-minwook')) {
+  if (str.includes('박민욱') || str.includes('minwook') || str.includes('park-minwook') || str.includes('박민준') || str.includes('minjun') || str.includes('park-minjun')) {
     return 'artist-park-minwook';
   }
   if (str.includes('최은서') || str.includes('eunseo') || str.includes('choi-eunseo')) {

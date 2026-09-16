@@ -49,44 +49,64 @@ export const Footer: React.FC<FooterProps> = ({
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
-                <button
-                  onClick={() => onNavigate('about')}
-                  className="hover:text-white transition-colors"
+                <a
+                  href="/about"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onNavigate('about');
+                  }}
+                  className="hover:text-white transition-colors cursor-pointer block py-0.5"
                 >
                   ABOUT TK
-                </button>
+                </a>
               </li>
               <li>
-                <button
-                  onClick={() => onNavigate('artists')}
-                  className="hover:text-white transition-colors"
+                <a
+                  href="/artists"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onNavigate('artists');
+                  }}
+                  className="hover:text-white transition-colors cursor-pointer block py-0.5"
                 >
                   ARTISTS (소속 배우)
-                </button>
+                </a>
               </li>
               <li>
-                <button
-                  onClick={() => onNavigate('news')}
-                  className="hover:text-white transition-colors"
+                <a
+                  href="/news"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onNavigate('news');
+                  }}
+                  className="hover:text-white transition-colors cursor-pointer block py-0.5"
                 >
                   NEWS (보도자료)
-                </button>
+                </a>
               </li>
               <li>
-                <button
-                  onClick={() => onNavigate('audition')}
-                  className="hover:text-white transition-colors"
+                <a
+                  href="/audition"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onNavigate('audition');
+                  }}
+                  className="hover:text-white transition-colors cursor-pointer block py-0.5"
                 >
                   AUDITION (신인 오디션)
-                </button>
+                </a>
               </li>
               <li>
-                <button
-                  onClick={() => onNavigate('contact')}
-                  className="hover:text-white transition-colors"
+                <a
+                  href="/contact"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onNavigate('contact');
+                  }}
+                  className="hover:text-white transition-colors cursor-pointer block py-0.5"
                 >
                   CONTACT (캐스팅 문의)
-                </button>
+                </a>
               </li>
             </ul>
           </div>

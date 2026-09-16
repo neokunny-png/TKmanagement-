@@ -1,6 +1,6 @@
 {
   "name": "TK MANAGEMENT",
-  "description": "TK MANAGEMENT (주식회사 TK Company) 공식 웹사이트 및 아티스트/오디션 관리 시스템",
+  "description": "TK매니지먼트 (㈜TK Company) 공식 웹사이트. 배우 매니지먼트, 신인배우 오디션 및 캐스팅",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

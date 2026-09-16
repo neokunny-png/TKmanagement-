@@ -158,12 +158,12 @@ export const AuditionSection: React.FC<AuditionSectionProps> = ({ id = 'audition
             <span className="text-xs font-mono tracking-widest text-sky-400 uppercase block mb-3">
               AUDITION RECRUITMENT
             </span>
-            <h2 className="text-4xl sm:text-6xl font-display font-black text-white tracking-tighter leading-tight mb-6">
-              FIND YOUR <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-sky-300">
-                NEXT SCENE.
-              </span>
-            </h2>
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-display font-black text-white tracking-tighter leading-tight mb-4">
+              신인배우 모집
+            </h1>
+            <p className="text-xl sm:text-2xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-sky-300 mb-4">
+              FIND YOUR NEXT SCENE.
+            </p>
             <p className="text-base sm:text-lg text-gray-200 font-medium leading-relaxed mb-6">
               TK MANAGEMENT와 함께 배우로서의 첫 장면을 시작하세요.
             </p>
@@ -541,6 +541,27 @@ export const AuditionSection: React.FC<AuditionSectionProps> = ({ id = 'audition
                   <Sparkles className="w-4 h-4 text-[#182A47]" />
                   <span>{isSubmitting ? '접수 처리중...' : 'TK MANAGEMENT 오디션 지원하기'}</span>
                 </button>
+              </div>
+
+              {/* Internal Link for Audition Inquiries */}
+              <div className="pt-4 text-center">
+                <p className="text-xs text-gray-400">
+                  오디션 접수 및 캐스팅 관련 개별 문의사항이 있으신가요?{' '}
+                  <a
+                    href="/contact"
+                    onClick={(e) => {
+                      if (typeof window !== 'undefined') {
+                        e.preventDefault();
+                        const el = document.getElementById('contact');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                        window.history.pushState(null, '', '/contact');
+                      }
+                    }}
+                    className="text-sky-400 hover:text-sky-300 underline font-medium ml-1 inline-flex items-center"
+                  >
+                    CONTACT (문의하기) 바로가기 →
+                  </a>
+                </p>
               </div>
             </form>
           )}

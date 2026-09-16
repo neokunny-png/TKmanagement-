@@ -96,7 +96,7 @@ export const Hero: React.FC<HeroProps> = ({
               >
                 <img
                   src={photoSrc}
-                  alt={`${artist.nameKo} (${artist.nameEn})`}
+                  alt={`TK매니지먼트 소속 배우 ${artist.nameKo} 프로필`}
                   className="w-full h-full object-cover object-top sm:object-center filter grayscale-[30%] brightness-[0.45] scale-105 transition-transform duration-7000 ease-out"
                   referrerPolicy="no-referrer"
                 />
@@ -129,15 +129,21 @@ export const Hero: React.FC<HeroProps> = ({
             </span>
           </div>
 
-          {/* Slogan */}
-          <div className="space-y-2 mb-4 sm:mb-6">
-            <h1 className="font-display text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tighter text-white leading-[1.05] break-words">
+          {/* Slogan & SEO Heading */}
+          <div className="space-y-3 mb-4 sm:mb-6">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-black tracking-tight text-white flex flex-col gap-1">
+              <span className="tracking-wide text-white">TK매니지먼트</span>
+              <span className="text-xs sm:text-sm md:text-base font-normal text-sky-300 font-sans tracking-normal">
+                배우의 가능성을 발견하고 함께 성장하는 매니지먼트
+              </span>
+            </h1>
+            <p className="font-display text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tighter text-white leading-[1.05] break-words">
               WE DEVELOP
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-sky-300">
                 THE NEXT STORY.
               </span>
-            </h1>
+            </p>
           </div>
 
           {/* Korean & English Subtitle */}

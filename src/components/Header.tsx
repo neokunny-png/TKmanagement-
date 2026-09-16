@@ -69,10 +69,14 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Desktop Navigation */}
         <nav id="desktop-nav" className="hidden md:flex items-center space-x-8">
           {navItems.map((item) => (
-            <button
+            <a
               key={item.id}
               id={`nav-link-${item.id}`}
-              onClick={() => handleNavClick(item.id)}
+              href={item.id === 'hero' ? '/' : `/${item.id}`}
+              onClick={(e) => {
+                e.preventDefault();
+                handleNavClick(item.id);
+              }}
               className={`text-xs tracking-widest font-medium transition-all relative py-1 hover:text-white cursor-pointer whitespace-nowrap ${
                 activeSection === item.id ? 'text-white' : 'text-gray-400'
               }`}
@@ -81,7 +85,7 @@ export const Header: React.FC<HeaderProps> = ({
               {activeSection === item.id && (
                 <span className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-sky-400 shadow-sm" />
               )}
-            </button>
+            </a>
           ))}
 
           {/* Admin Portal Trigger */}
@@ -128,15 +132,19 @@ export const Header: React.FC<HeaderProps> = ({
           className="md:hidden bg-[#0B0C10]/98 border-b border-white/10 px-6 py-6 space-y-4 backdrop-blur-xl animate-in slide-in-from-top duration-200 max-h-[calc(100dvh-5rem)] overflow-y-auto touch-scroll pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]"
         >
           {navItems.map((item) => (
-            <button
+            <a
               key={item.id}
-              onClick={() => handleNavClick(item.id)}
+              href={item.id === 'hero' ? '/' : `/${item.id}`}
+              onClick={(e) => {
+                e.preventDefault();
+                handleNavClick(item.id);
+              }}
               className={`block w-full text-left py-2.5 text-sm tracking-widest font-medium border-b border-white/5 cursor-pointer whitespace-nowrap ${
                 activeSection === item.id ? 'text-sky-400 font-bold' : 'text-gray-300'
               }`}
             >
               {item.label}
-            </button>
+            </a>
           ))}
 
           <div className="pt-2 flex justify-between items-center">

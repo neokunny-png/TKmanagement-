@@ -49,9 +49,12 @@ export const NewsSection: React.FC<NewsSectionProps> = ({ newsList }) => {
             <span className="text-xs font-mono tracking-widest text-sky-400 uppercase block mb-3">
               PRESS &amp; ANNOUNCEMENTS
             </span>
-            <h2 className="text-4xl sm:text-5xl font-display font-black text-white tracking-tighter">
-              NEWS.
-            </h2>
+            <h1 className="text-3xl sm:text-5xl font-display font-black text-white tracking-tighter">
+              TK매니지먼트 뉴스
+            </h1>
+            <p className="text-xs sm:text-sm font-mono tracking-widest text-gray-400 uppercase mt-1">
+              NEWS &amp; NOTICE
+            </p>
           </div>
           <p className="text-xs sm:text-sm text-gray-400 mt-4 md:mt-0 font-light max-w-md text-right md:text-left">
             TK MANAGEMENT의 공식 소식과 소속 배우들의 작품 및 캐스팅 소식을 전합니다.
@@ -95,7 +98,7 @@ export const NewsSection: React.FC<NewsSectionProps> = ({ newsList }) => {
                   <div className="w-full md:w-36 h-24 overflow-hidden border border-white/10 bg-black/50 shrink-0">
                     <img
                       src={article.coverImage}
-                      alt={article.title}
+                      alt={`TK매니지먼트 뉴스 - ${article.title}`}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       referrerPolicy="no-referrer"
                     />
@@ -184,7 +187,7 @@ export const NewsSection: React.FC<NewsSectionProps> = ({ newsList }) => {
               <div className="mb-8 max-h-[420px] w-full overflow-hidden border border-white/10 bg-black/40">
                 <img
                   src={selectedArticle.coverImage}
-                  alt={selectedArticle.title}
+                  alt={`TK매니지먼트 뉴스 - ${selectedArticle.title}`}
                   className="w-full h-full object-contain max-h-[420px] mx-auto"
                   referrerPolicy="no-referrer"
                 />

@@ -189,7 +189,7 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
                   <img
                     key={currentPhoto}
                     src={currentPhoto}
-                    alt={`${artist.nameKo} - ${allPhotos[activePhotoIdx]?.label || 'Profile'}`}
+                    alt={`TK매니지먼트 소속 배우 ${artist.nameKo} 프로필 사진 ${activePhotoIdx + 1}`}
                     onError={() => setImgError(true)}
                     className="w-full h-full object-cover object-center transition-all duration-300"
                     referrerPolicy="no-referrer"
@@ -270,7 +270,7 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
                         >
                           <img
                             src={photo.url}
-                            alt={`Thumbnail ${idx + 1}`}
+                            alt={`TK매니지먼트 소속 배우 ${artist.nameKo} 갤러리 사진 ${idx + 1}`}
                             className="w-full h-full object-cover"
                             referrerPolicy="no-referrer"
                           />
@@ -300,9 +300,9 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
                 <div className="pb-6 border-b border-white/10">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h2 className="text-3xl sm:text-4xl font-display font-black text-white tracking-tight">
+                      <h1 className="text-3xl sm:text-4xl font-display font-black text-white tracking-tight">
                         {artist.nameKo}
-                      </h2>
+                      </h1>
                       <p className="text-sm font-mono tracking-widest text-gray-300 uppercase mt-1">
                         {artist.nameEn}
                       </p>

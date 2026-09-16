@@ -121,11 +121,11 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
           <span className="text-[11px] sm:text-xs font-mono tracking-widest text-sky-400 uppercase block mb-2 sm:mb-3">
             BUSINESS &amp; CASTING INQUIRY
           </span>
-          <h2 className="text-[clamp(2rem,9vw,3.75rem)] sm:text-5xl md:text-6xl font-display font-black text-white tracking-tight sm:tracking-tighter whitespace-nowrap leading-none">
-            CONTACT.
-          </h2>
-          <p className="text-xs sm:text-sm text-gray-400 mt-2">
-            TK MANAGEMENT • ㈜TK Company
+          <h1 className="text-[clamp(1.75rem,8vw,3.5rem)] sm:text-5xl md:text-6xl font-display font-black text-white tracking-tight sm:tracking-tighter whitespace-nowrap leading-none">
+            TK매니지먼트 문의
+          </h1>
+          <p className="text-xs sm:text-sm font-mono tracking-widest text-gray-400 uppercase mt-2">
+            CONTACT • ㈜TK Company
           </p>
         </div>
 

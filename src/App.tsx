@@ -18,6 +18,7 @@ import { NEWS_ARTICLES } from './data/news';
 import { subscribeArtists } from './services/artistService';
 import { subscribeNews } from './services/newsService';
 import { subscribeCompanyInfo, DEFAULT_COMPANY_INFO } from './services/companyService';
+import { applyPageSEO, getArtistSlug, mapSlugToArtistId } from './lib/seo';
 
 type ActiveMobileView = 'home' | 'about' | 'audition' | 'contact';
 
@@ -39,6 +40,11 @@ export default function App() {
     return false;
   });
 
+  // Modals & Selection State
+  const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
+  const [printArtist, setPrintArtist] = useState<Artist | null>(null);
+  const [preselectedActorForContact, setPreselectedActorForContact] = useState<Artist | null>(null);
+
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
@@ -51,15 +57,95 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Support direct URL hash loading on mobile (#about, #audition, #contact)
+  // Initial URL routing and deep-linking (supports /artists, /artists/:slug, /audition, /news, /contact, /about, and legacy hashes)
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      const hash = window.location.hash;
-      if (hash === '#about') setActiveMobileView('about');
-      else if (hash === '#audition') setActiveMobileView('audition');
-      else if (hash === '#contact') setActiveMobileView('contact');
+    if (typeof window === 'undefined') return;
+
+    const pathname = window.location.pathname.replace(/\/$/, '') || '/';
+    const hash = window.location.hash;
+    const isCurrentMobile = window.innerWidth < 768;
+
+    // 1. Direct actor profile path e.g. /artists/choi-eunseo or #artist/artist-choi-eunseo
+    if (pathname.startsWith('/artists/')) {
+      const slug = pathname.replace('/artists/', '').trim();
+      if (slug && artists.length > 0) {
+        const canonicalId = mapSlugToArtistId(slug);
+        const found = artists.find(
+          a => a.id === canonicalId || getArtistSlug(a) === slug || (a.nameKo && slug.includes(a.nameKo))
+        );
+        if (found) {
+          setSelectedArtist(found);
+          setActiveSection('artists');
+          return;
+        }
+      }
+    } else if (hash.startsWith('#artist/')) {
+      const artistId = hash.replace('#artist/', '').trim();
+      const canonicalId = mapSlugToArtistId(artistId);
+      const found = artists.find(a => a.id === canonicalId || a.id === artistId || getArtistSlug(a) === artistId);
+      if (found) {
+        setSelectedArtist(found);
+        setActiveSection('artists');
+        return;
+      }
     }
-  }, []);
+
+    // 2. Direct section paths
+    if (pathname === '/artists' || hash === '#artists') {
+      setActiveSection('artists');
+      setTimeout(() => {
+        document.getElementById('artists')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } else if (pathname === '/audition' || hash === '#audition') {
+      if (isCurrentMobile) {
+        setActiveMobileView('audition');
+      } else {
+        setActiveSection('audition');
+        setTimeout(() => {
+          document.getElementById('audition')?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    } else if (pathname === '/news' || hash === '#news') {
+      setActiveSection('news');
+      setTimeout(() => {
+        document.getElementById('news')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } else if (pathname === '/contact' || hash === '#contact') {
+      if (isCurrentMobile) {
+        setActiveMobileView('contact');
+      } else {
+        setActiveSection('contact');
+        setTimeout(() => {
+          document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    } else if (pathname === '/about' || hash === '#about') {
+      if (isCurrentMobile) {
+        setActiveMobileView('about');
+      } else {
+        setActiveSection('about');
+        setTimeout(() => {
+          document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
+  }, [artists]);
+
+  // Dynamic SEO Synchronization
+  useEffect(() => {
+    if (selectedArtist) {
+      applyPageSEO('artist', selectedArtist);
+      return;
+    }
+
+    let view = 'home';
+    if (activeMobileView !== 'home') {
+      view = activeMobileView;
+    } else if (activeSection && activeSection !== 'hero') {
+      view = activeSection;
+    }
+    applyPageSEO(view, null);
+  }, [selectedArtist, activeMobileView, activeSection]);
 
   // Real-time Firestore Subscriptions
   useEffect(() => {
@@ -98,11 +184,6 @@ export default function App() {
   const [isAdminAuthModalOpen, setIsAdminAuthModalOpen] = useState<boolean>(false);
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
 
-  // Modals
-  const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
-  const [printArtist, setPrintArtist] = useState<Artist | null>(null);
-  const [preselectedActorForContact, setPreselectedActorForContact] = useState<Artist | null>(null);
-
   // Body scroll lock management when modals are open
   useEffect(() => {
     const isAnyModalOpen = Boolean(selectedArtist || printArtist || isAdminOpen || isAdminAuthModalOpen);
@@ -140,29 +221,59 @@ export default function App() {
   // Browser History & Mobile Back Gesture (popstate) Handler
   useEffect(() => {
     const handlePopState = () => {
-      // If mobile view is open and user presses back, return to home
-      if (activeMobileView !== 'home') {
-        setActiveMobileView('home');
-        return;
+      const pathname = window.location.pathname.replace(/\/$/, '') || '/';
+      const hash = window.location.hash;
+
+      // 1. If back/forward navigates to an artist profile: /artists/:slug
+      if (pathname.startsWith('/artists/')) {
+        const slug = pathname.replace('/artists/', '').trim();
+        const canonicalId = mapSlugToArtistId(slug);
+        const found = artists.find(
+          a => a.id === canonicalId || getArtistSlug(a) === slug || (a.nameKo && slug.includes(a.nameKo))
+        );
+        if (found) {
+          setSelectedArtist(found);
+          return;
+        }
       }
-      // If user swipes back or taps browser back button, close open modals smoothly
+
+      // 2. If an artist or print modal was open, close them
       if (selectedArtist) {
         setSelectedArtist(null);
-        return;
       }
       if (printArtist) {
         setPrintArtist(null);
-        return;
       }
       if (isAdminAuthModalOpen) {
         setIsAdminAuthModalOpen(false);
-        return;
+      }
+
+      // 3. Handle mobile dedicated views and desktop sections
+      const isCurrentMobile = window.innerWidth < 768;
+      if (pathname === '/about' || hash === '#about') {
+        if (isCurrentMobile) setActiveMobileView('about');
+        else setActiveSection('about');
+      } else if (pathname === '/audition' || hash === '#audition') {
+        if (isCurrentMobile) setActiveMobileView('audition');
+        else setActiveSection('audition');
+      } else if (pathname === '/contact' || hash === '#contact') {
+        if (isCurrentMobile) setActiveMobileView('contact');
+        else setActiveSection('contact');
+      } else if (pathname === '/artists' || hash === '#artists') {
+        setActiveMobileView('home');
+        setActiveSection('artists');
+      } else if (pathname === '/news' || hash === '#news') {
+        setActiveMobileView('home');
+        setActiveSection('news');
+      } else {
+        setActiveMobileView('home');
+        setActiveSection('hero');
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [activeMobileView, selectedArtist, printArtist, isAdminAuthModalOpen]);
+  }, [artists, selectedArtist, printArtist, isAdminAuthModalOpen]);
 
   // Track active section on scroll
   useEffect(() => {
@@ -196,16 +307,19 @@ export default function App() {
 
   const handleSelectArtist = (artist: Artist) => {
     setSelectedArtist(artist);
+    const slug = getArtistSlug(artist);
     try {
-      window.history.pushState({ modal: 'artist', id: artist.id }, '', `#artist/${artist.id}`);
+      window.history.pushState({ modal: 'artist', slug, id: artist.id }, '', `/artists/${slug}`);
     } catch {}
   };
 
   const handleCloseArtistModal = () => {
     setSelectedArtist(null);
     try {
-      if (window.location.hash.startsWith('#artist/')) {
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      if (window.location.pathname.startsWith('/artists/')) {
+        window.history.pushState(null, '', '/artists');
+      } else if (window.location.hash.startsWith('#artist/')) {
+        window.history.replaceState(null, '', window.location.pathname);
       }
     } catch {}
   };
@@ -233,12 +347,19 @@ export default function App() {
 
     const isCurrentMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : isMobile;
 
+    let targetPath = '/';
+    if (sectionId === 'artists') targetPath = '/artists';
+    else if (sectionId === 'audition') targetPath = '/audition';
+    else if (sectionId === 'news') targetPath = '/news';
+    else if (sectionId === 'contact') targetPath = '/contact';
+    else if (sectionId === 'about') targetPath = '/about';
+
     // On Mobile: ABOUT, AUDITION, CONTACT open as dedicated views
     if (isCurrentMobile && (sectionId === 'about' || sectionId === 'audition' || sectionId === 'contact')) {
       setSavedScrollPos(window.scrollY);
-      setActiveMobileView(sectionId);
+      setActiveMobileView(sectionId as ActiveMobileView);
       try {
-        window.history.pushState({ mobileView: sectionId }, '', `#${sectionId}`);
+        window.history.pushState({ mobileView: sectionId }, '', targetPath);
       } catch {}
       window.scrollTo({ top: 0, behavior: 'instant' });
       return;
@@ -247,18 +368,11 @@ export default function App() {
     // If currently in a mobile sub-view and navigating to home/artists/news
     if (activeMobileView !== 'home') {
       setActiveMobileView('home');
-      try {
-        if (['#about', '#audition', '#contact'].includes(window.location.hash)) {
-          window.history.replaceState(null, '', window.location.pathname + window.location.search);
-        }
-      } catch {}
     }
 
     setActiveSection(sectionId);
     try {
-      if (window.location.hash && !window.location.hash.startsWith('#artist/') && !window.location.hash.startsWith('#print/')) {
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-      }
+      window.history.pushState({ section: sectionId }, '', targetPath);
     } catch {}
 
     setTimeout(() => {
@@ -274,9 +388,7 @@ export default function App() {
   const handleCloseMobileView = () => {
     setActiveMobileView('home');
     try {
-      if (['#about', '#audition', '#contact'].includes(window.location.hash)) {
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-      }
+      window.history.pushState(null, '', '/');
     } catch {}
     // Smoothly restore previous scroll position
     setTimeout(() => {
@@ -292,9 +404,7 @@ export default function App() {
     setActiveMobileView('home');
     setActiveSection('hero');
     try {
-      if (window.location.hash) {
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-      }
+      window.history.pushState(null, '', '/');
     } catch {}
     const heroElement = document.getElementById('hero');
     if (heroElement) {
