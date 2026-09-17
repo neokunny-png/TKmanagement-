@@ -1,20 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- 메인 홈 -->
   <url>
     <loc>https://www.tkm.kr/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
-
-  <!-- 소속 배우 목록 -->
   <url>
     <loc>https://www.tkm.kr/artists</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
-
-  <!-- 소속 배우별 상세 프로필 (현재 공식 소속 배우 4인) -->
   <url>
     <loc>https://www.tkm.kr/artists/choi-eunseo</loc>
     <changefreq>weekly</changefreq>
@@ -35,22 +30,16 @@
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-
-  <!-- 신인 배우 오디션 -->
   <url>
     <loc>https://www.tkm.kr/audition</loc>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
-
-  <!-- 뉴스 및 공지사항 -->
   <url>
     <loc>https://www.tkm.kr/news</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
-
-  <!-- 캐스팅 및 비즈니스 문의 -->
   <url>
     <loc>https://www.tkm.kr/contact</loc>
     <changefreq>monthly</changefreq>
