@@ -1,3 +1,11 @@
-/sitemap.xml    /sitemap.xml    200
-/robots.txt     /robots.txt     200
-/*              /index.html     200
+# 1. Directly serve sitemap.xml and robots.txt without redirection or SPA fallback
+/sitemap.xml                      /sitemap.xml    200
+/robots.txt                       /robots.txt     200
+
+# 2. Redirect apex domain (tkm.kr) to canonical primary domain (https://www.tkm.kr) with 301 Permanent Redirect
+http://tkm.kr/*                   https://www.tkm.kr/:splat    301!
+https://tkm.kr/*                  https://www.tkm.kr/:splat    301!
+http://www.tkm.kr/*               https://www.tkm.kr/:splat    301!
+
+# 3. React SPA Fallback for client-side routing
+/*                                /index.html     200
