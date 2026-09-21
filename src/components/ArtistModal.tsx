@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Download, Play, Mail, Instagram, ChevronRight, ChevronLeft, Film, GraduationCap } from 'lucide-react';
 import { Artist, getGroupedFilmography } from '../types';
 import { TKLogoMark } from './TKLogo';
+import { getArtistSlug, OFFICIAL_ACTORS } from '../lib/seo';
 
 interface ArtistModalProps {
   artist: Artist | null;
@@ -20,7 +21,10 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
 }) => {
   if (!artist) return null;
 
-  const profilePhoto = artist.profileImageUrl || artist.image || artist.profileImage || null;
+  const slug = getArtistSlug(artist);
+  const official = OFFICIAL_ACTORS[slug];
+  const officialImage = official ? official.image : null;
+  const profilePhoto = artist.profileImageUrl || artist.image || artist.profileImage || officialImage || null;
 
   // Build full photo list: main profile photo + any additional gallery photos
   const allPhotos: Array<{ id: string; url: string; label: string }> = [];
@@ -108,10 +112,12 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
 
   const validEmbedUrl = getEmbedUrl(artist.showreelUrl);
 
+  const displayBio = artist.bio || official?.description || '';
+
   return (
     <div
       id="artist-modal-overlay"
-      className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-0 sm:p-4 md:p-6 overscroll-contain"
+      className="fixed inset-0 z-50 bg-[#0B0C10] sm:bg-black/95 sm:backdrop-blur-2xl flex items-center justify-center p-0 sm:p-4 md:p-6 overscroll-contain"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -300,6 +306,9 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
                 <div className="pb-6 border-b border-white/10">
                   <div className="flex items-start justify-between gap-4">
                     <div>
+                      <span className="text-xs font-mono tracking-widest text-sky-400 uppercase block mb-1">
+                        TK MANAGEMENT ACTOR
+                      </span>
                       <h1 className="text-3xl sm:text-4xl font-display font-black text-white tracking-tight">
                         {artist.nameKo}
                       </h1>
@@ -322,13 +331,13 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
                   </div>
 
                   {/* 2. INTRODUCTION (소개글) */}
-                  {artist.bio && (
+                  {displayBio && (
                     <div className="mt-5">
                       <span className="text-[10px] font-mono tracking-widest text-sky-400 uppercase font-semibold block mb-1.5">
                         INTRODUCTION
                       </span>
                       <p className="text-xs sm:text-sm text-gray-200 font-light leading-relaxed bg-[#141824]/60 p-4 border-l-2 border-sky-400 whitespace-pre-line">
-                        "{artist.bio}"
+                        {displayBio}
                       </p>
                     </div>
                   )}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
@@ -15,18 +15,126 @@ import { AdminAuthModal } from './components/AdminAuthModal';
 import { Artist, NewsArticle, CompanyInfo } from './types';
 import { ARTISTS } from './data/artists';
 import { NEWS_ARTICLES } from './data/news';
-import { subscribeArtists } from './services/artistService';
+import { subscribeArtists, getCachedArtistBySlug } from './services/artistService';
 import { subscribeNews } from './services/newsService';
 import { subscribeCompanyInfo, DEFAULT_COMPANY_INFO } from './services/companyService';
 import { applyPageSEO, getArtistSlug, mapSlugToArtistId, isOfficialSlug, OFFICIAL_ACTORS } from './lib/seo';
 
 type ActiveMobileView = 'home' | 'about' | 'audition' | 'contact';
 
+/**
+ * Synchronously extracts and resolves the route on Frame 0 before any DOM rendering.
+ * Strictly guarantees zero flash of incorrect/default actor when direct accessing an actor URL.
+ */
+export function resolveInitialRoute(): {
+  slug: string | null;
+  artist: Artist | null;
+  isNotFound: boolean;
+  activeSection: string;
+} {
+  if (typeof window === 'undefined') {
+    return { slug: null, artist: null, isNotFound: false, activeSection: 'hero' };
+  }
+
+  const pathname = window.location.pathname.replace(/\/$/, '') || '/';
+  const hash = window.location.hash || '';
+
+  // 1. Direct actor route /artists/:slug
+  if (pathname.startsWith('/artists/')) {
+    const rawSlug = pathname.replace('/artists/', '').split('/')[0].trim().toLowerCase();
+    if (!rawSlug) {
+      return { slug: null, artist: null, isNotFound: false, activeSection: 'artists' };
+    }
+
+    if (isOfficialSlug(rawSlug)) {
+      // Look up cached record
+      const cached = getCachedArtistBySlug(rawSlug);
+      if (cached) {
+        return { slug: rawSlug, artist: cached, isNotFound: false, activeSection: 'artists' };
+      }
+
+      // Exact verified official fallback
+      const official = OFFICIAL_ACTORS[rawSlug];
+      if (official) {
+        const initialArtist: Artist = {
+          id: mapSlugToArtistId(rawSlug) || `artist-${rawSlug}`,
+          nameKo: official.nameKo,
+          nameEn: official.nameEn,
+          profileImageUrl: official.image,
+          image: official.image,
+          gender: official.gender,
+          bio: official.description,
+          filmography: [],
+          galleryImages: [],
+          isActive: true,
+        };
+        return { slug: rawSlug, artist: initialArtist, isNotFound: false, activeSection: 'artists' };
+      }
+    }
+
+    // Unofficial or non-existent actor slug -> strictly 404
+    return { slug: rawSlug, artist: null, isNotFound: true, activeSection: 'artists' };
+  }
+
+  // 2. Legacy hash #artist/...
+  if (hash.startsWith('#artist/')) {
+    const rawId = hash.replace('#artist/', '').split('/')[0].trim().toLowerCase();
+    if (rawId) {
+      const canonicalId = mapSlugToArtistId(rawId);
+      const rawSlug = getArtistSlug({ id: canonicalId } as Artist) || rawId;
+      if (isOfficialSlug(rawSlug)) {
+        const cached = getCachedArtistBySlug(rawSlug);
+        if (cached) {
+          return { slug: rawSlug, artist: cached, isNotFound: false, activeSection: 'artists' };
+        }
+        const official = OFFICIAL_ACTORS[rawSlug];
+        if (official) {
+          const initialArtist: Artist = {
+            id: canonicalId || `artist-${rawSlug}`,
+            nameKo: official.nameKo,
+            nameEn: official.nameEn,
+            profileImageUrl: official.image,
+            image: official.image,
+            gender: official.gender,
+            bio: official.description,
+            filmography: [],
+            galleryImages: [],
+            isActive: true,
+          };
+          return { slug: rawSlug, artist: initialArtist, isNotFound: false, activeSection: 'artists' };
+        }
+      }
+      return { slug: rawId, artist: null, isNotFound: true, activeSection: 'artists' };
+    }
+  }
+
+  // 3. Section routes
+  if (pathname === '/artists' || hash === '#artists') {
+    return { slug: null, artist: null, isNotFound: false, activeSection: 'artists' };
+  }
+  if (pathname === '/audition' || hash === '#audition') {
+    return { slug: null, artist: null, isNotFound: false, activeSection: 'audition' };
+  }
+  if (pathname === '/news' || hash === '#news') {
+    return { slug: null, artist: null, isNotFound: false, activeSection: 'news' };
+  }
+  if (pathname === '/contact' || hash === '#contact') {
+    return { slug: null, artist: null, isNotFound: false, activeSection: 'contact' };
+  }
+  if (pathname === '/about' || hash === '#about') {
+    return { slug: null, artist: null, isNotFound: false, activeSection: 'about' };
+  }
+
+  return { slug: null, artist: null, isNotFound: false, activeSection: 'hero' };
+}
+
 export default function App() {
+  const initialRoute = useMemo(() => resolveInitialRoute(), []);
+
   const [artists, setArtists] = useState<Artist[]>(ARTISTS);
   const [newsList, setNewsList] = useState<NewsArticle[]>(NEWS_ARTICLES);
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo>(DEFAULT_COMPANY_INFO);
-  const [activeSection, setActiveSection] = useState<string>('hero');
+  const [activeSection, setActiveSection] = useState<string>(() => initialRoute.activeSection);
 
   // Mobile dedicated view state ('home' | 'about' | 'audition' | 'contact')
   const [activeMobileView, setActiveMobileView] = useState<ActiveMobileView>('home');
@@ -40,11 +148,11 @@ export default function App() {
     return false;
   });
 
-  // Modals & Selection State
-  const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
+  // Modals & Selection State - Initialized synchronously on Frame 0
+  const [selectedArtist, setSelectedArtist] = useState<Artist | null>(() => initialRoute.artist);
   const [printArtist, setPrintArtist] = useState<Artist | null>(null);
   const [preselectedActorForContact, setPreselectedActorForContact] = useState<Artist | null>(null);
-  const [isNotFound, setIsNotFound] = useState<boolean>(false);
+  const [isNotFound, setIsNotFound] = useState<boolean>(() => initialRoute.isNotFound);
 
   useEffect(() => {
     const handleResize = () => {
@@ -198,6 +306,19 @@ export default function App() {
   useEffect(() => {
     const unsubArtists = subscribeArtists((updatedArtists) => {
       setArtists(updatedArtists);
+
+      // If an official actor route is active, update with fresh Firestore data
+      // Strictly for that matching actor, NEVER switching to another actor or artists[0]!
+      const currentRoute = resolveInitialRoute();
+      if (currentRoute.slug && isOfficialSlug(currentRoute.slug)) {
+        const canonicalId = mapSlugToArtistId(currentRoute.slug);
+        const match = updatedArtists.find(
+          a => a.id === canonicalId || getArtistSlug(a) === currentRoute.slug || (a.nameKo && currentRoute.slug!.includes(a.nameKo))
+        );
+        if (match) {
+          setSelectedArtist(match);
+        }
+      }
     });
     const unsubNews = subscribeNews((updatedNews) => {
       setNewsList(updatedNews);
@@ -273,7 +394,7 @@ export default function App() {
 
       // 1. If back/forward navigates to an artist profile: /artists/:slug
       if (pathname.startsWith('/artists/')) {
-        const slug = pathname.replace('/artists/', '').trim();
+        const slug = pathname.replace('/artists/', '').trim().toLowerCase();
         if (isOfficialSlug(slug)) {
           setIsNotFound(false);
           const canonicalId = mapSlugToArtistId(slug);
@@ -282,6 +403,27 @@ export default function App() {
           );
           if (found) {
             setSelectedArtist(found);
+            return;
+          }
+          const cached = getCachedArtistBySlug(slug);
+          if (cached) {
+            setSelectedArtist(cached);
+            return;
+          }
+          const official = OFFICIAL_ACTORS[slug];
+          if (official) {
+            setSelectedArtist({
+              id: canonicalId || `artist-${slug}`,
+              nameKo: official.nameKo,
+              nameEn: official.nameEn,
+              profileImageUrl: official.image,
+              image: official.image,
+              gender: official.gender,
+              bio: official.description,
+              filmography: [],
+              galleryImages: [],
+              isActive: true,
+            });
             return;
           }
         } else {
