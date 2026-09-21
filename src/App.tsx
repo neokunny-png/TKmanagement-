@@ -18,7 +18,7 @@ import { NEWS_ARTICLES } from './data/news';
 import { subscribeArtists } from './services/artistService';
 import { subscribeNews } from './services/newsService';
 import { subscribeCompanyInfo, DEFAULT_COMPANY_INFO } from './services/companyService';
-import { applyPageSEO, getArtistSlug, mapSlugToArtistId } from './lib/seo';
+import { applyPageSEO, getArtistSlug, mapSlugToArtistId, isOfficialSlug, OFFICIAL_ACTORS } from './lib/seo';
 
 type ActiveMobileView = 'home' | 'about' | 'audition' | 'contact';
 
@@ -44,6 +44,7 @@ export default function App() {
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
   const [printArtist, setPrintArtist] = useState<Artist | null>(null);
   const [preselectedActorForContact, setPreselectedActorForContact] = useState<Artist | null>(null);
+  const [isNotFound, setIsNotFound] = useState<boolean>(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -68,7 +69,16 @@ export default function App() {
     // 1. Direct actor profile path e.g. /artists/choi-eunseo or #artist/artist-choi-eunseo
     if (pathname.startsWith('/artists/')) {
       const slug = pathname.replace('/artists/', '').trim();
-      if (slug && artists.length > 0) {
+      if (!slug) {
+        setActiveSection('artists');
+        setTimeout(() => {
+          document.getElementById('artists')?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+        return;
+      }
+
+      if (isOfficialSlug(slug)) {
+        setIsNotFound(false);
         const canonicalId = mapSlugToArtistId(slug);
         const found = artists.find(
           a => a.id === canonicalId || getArtistSlug(a) === slug || (a.nameKo && slug.includes(a.nameKo))
@@ -77,7 +87,30 @@ export default function App() {
           setSelectedArtist(found);
           setActiveSection('artists');
           return;
+        } else {
+          const official = OFFICIAL_ACTORS[slug];
+          if (official) {
+            const preliminaryArtist: Artist = {
+              id: canonicalId || `artist-${slug}`,
+              nameKo: official.nameKo,
+              nameEn: official.nameEn,
+              profileImageUrl: official.image,
+              image: official.image,
+              gender: official.gender,
+              filmography: [],
+              galleryImages: [],
+              isActive: true,
+            };
+            setSelectedArtist(preliminaryArtist);
+            setActiveSection('artists');
+            return;
+          }
         }
+      } else {
+        // Unknown actor slug or non-official actor -> 404
+        setSelectedArtist(null);
+        setIsNotFound(true);
+        return;
       }
     } else if (hash.startsWith('#artist/')) {
       const artistId = hash.replace('#artist/', '').trim();
@@ -133,9 +166,23 @@ export default function App() {
 
   // Dynamic SEO Synchronization
   useEffect(() => {
+    if (isNotFound) {
+      applyPageSEO('notFound', null);
+      return;
+    }
+
     if (selectedArtist) {
       applyPageSEO('artist', selectedArtist);
       return;
+    }
+
+    const pathname = typeof window !== 'undefined' ? window.location.pathname.replace(/\/$/, '') || '/' : '/';
+    if (pathname.startsWith('/artists/')) {
+      const slug = pathname.replace('/artists/', '').trim();
+      if (isOfficialSlug(slug)) {
+        applyPageSEO('artist', slug);
+        return;
+      }
     }
 
     let view = 'home';
@@ -145,7 +192,7 @@ export default function App() {
       view = activeSection;
     }
     applyPageSEO(view, null);
-  }, [selectedArtist, activeMobileView, activeSection]);
+  }, [selectedArtist, activeMobileView, activeSection, isNotFound]);
 
   // Real-time Firestore Subscriptions
   useEffect(() => {
@@ -227,15 +274,24 @@ export default function App() {
       // 1. If back/forward navigates to an artist profile: /artists/:slug
       if (pathname.startsWith('/artists/')) {
         const slug = pathname.replace('/artists/', '').trim();
-        const canonicalId = mapSlugToArtistId(slug);
-        const found = artists.find(
-          a => a.id === canonicalId || getArtistSlug(a) === slug || (a.nameKo && slug.includes(a.nameKo))
-        );
-        if (found) {
-          setSelectedArtist(found);
+        if (isOfficialSlug(slug)) {
+          setIsNotFound(false);
+          const canonicalId = mapSlugToArtistId(slug);
+          const found = artists.find(
+            a => a.id === canonicalId || getArtistSlug(a) === slug || (a.nameKo && slug.includes(a.nameKo))
+          );
+          if (found) {
+            setSelectedArtist(found);
+            return;
+          }
+        } else {
+          setSelectedArtist(null);
+          setIsNotFound(true);
           return;
         }
       }
+
+      setIsNotFound(false);
 
       // 2. If an artist or print modal was open, close them
       if (selectedArtist) {
@@ -315,6 +371,7 @@ export default function App() {
 
   const handleCloseArtistModal = () => {
     setSelectedArtist(null);
+    setIsNotFound(false);
     try {
       if (window.location.pathname.startsWith('/artists/')) {
         window.history.pushState(null, '', '/artists');
@@ -344,6 +401,7 @@ export default function App() {
   const handleNavigate = (sectionId: string) => {
     setSelectedArtist(null);
     setPrintArtist(null);
+    setIsNotFound(false);
 
     const isCurrentMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : isMobile;
 
@@ -399,6 +457,7 @@ export default function App() {
   const handleNavigateHome = () => {
     setSelectedArtist(null);
     setPrintArtist(null);
+    setIsNotFound(false);
     setIsAdminOpen(false);
     setIsAdminAuthModalOpen(false);
     setActiveMobileView('home');
@@ -664,6 +723,42 @@ export default function App() {
           onClose={handleClosePrintSheet}
           onGoHome={handleNavigateHome}
         />
+      )}
+
+      {/* 404 Not Found Screen for invalid actor slugs */}
+      {isNotFound && (
+        <div className="fixed inset-0 z-50 bg-[#0B0C10] flex flex-col items-center justify-center p-6 text-center">
+          <div className="max-w-md w-full border border-white/15 bg-[#111319] p-8 shadow-2xl">
+            <span className="text-xs font-mono text-sky-400 tracking-widest uppercase block mb-2">
+              404 ERROR · PAGE NOT FOUND
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-display font-black text-white mb-3">
+              페이지를 찾을 수 없습니다
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-400 leading-relaxed mb-6 font-sans">
+              요청하신 배우 정보 또는 페이지가 존재하지 않거나 변경되었습니다.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsNotFound(false);
+                  handleNavigate('artists');
+                }}
+                className="px-5 py-3 bg-white text-black font-semibold text-xs tracking-wider uppercase hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                소속 배우 목록 보기
+              </button>
+              <button
+                type="button"
+                onClick={handleNavigateHome}
+                className="px-5 py-3 bg-white/10 text-white font-semibold text-xs tracking-wider uppercase hover:bg-white/20 transition-colors cursor-pointer border border-white/10"
+              >
+                홈으로 이동
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Admin Dashboard */}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, UserCheck, Users } from 'lucide-react';
 import { Artist } from '../types';
+import { getArtistSlug } from '../lib/seo';
 
 interface ArtistsSectionProps {
   artists: Artist[];
@@ -84,9 +85,9 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
             <span className="text-xs font-mono tracking-widest text-sky-400 uppercase mb-2 block">
               MANAGEMENT ROSTER
             </span>
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-display font-black text-white tracking-tighter">
+            <h2 className="text-3xl sm:text-5xl lg:text-6xl font-display font-black text-white tracking-tighter">
               TK매니지먼트 소속 배우
-            </h1>
+            </h2>
             <p className="text-xs sm:text-sm font-mono tracking-widest text-gray-400 uppercase mt-1">
               ARTISTS ROSTER
             </p>
@@ -168,19 +169,26 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
             {filteredArtists.map((artist) => {
               const engUpper = (artist.nameEn || '').toUpperCase();
               const photoSrc = artist.profileImageUrl || artist.image || artist.profileImage || null;
+              const slug = getArtistSlug(artist) || artist.id;
 
               return (
-                <div
+                <a
                   key={artist.id}
                   id={`artist-card-${artist.id}`}
-                  onClick={() => onSelectArtist(artist)}
-                  className="group relative cursor-pointer overflow-hidden bg-[#111319] border border-white/10 hover:border-white/40 transition-all duration-500"
+                  href={`/artists/${slug}`}
+                  onClick={(e) => {
+                    if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                      e.preventDefault();
+                      onSelectArtist(artist);
+                    }
+                  }}
+                  className="group block relative cursor-pointer overflow-hidden bg-[#111319] border border-white/10 hover:border-white/40 transition-all duration-500 no-underline"
                 >
                   {/* Ratio aspect container for crisp editorial portraits (3:4 ratio) */}
                   <div className="aspect-[3/4] w-full overflow-hidden relative bg-neutral-900">
                     <ArtistCardImage
                       src={photoSrc}
-                      alt={`TK매니지먼트 소속 배우 ${artist.nameKo} 프로필`}
+                      alt={`${artist.nameKo} 배우 프로필`}
                     />
 
                     {/* Dramatic multi-stop gradient for text readability */}
@@ -223,7 +231,7 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
                       </div>
                     </div>
                   </div>
-                </div>
+                </a>
               );
             })}
           </div>
