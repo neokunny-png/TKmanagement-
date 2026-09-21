@@ -196,6 +196,12 @@ export default function App() {
           setActiveSection('artists');
           return;
         } else {
+          // If selectedArtist is already set for this slug (from synchronous Frame 0 initialRoute), keep it!
+          if (selectedArtist && (getArtistSlug(selectedArtist) === slug || selectedArtist.id === canonicalId)) {
+            setActiveSection('artists');
+            return;
+          }
+
           const official = OFFICIAL_ACTORS[slug];
           if (official) {
             const preliminaryArtist: Artist = {
@@ -205,6 +211,7 @@ export default function App() {
               profileImageUrl: official.image,
               image: official.image,
               gender: official.gender,
+              bio: official.description,
               filmography: [],
               galleryImages: [],
               isActive: true,
