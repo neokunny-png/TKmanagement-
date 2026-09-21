@@ -32,11 +32,118 @@
   status = 301
   force = true
 
+# Actor pre-rendered HTML static routing
+[[redirects]]
+  from = "/artists/choi-eunseo"
+  to = "/artists/choi-eunseo/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/artists/choi-eunseo/"
+  to = "/artists/choi-eunseo/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/artists/lee-eunsoo"
+  to = "/artists/lee-eunsoo/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/artists/lee-eunsoo/"
+  to = "/artists/lee-eunsoo/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/artists/park-minwook"
+  to = "/artists/park-minwook/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/artists/park-minwook/"
+  to = "/artists/park-minwook/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/artists/park-hyunjin"
+  to = "/artists/park-hyunjin/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/artists/park-hyunjin/"
+  to = "/artists/park-hyunjin/index.html"
+  status = 200
+
+# Main sections pre-rendered HTML routing
+[[redirects]]
+  from = "/artists"
+  to = "/artists/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/artists/"
+  to = "/artists/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/audition"
+  to = "/audition/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/audition/"
+  to = "/audition/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/news"
+  to = "/news/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/news/"
+  to = "/news/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/contact"
+  to = "/contact/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/contact/"
+  to = "/contact/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/about"
+  to = "/about/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/about/"
+  to = "/about/index.html"
+  status = 200
+
 # SPA Fallback for client-side routing
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Custom headers
+[[headers]]
+  for = "/artists/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+    Expires = "0"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+    Expires = "0"
 
 # Custom headers for sitemap and robots
 [[headers]]
