@@ -188,7 +188,7 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
                   <div className="aspect-[3/4] w-full overflow-hidden relative bg-neutral-900">
                     <ArtistCardImage
                       src={photoSrc}
-                      alt={`${artist.nameKo} 배우 프로필`}
+                      alt={`TK매니지먼트 소속 배우 ${artist.nameKo} 프로필`}
                     />
 
                     {/* Dramatic multi-stop gradient for text readability */}

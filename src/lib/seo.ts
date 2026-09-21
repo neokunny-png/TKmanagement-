@@ -41,7 +41,7 @@ export const OFFICIAL_ACTORS: Record<string, ActorSEOData> = {
     description: '최은서 배우의 프로필과 활동 정보를 확인하세요. TK매니지먼트 소속 배우 최은서의 공식 프로필 페이지입니다.',
     canonical: `${SITE_DOMAIN}/artists/choi-eunseo`,
     image: `${SITE_DOMAIN}/images/actors/choi-eunseo.jpg`,
-    alt: '최은서 배우 프로필',
+    alt: 'TK매니지먼트 소속 배우 최은서 프로필',
     gender: 'Female',
   },
   'lee-eunsoo': {
@@ -52,7 +52,7 @@ export const OFFICIAL_ACTORS: Record<string, ActorSEOData> = {
     description: '이은수 배우의 프로필과 활동 정보를 확인하세요. TK매니지먼트 소속 배우 이은수의 공식 프로필 페이지입니다.',
     canonical: `${SITE_DOMAIN}/artists/lee-eunsoo`,
     image: `${SITE_DOMAIN}/images/actors/lee-eunsoo.jpg`,
-    alt: '이은수 배우 프로필',
+    alt: 'TK매니지먼트 소속 배우 이은수 프로필',
     gender: 'Female',
   },
   'park-minwook': {
@@ -63,7 +63,7 @@ export const OFFICIAL_ACTORS: Record<string, ActorSEOData> = {
     description: '박민욱 배우의 프로필과 활동 정보를 확인하세요. TK매니지먼트 소속 배우 박민욱의 공식 프로필 페이지입니다.',
     canonical: `${SITE_DOMAIN}/artists/park-minwook`,
     image: `${SITE_DOMAIN}/images/actors/park-minwook.jpg`,
-    alt: '박민욱 배우 프로필',
+    alt: 'TK매니지먼트 소속 배우 박민욱 프로필',
     gender: 'Male',
   },
   'park-hyunjin': {
@@ -74,7 +74,7 @@ export const OFFICIAL_ACTORS: Record<string, ActorSEOData> = {
     description: '박현진 배우의 프로필과 활동 정보를 확인하세요. TK매니지먼트 소속 배우 박현진의 공식 프로필 페이지입니다.',
     canonical: `${SITE_DOMAIN}/artists/park-hyunjin`,
     image: `${SITE_DOMAIN}/images/actors/park-hyunjin.jpg`,
-    alt: '박현진 배우 프로필',
+    alt: 'TK매니지먼트 소속 배우 박현진 프로필',
     gender: 'Male',
   },
 };

@@ -7,5 +7,27 @@ http://tkm.kr/*                   https://www.tkm.kr/:splat    301!
 https://tkm.kr/*                  https://www.tkm.kr/:splat    301!
 http://www.tkm.kr/*               https://www.tkm.kr/:splat    301!
 
-# 3. React SPA Fallback for client-side routing
-/*                                /index.html     200
+# 3. Dedicated pre-rendered HTML for actors (200 status direct serve)
+/artists/choi-eunseo              /artists/choi-eunseo/index.html    200
+/artists/choi-eunseo/             /artists/choi-eunseo/index.html    200
+/artists/lee-eunsoo               /artists/lee-eunsoo/index.html     200
+/artists/lee-eunsoo/              /artists/lee-eunsoo/index.html     200
+/artists/park-minwook             /artists/park-minwook/index.html   200
+/artists/park-minwook/            /artists/park-minwook/index.html   200
+/artists/park-hyunjin             /artists/park-hyunjin/index.html   200
+/artists/park-hyunjin/            /artists/park-hyunjin/index.html   200
+
+# 4. Dedicated pre-rendered HTML for main sections
+/artists                          /artists/index.html                200
+/artists/                         /artists/index.html                200
+/audition                         /audition/index.html               200
+/audition/                        /audition/index.html               200
+/news                             /news/index.html                   200
+/news/                            /news/index.html                   200
+/contact                          /contact/index.html                200
+/contact/                         /contact/index.html                200
+/about                            /about/index.html                  200
+/about/                           /about/index.html                  200
+
+# 5. React SPA Fallback for client-side routing
+/*                                /index.html                        200

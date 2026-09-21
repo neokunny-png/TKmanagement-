@@ -189,7 +189,7 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
                   <img
                     key={currentPhoto}
                     src={currentPhoto}
-                    alt={`${artist.nameKo} 배우 프로필`}
+                    alt={`TK매니지먼트 소속 배우 ${artist.nameKo} 프로필`}
                     onError={() => setImgError(true)}
                     className="w-full h-full object-cover object-center transition-all duration-300"
                     referrerPolicy="no-referrer"

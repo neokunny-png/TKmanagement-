@@ -474,11 +474,27 @@ export function normalizeArtists(rawItems: Artist[]): { normalized: Artist[]; du
   const result: Artist[] = [];
 
   for (const [canonicalId, group] of groupMap.entries()) {
+    // Requirement 10: Strictly exclude past actors (박도이, 박아론) from active roster
+    const isExcluded =
+      canonicalId === 'artist-park-doyi' ||
+      canonicalId === 'artist-park-aron' ||
+      group.some(g => (g.nameKo && (g.nameKo.includes('박도이') || g.nameKo.includes('박아론'))));
+
+    if (isExcluded) {
+      group.forEach(g => {
+        if (g.id) duplicatesToDelete.push(g.id);
+      });
+      continue;
+    }
+
     if (group.length === 1) {
       const single = group[0];
+      const isMinwook = canonicalId === 'artist-park-minwook' || (single.nameKo && single.nameKo.includes('박민준'));
       result.push({
         ...single,
         id: single.id || canonicalId,
+        nameKo: isMinwook ? '박민욱' : single.nameKo,
+        nameEn: isMinwook ? 'PARK MIN WOOK' : single.nameEn,
       });
       continue;
     }
@@ -528,9 +544,13 @@ export function normalizeArtists(rawItems: Artist[]): { normalized: Artist[]; du
       }
     }
 
+    const isMinwook = canonicalId === 'artist-park-minwook' || (master.nameKo && master.nameKo.includes('박민준'));
+
     const mergedMaster: Artist = {
       ...master,
       id: canonicalId,
+      nameKo: isMinwook ? '박민욱' : master.nameKo,
+      nameEn: isMinwook ? 'PARK MIN WOOK' : master.nameEn,
       profileImageUrl: master.profileImageUrl || secondaryList.find(s => s.profileImageUrl)?.profileImageUrl || null,
       image: master.profileImageUrl || secondaryList.find(s => s.profileImageUrl)?.profileImageUrl || null,
       profileImage: master.profileImageUrl || secondaryList.find(s => s.profileImageUrl)?.profileImageUrl || null,
