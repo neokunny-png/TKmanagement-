@@ -75,7 +75,7 @@ export const OFFICIAL_ACTORS: Record<string, ActorSEOData> = {
     canonical: `${SITE_DOMAIN}/artists/park-hyunjin`,
     image: `${SITE_DOMAIN}/images/actors/park-hyunjin.jpg`,
     alt: 'TK매니지먼트 소속 배우 박현진 프로필',
-    gender: 'Male',
+    gender: 'Female',
   },
 };
 

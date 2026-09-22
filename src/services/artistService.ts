@@ -449,7 +449,7 @@ export async function saveArtistToDb(
   return resultArtist;
 }
 
-export const CACHE_KEY_ARTISTS = 'tk_cached_artists_v3';
+export const CACHE_KEY_ARTISTS = 'tk_cached_artists_v4';
 
 /**
  * Strictly reads an actor from localStorage cache by slug.

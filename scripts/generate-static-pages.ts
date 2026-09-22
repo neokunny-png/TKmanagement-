@@ -56,7 +56,7 @@ export const OFFICIAL_STATIC_ACTORS: StaticActor[] = [
     canonical: 'https://www.tkm.kr/artists/park-hyunjin',
     image: 'https://www.tkm.kr/images/actors/park-hyunjin.jpg',
     alt: 'TK매니지먼트 소속 배우 박현진 프로필',
-    gender: 'Male',
+    gender: 'Female',
   },
 ];
 
