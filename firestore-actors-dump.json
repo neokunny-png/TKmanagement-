@@ -1,0 +1,67 @@
+{
+  "totalDocs": 4,
+  "artists": [
+    {
+      "id": "artist-choi-eunseo",
+      "nameKo": "최은서",
+      "nameEn": "CHOI EUN SEO",
+      "isActive": true,
+      "order": 1,
+      "profileImageUrl": null,
+      "image": null,
+      "profileImage": null,
+      "urlCheck": null
+    },
+    {
+      "id": "artist-lee-eunsoo",
+      "nameKo": "이은수",
+      "nameEn": "LEE EUN SU",
+      "isActive": true,
+      "order": 2,
+      "profileImageUrl": null,
+      "image": null,
+      "profileImage": null,
+      "urlCheck": null
+    },
+    {
+      "id": "artist-park-hyunjin",
+      "nameKo": "박현진",
+      "nameEn": "PARK HYUN JIN",
+      "isActive": true,
+      "order": 5,
+      "profileImageUrl": null,
+      "image": null,
+      "profileImage": null,
+      "urlCheck": null
+    },
+    {
+      "id": "artist-park-minwook",
+      "nameKo": "박민욱",
+      "nameEn": "PARK MIN WOOK",
+      "isActive": true,
+      "order": 3,
+      "profileImageUrl": null,
+      "image": null,
+      "profileImage": null,
+      "urlCheck": null
+    }
+  ],
+  "staticChecks": {
+    "https://www.tkm.kr/images/actors/choi-eunseo-v5-8fe5a05d.jpg": {
+      "status": 200,
+      "contentType": "image/jpeg"
+    },
+    "https://www.tkm.kr/images/actors/lee-eunsoo-v5-26e9ac09.jpg": {
+      "status": 200,
+      "contentType": "image/jpeg"
+    },
+    "https://www.tkm.kr/images/actors/park-minwook-v5-973012cc.jpg": {
+      "status": 200,
+      "contentType": "image/jpeg"
+    },
+    "https://www.tkm.kr/images/actors/park-hyunjin-v5-d3cb5da4.jpg": {
+      "status": 200,
+      "contentType": "image/jpeg"
+    }
+  }
+}

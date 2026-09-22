@@ -49,6 +49,19 @@ export function getOfficialActorStaticImage(slugOrId?: string | null): string {
   if (clean in OFFICIAL_ACTOR_IMAGES) {
     return OFFICIAL_ACTOR_IMAGES[clean];
   }
+  // Check common aliases and Korean variants
+  if (clean.includes('choi') || clean.includes('eunseo') || clean.includes('최은서')) {
+    return OFFICIAL_ACTOR_IMAGES['choi-eunseo'];
+  }
+  if (clean.includes('lee') || clean.includes('eunsoo') || clean.includes('eunsu') || clean.includes('이은수')) {
+    return OFFICIAL_ACTOR_IMAGES['lee-eunsoo'];
+  }
+  if (clean.includes('minwook') || clean.includes('minjun') || clean.includes('박민욱') || clean.includes('박민준')) {
+    return OFFICIAL_ACTOR_IMAGES['park-minwook'];
+  }
+  if (clean.includes('hyunjin') || clean.includes('박현진')) {
+    return OFFICIAL_ACTOR_IMAGES['park-hyunjin'];
+  }
   // Try partial match against official slugs
   for (const officialSlug of Object.keys(OFFICIAL_ACTOR_IMAGES)) {
     if (clean.includes(officialSlug)) {

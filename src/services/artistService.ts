@@ -12,7 +12,7 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { db, storage, ensureFirebaseAuth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Artist, ArtistPhoto } from '../types';
 import { OFFICIAL_ACTOR_IMAGES } from '../lib/seo';
-import { isValidArtistImageUrl } from '../utils/artistImageResolver';
+import { isValidArtistImageUrl, getOfficialActorStaticImage } from '../utils/artistImageResolver';
 
 const COLLECTION_NAME = 'artists';
 
@@ -580,14 +580,24 @@ export function normalizeArtists(rawItems: Artist[]): { normalized: Artist[]; du
       continue;
     }
 
+    const slugFromId = canonicalId.replace('artist-', '').toLowerCase().trim();
+    const staticImageFallback = getOfficialActorStaticImage(slugFromId);
+
     if (group.length === 1) {
       const single = group[0];
       const isMinwook = canonicalId === 'artist-park-minwook' || (single.nameKo && single.nameKo.includes('박민준'));
+      const safePhoto = isValidArtistImageUrl(single.profileImageUrl)
+        ? single.profileImageUrl
+        : (isValidArtistImageUrl(single.image) ? single.image : staticImageFallback);
+
       result.push({
         ...single,
         id: canonicalId,
         nameKo: isMinwook ? '박민욱' : single.nameKo,
         nameEn: isMinwook ? 'PARK MIN WOOK' : single.nameEn,
+        profileImageUrl: safePhoto,
+        image: safePhoto,
+        profileImage: safePhoto,
       });
       continue;
     }
@@ -635,15 +645,17 @@ export function normalizeArtists(rawItems: Artist[]): { normalized: Artist[]; du
     }
 
     const isMinwook = canonicalId === 'artist-park-minwook' || (master.nameKo && master.nameKo.includes('박민준'));
+    const masterRawPhoto = master.profileImageUrl || secondaryList.find(s => s.profileImageUrl)?.profileImageUrl || null;
+    const masterSafePhoto = isValidArtistImageUrl(masterRawPhoto) ? masterRawPhoto : staticImageFallback;
 
     const mergedMaster: Artist = {
       ...master,
       id: canonicalId,
       nameKo: isMinwook ? '박민욱' : master.nameKo,
       nameEn: isMinwook ? 'PARK MIN WOOK' : master.nameEn,
-      profileImageUrl: master.profileImageUrl || secondaryList.find(s => s.profileImageUrl)?.profileImageUrl || null,
-      image: master.profileImageUrl || secondaryList.find(s => s.profileImageUrl)?.profileImageUrl || null,
-      profileImage: master.profileImageUrl || secondaryList.find(s => s.profileImageUrl)?.profileImageUrl || null,
+      profileImageUrl: masterSafePhoto,
+      image: masterSafePhoto,
+      profileImage: masterSafePhoto,
       galleryImages: mergedGallery,
       birth: master.birth || secondaryList.find(s => s.birth)?.birth || '',
       height: master.height || secondaryList.find(s => s.height)?.height || 0,

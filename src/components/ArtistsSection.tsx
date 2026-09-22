@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowRight, UserCheck, Users } from 'lucide-react';
 import { Artist } from '../types';
 import { getArtistSlug } from '../lib/seo';
-import { resolveArtistRepresentativeImage } from '../utils/artistImageResolver';
+import { resolveArtistRepresentativeImage, getOfficialActorStaticImage, isValidArtistImageUrl } from '../utils/artistImageResolver';
 
 interface ArtistsSectionProps {
   artists: Artist[];
@@ -10,32 +10,65 @@ interface ArtistsSectionProps {
 }
 
 const ArtistCardImage: React.FC<{
-  src?: string | null;
+  artist: Artist;
   alt: string;
-}> = ({ src, alt }) => {
-  const [hasError, setHasError] = useState(false);
+}> = ({ artist, alt }) => {
+  const slug = getArtistSlug(artist) || (artist.id ? artist.id.replace('artist-', '') : '').toLowerCase();
+  const staticFallback = getOfficialActorStaticImage(slug);
+
+  const [displayedImageUrl, setDisplayedImageUrl] = useState<string>(staticFallback);
+  const [hasFallbackError, setHasFallbackError] = useState<boolean>(false);
+  const failedUrlsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    setHasError(false);
-  }, [src]);
+    const currentStatic = getOfficialActorStaticImage(slug);
+    const rawFirestoreUrl = artist.profileImageUrl || artist.image || artist.profileImage;
 
-  if (!src) {
-    return (
-      <div className="w-full h-full bg-[#141722] flex flex-col items-center justify-center p-6 text-center border border-white/5 select-none">
-        <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center mb-3 text-gray-400 font-mono text-xs">
-          TK
-        </div>
-        <span className="text-[11px] font-mono tracking-wider text-gray-400 uppercase font-semibold">
-          OFFICIAL PROFILE IMAGE
-        </span>
-        <span className="text-[10px] text-gray-500 font-mono mt-0.5">
-          NOT UPLOADED
-        </span>
-      </div>
-    );
-  }
+    // If no valid Firestore URL or it matches staticFallback, keep staticFallback
+    if (!rawFirestoreUrl || !isValidArtistImageUrl(rawFirestoreUrl) || rawFirestoreUrl === currentStatic) {
+      setDisplayedImageUrl(currentStatic);
+      return;
+    }
 
-  if (hasError) {
+    // If this URL previously failed, avoid retrying and maintain static fallback
+    if (failedUrlsRef.current.has(rawFirestoreUrl)) {
+      setDisplayedImageUrl(currentStatic);
+      return;
+    }
+
+    // Preload image before applying to prevent any broken frame or flicker
+    let isCancelled = false;
+    const img = new Image();
+    img.onload = () => {
+      if (!isCancelled) {
+        setDisplayedImageUrl(rawFirestoreUrl);
+      }
+    };
+    img.onerror = () => {
+      if (!isCancelled) {
+        console.warn(`[TK] Actor image preload failed for ${artist.nameKo} (${rawFirestoreUrl}), falling back to static`);
+        failedUrlsRef.current.add(rawFirestoreUrl);
+        setDisplayedImageUrl(currentStatic);
+      }
+    };
+    img.src = rawFirestoreUrl;
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [artist.profileImageUrl, artist.image, artist.profileImage, slug, artist.nameKo]);
+
+  const handleImageError = () => {
+    const currentStatic = getOfficialActorStaticImage(slug);
+    if (displayedImageUrl !== currentStatic) {
+      failedUrlsRef.current.add(displayedImageUrl);
+      setDisplayedImageUrl(currentStatic);
+    } else {
+      setHasFallbackError(true);
+    }
+  };
+
+  if (hasFallbackError) {
     return (
       <div className="w-full h-full bg-[#141722] flex flex-col items-center justify-center p-6 text-center border border-white/5 select-none">
         <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center mb-3 text-gray-400 font-mono text-xs">
@@ -53,12 +86,12 @@ const ArtistCardImage: React.FC<{
 
   return (
     <img
-      src={src}
+      src={displayedImageUrl}
       alt={alt}
-      onError={() => setHasError(true)}
+      onError={handleImageError}
       className="w-full h-full object-cover object-center filter grayscale-[15%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700 ease-out"
-      referrerPolicy="no-referrer"
-      loading="lazy"
+      loading="eager"
+      decoding="async"
     />
   );
 };
@@ -188,7 +221,7 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
                   {/* Ratio aspect container for crisp editorial portraits (3:4 ratio) */}
                   <div className="aspect-[3/4] w-full overflow-hidden relative bg-neutral-900">
                     <ArtistCardImage
-                      src={photoSrc}
+                      artist={artist}
                       alt={`TK매니지먼트 소속 배우 ${artist.nameKo} 프로필`}
                     />
 
