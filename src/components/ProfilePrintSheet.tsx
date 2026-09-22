@@ -5,6 +5,7 @@ import html2canvas from 'html2canvas';
 import { Artist, CompanyInfo, getGroupedFilmography } from '../types';
 import { DEFAULT_COMPANY_INFO } from '../services/companyService';
 import { TKLogoMark } from './TKLogo';
+import { getArtistSlug, isOfficialSlug, OFFICIAL_ACTOR_IMAGES } from '../lib/seo';
 
 interface ProfilePrintSheetProps {
   artist: Artist | null;
@@ -21,7 +22,9 @@ export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({
 }) => {
   if (!artist) return null;
 
-  const photoUrl = artist.profileImageUrl || artist.image || artist.profileImage || null;
+  const slug = getArtistSlug(artist);
+  const officialHashed = isOfficialSlug(slug) ? OFFICIAL_ACTOR_IMAGES[slug] : null;
+  const photoUrl = officialHashed || artist.profileImageUrl || artist.image || artist.profileImage || null;
   const [imgError, setImgError] = useState(false);
   const [base64Photo, setBase64Photo] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);

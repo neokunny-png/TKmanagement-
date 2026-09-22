@@ -29,6 +29,17 @@ export interface ActorSEOData {
 }
 
 /**
+ * Canonical unified mapping for official actor profile images.
+ * Uses content-hashed filenames to completely eliminate browser, CDN, and SW caching issues.
+ */
+export const OFFICIAL_ACTOR_IMAGES: Record<string, string> = {
+  'choi-eunseo': '/images/actors/choi-eunseo-v5-8fe5a05d.jpg',
+  'lee-eunsoo': '/images/actors/lee-eunsoo-v5-26e9ac09.jpg',
+  'park-minwook': '/images/actors/park-minwook-v5-973012cc.jpg',
+  'park-hyunjin': '/images/actors/park-hyunjin-v5-d3cb5da4.jpg',
+};
+
+/**
  * Exact official actors roster (4 actors only)
  * Follows strict Title, Description, and Canonical templates specified by user
  */
@@ -40,7 +51,7 @@ export const OFFICIAL_ACTORS: Record<string, ActorSEOData> = {
     title: '최은서 배우 | TK매니지먼트',
     description: '최은서 배우의 프로필과 활동 정보를 확인하세요. TK매니지먼트 소속 배우 최은서의 공식 프로필 페이지입니다.',
     canonical: `${SITE_DOMAIN}/artists/choi-eunseo`,
-    image: `${SITE_DOMAIN}/images/actors/choi-eunseo.jpg`,
+    image: `${SITE_DOMAIN}${OFFICIAL_ACTOR_IMAGES['choi-eunseo']}`,
     alt: 'TK매니지먼트 소속 배우 최은서 프로필',
     gender: 'Female',
   },
@@ -51,7 +62,7 @@ export const OFFICIAL_ACTORS: Record<string, ActorSEOData> = {
     title: '이은수 배우 | TK매니지먼트',
     description: '이은수 배우의 프로필과 활동 정보를 확인하세요. TK매니지먼트 소속 배우 이은수의 공식 프로필 페이지입니다.',
     canonical: `${SITE_DOMAIN}/artists/lee-eunsoo`,
-    image: `${SITE_DOMAIN}/images/actors/lee-eunsoo.jpg`,
+    image: `${SITE_DOMAIN}${OFFICIAL_ACTOR_IMAGES['lee-eunsoo']}`,
     alt: 'TK매니지먼트 소속 배우 이은수 프로필',
     gender: 'Female',
   },
@@ -62,7 +73,7 @@ export const OFFICIAL_ACTORS: Record<string, ActorSEOData> = {
     title: '박민욱 배우 | TK매니지먼트',
     description: '박민욱 배우의 프로필과 활동 정보를 확인하세요. TK매니지먼트 소속 배우 박민욱의 공식 프로필 페이지입니다.',
     canonical: `${SITE_DOMAIN}/artists/park-minwook`,
-    image: `${SITE_DOMAIN}/images/actors/park-minwook.jpg`,
+    image: `${SITE_DOMAIN}${OFFICIAL_ACTOR_IMAGES['park-minwook']}`,
     alt: 'TK매니지먼트 소속 배우 박민욱 프로필',
     gender: 'Male',
   },
@@ -73,7 +84,7 @@ export const OFFICIAL_ACTORS: Record<string, ActorSEOData> = {
     title: '박현진 배우 | TK매니지먼트',
     description: '박현진 배우의 프로필과 활동 정보를 확인하세요. TK매니지먼트 소속 배우 박현진의 공식 프로필 페이지입니다.',
     canonical: `${SITE_DOMAIN}/artists/park-hyunjin`,
-    image: `${SITE_DOMAIN}/images/actors/park-hyunjin.jpg`,
+    image: `${SITE_DOMAIN}${OFFICIAL_ACTOR_IMAGES['park-hyunjin']}`,
     alt: 'TK매니지먼트 소속 배우 박현진 프로필',
     gender: 'Female',
   },

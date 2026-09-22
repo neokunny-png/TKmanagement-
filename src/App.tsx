@@ -13,12 +13,12 @@ import { ProfilePrintSheet } from './components/ProfilePrintSheet';
 import { AdminDashboard } from './components/AdminDashboard';
 import { AdminAuthModal } from './components/AdminAuthModal';
 import { Artist, NewsArticle, CompanyInfo } from './types';
-import { ARTISTS } from './data/artists';
+import { ARTISTS, STATIC_OFFICIAL_ARTISTS } from './data/artists';
 import { NEWS_ARTICLES } from './data/news';
 import { subscribeArtists, getCachedArtistBySlug } from './services/artistService';
 import { subscribeNews } from './services/newsService';
 import { subscribeCompanyInfo, DEFAULT_COMPANY_INFO } from './services/companyService';
-import { applyPageSEO, getArtistSlug, mapSlugToArtistId, isOfficialSlug, OFFICIAL_ACTORS } from './lib/seo';
+import { applyPageSEO, getArtistSlug, mapSlugToArtistId, isOfficialSlug, OFFICIAL_ACTORS, OFFICIAL_ACTOR_IMAGES } from './lib/seo';
 
 type ActiveMobileView = 'home' | 'about' | 'audition' | 'contact';
 
@@ -47,17 +47,26 @@ export function resolveInitialRoute(): {
     }
 
     if (isOfficialSlug(rawSlug)) {
-      // Look up cached record
+      // 1. Static verified official record (immediate Frame 0, complete data, zero network dependence)
+      const canonicalId = mapSlugToArtistId(rawSlug);
+      const staticMatch = STATIC_OFFICIAL_ARTISTS.find(
+        a => getArtistSlug(a) === rawSlug || a.id === canonicalId
+      );
+      if (staticMatch) {
+        return { slug: rawSlug, artist: staticMatch, isNotFound: false, activeSection: 'artists' };
+      }
+
+      // 2. Look up cached record
       const cached = getCachedArtistBySlug(rawSlug);
       if (cached) {
         return { slug: rawSlug, artist: cached, isNotFound: false, activeSection: 'artists' };
       }
 
-      // Exact verified official fallback
+      // 3. Exact verified official fallback
       const official = OFFICIAL_ACTORS[rawSlug];
       if (official) {
         const initialArtist: Artist = {
-          id: mapSlugToArtistId(rawSlug) || `artist-${rawSlug}`,
+          id: canonicalId || `artist-${rawSlug}`,
           nameKo: official.nameKo,
           nameEn: official.nameEn,
           profileImageUrl: official.image,
@@ -410,6 +419,13 @@ export default function App() {
           );
           if (found) {
             setSelectedArtist(found);
+            return;
+          }
+          const staticMatch = STATIC_OFFICIAL_ARTISTS.find(
+            a => getArtistSlug(a) === slug || a.id === canonicalId
+          );
+          if (staticMatch) {
+            setSelectedArtist(staticMatch);
             return;
           }
           const cached = getCachedArtistBySlug(slug);

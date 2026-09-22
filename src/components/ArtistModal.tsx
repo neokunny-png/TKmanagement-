@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Download, Play, Mail, Instagram, ChevronRight, ChevronLeft, Film, GraduationCap } from 'lucide-react';
 import { Artist, getGroupedFilmography } from '../types';
 import { TKLogoMark } from './TKLogo';
-import { getArtistSlug, OFFICIAL_ACTORS } from '../lib/seo';
+import { getArtistSlug, OFFICIAL_ACTORS, OFFICIAL_ACTOR_IMAGES, isOfficialSlug } from '../lib/seo';
 
 interface ArtistModalProps {
   artist: Artist | null;
@@ -22,9 +22,10 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
   if (!artist) return null;
 
   const slug = getArtistSlug(artist);
+  const officialHashed = isOfficialSlug(slug) ? OFFICIAL_ACTOR_IMAGES[slug] : null;
   const official = OFFICIAL_ACTORS[slug];
   const officialImage = official ? official.image : null;
-  const profilePhoto = artist.profileImageUrl || artist.image || artist.profileImage || officialImage || null;
+  const profilePhoto = officialHashed || artist.profileImageUrl || artist.image || artist.profileImage || officialImage || null;
 
   // Build full photo list: main profile photo + any additional gallery photos
   const allPhotos: Array<{ id: string; url: string; label: string }> = [];

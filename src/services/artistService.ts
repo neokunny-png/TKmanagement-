@@ -11,6 +11,7 @@ import {
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage, ensureFirebaseAuth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Artist, ArtistPhoto } from '../types';
+import { OFFICIAL_ACTOR_IMAGES } from '../lib/seo';
 
 const COLLECTION_NAME = 'artists';
 
@@ -449,7 +450,16 @@ export async function saveArtistToDb(
   return resultArtist;
 }
 
-export const CACHE_KEY_ARTISTS = 'tk_cached_artists_v4';
+export const CACHE_KEY_ARTISTS = 'tk_cached_artists_v5';
+
+// One-time purge of all stale localStorage keys
+if (typeof window !== 'undefined') {
+  try {
+    ['tk_cached_artists', 'tk_cached_artists_v1', 'tk_cached_artists_v2', 'tk_cached_artists_v3', 'tk_cached_artists_v4', 'cached_artists'].forEach(k => {
+      localStorage.removeItem(k);
+    });
+  } catch {}
+}
 
 /**
  * Strictly reads an actor from localStorage cache by slug.
@@ -506,8 +516,20 @@ export function getCachedArtistBySlug(slug: string): Artist | null {
       return itemSlug === cleanSlug || itemId === `artist-${cleanSlug}`;
     });
 
-    // ABSOLUTELY NEVER return valid[0]!
-    return found || null;
+    if (!found) return null;
+
+    // Guarantee verified official hashed image for official actors
+    if (cleanSlug in OFFICIAL_ACTOR_IMAGES) {
+      const officialImg = OFFICIAL_ACTOR_IMAGES[cleanSlug];
+      return {
+        ...found,
+        profileImageUrl: officialImg,
+        image: officialImg,
+        profileImage: officialImg,
+      };
+    }
+
+    return found;
   } catch {
     return null;
   }
@@ -519,7 +541,20 @@ export function getCachedArtistBySlug(slug: string): Artist | null {
 export function saveCachedArtists(artists: Artist[]): void {
   if (typeof window === 'undefined' || !Array.isArray(artists)) return;
   try {
-    localStorage.setItem(CACHE_KEY_ARTISTS, JSON.stringify(artists));
+    const sanitized = artists.map(a => {
+      const slug = (a.id ? a.id.replace('artist-', '') : '').toLowerCase();
+      if (slug in OFFICIAL_ACTOR_IMAGES) {
+        const officialImg = OFFICIAL_ACTOR_IMAGES[slug];
+        return {
+          ...a,
+          profileImageUrl: officialImg,
+          image: officialImg,
+          profileImage: officialImg,
+        };
+      }
+      return a;
+    });
+    localStorage.setItem(CACHE_KEY_ARTISTS, JSON.stringify(sanitized));
   } catch (err) {
     console.warn('[TK] Failed to persist artists cache:', err);
   }
@@ -739,12 +774,12 @@ export function subscribeArtists(
       onUpdate(normalized);
     },
     (error) => {
-      console.error('Error listening to artists:', error);
+      console.warn('[TK] Notice on artists subscription (falling back to static roster):', error);
       if (onError) {
         onError(error);
-      } else {
-        handleFirestoreError(error, OperationType.LIST, COLLECTION_NAME);
       }
+      // Non-fatal fallback: Never crash the public application on subscription error.
+      // Static roster and local cache maintain 100% availability.
     }
   );
 }

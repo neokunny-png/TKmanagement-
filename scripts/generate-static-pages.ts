@@ -21,7 +21,7 @@ export const OFFICIAL_STATIC_ACTORS: StaticActor[] = [
     title: '최은서 배우 | TK매니지먼트',
     description: '최은서 배우의 프로필과 활동 정보를 확인하세요. TK매니지먼트 소속 배우 최은서의 공식 프로필 페이지입니다.',
     canonical: 'https://www.tkm.kr/artists/choi-eunseo',
-    image: 'https://www.tkm.kr/images/actors/choi-eunseo.jpg',
+    image: 'https://www.tkm.kr/images/actors/choi-eunseo-v5-8fe5a05d.jpg',
     alt: 'TK매니지먼트 소속 배우 최은서 프로필',
     gender: 'Female',
   },
@@ -32,7 +32,7 @@ export const OFFICIAL_STATIC_ACTORS: StaticActor[] = [
     title: '이은수 배우 | TK매니지먼트',
     description: '이은수 배우의 프로필과 활동 정보를 확인하세요. TK매니지먼트 소속 배우 이은수의 공식 프로필 페이지입니다.',
     canonical: 'https://www.tkm.kr/artists/lee-eunsoo',
-    image: 'https://www.tkm.kr/images/actors/lee-eunsoo.jpg',
+    image: 'https://www.tkm.kr/images/actors/lee-eunsoo-v5-26e9ac09.jpg',
     alt: 'TK매니지먼트 소속 배우 이은수 프로필',
     gender: 'Female',
   },
@@ -43,7 +43,7 @@ export const OFFICIAL_STATIC_ACTORS: StaticActor[] = [
     title: '박민욱 배우 | TK매니지먼트',
     description: '박민욱 배우의 프로필과 활동 정보를 확인하세요. TK매니지먼트 소속 배우 박민욱의 공식 프로필 페이지입니다.',
     canonical: 'https://www.tkm.kr/artists/park-minwook',
-    image: 'https://www.tkm.kr/images/actors/park-minwook.jpg',
+    image: 'https://www.tkm.kr/images/actors/park-minwook-v5-973012cc.jpg',
     alt: 'TK매니지먼트 소속 배우 박민욱 프로필',
     gender: 'Male',
   },
@@ -54,7 +54,7 @@ export const OFFICIAL_STATIC_ACTORS: StaticActor[] = [
     title: '박현진 배우 | TK매니지먼트',
     description: '박현진 배우의 프로필과 활동 정보를 확인하세요. TK매니지먼트 소속 배우 박현진의 공식 프로필 페이지입니다.',
     canonical: 'https://www.tkm.kr/artists/park-hyunjin',
-    image: 'https://www.tkm.kr/images/actors/park-hyunjin.jpg',
+    image: 'https://www.tkm.kr/images/actors/park-hyunjin-v5-d3cb5da4.jpg',
     alt: 'TK매니지먼트 소속 배우 박현진 프로필',
     gender: 'Female',
   },
@@ -157,10 +157,10 @@ export function buildActorHtml(baseHtml: string, actor: StaticActor): string {
     `<meta name="description" content="${actor.description}" />`
   );
 
-  // 3. Replace Canonical Link
+  // 3. Replace Canonical Link and inject high-priority image preload
   html = html.replace(
     /<link\s+rel=["']canonical["'][^>]*>/i,
-    `<link rel="canonical" href="${actor.canonical}" />`
+    `<link rel="canonical" href="${actor.canonical}" />\n    <link rel="preload" as="image" href="${actor.image}" fetchpriority="high" />`
   );
 
   // 4. Replace OpenGraph Tags
