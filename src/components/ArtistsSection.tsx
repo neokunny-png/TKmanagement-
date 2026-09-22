@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, UserCheck, Users } from 'lucide-react';
 import { Artist } from '../types';
-import { getArtistSlug, OFFICIAL_ACTOR_IMAGES, isOfficialSlug } from '../lib/seo';
+import { getArtistSlug } from '../lib/seo';
+import { resolveArtistRepresentativeImage } from '../utils/artistImageResolver';
 
 interface ArtistsSectionProps {
   artists: Artist[];
@@ -169,8 +170,7 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
             {filteredArtists.map((artist) => {
               const engUpper = (artist.nameEn || '').toUpperCase();
               const slug = getArtistSlug(artist) || artist.id;
-              const officialHashed = isOfficialSlug(slug) ? OFFICIAL_ACTOR_IMAGES[slug] : null;
-              const photoSrc = officialHashed || artist.profileImageUrl || artist.image || artist.profileImage || null;
+              const photoSrc = resolveArtistRepresentativeImage(artist);
 
               return (
                 <a

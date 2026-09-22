@@ -71,6 +71,7 @@ import { ARTISTS } from '../data/artists';
 import { NEWS_ARTICLES } from '../data/news';
 import { TKLogoMark } from './TKLogo';
 import { AdminInquiriesTab } from './AdminInquiriesTab';
+import { resolveArtistRepresentativeImage } from '../utils/artistImageResolver';
 
 interface AdminDashboardProps {
   artists: Artist[];
@@ -1363,9 +1364,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </div>
                         </td>
                         <td className="p-3">
-                          {artist.profileImageUrl || artist.image || artist.profileImage ? (
+                          {resolveArtistRepresentativeImage(artist) ? (
                             <img
-                              src={artist.profileImageUrl || artist.image || artist.profileImage}
+                              src={resolveArtistRepresentativeImage(artist)}
                               alt={artist.nameKo}
                               className="w-10 h-13 object-cover border border-white/10"
                               referrerPolicy="no-referrer"
@@ -2433,43 +2434,54 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <div className="bg-[#141724] p-5 border border-white/10 space-y-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
                       {/* Photo Preview Box */}
-                      <div className="w-32 aspect-[3/4] bg-black border border-white/20 overflow-hidden shrink-0 relative group">
-                        {editingArtist.profileImageUrl || editingArtist.profileImage || editingArtist.image ? (
-                          <>
-                            <img
-                              src={editingArtist.profileImageUrl || editingArtist.profileImage || editingArtist.image}
-                              alt={editingArtist.nameKo || 'Actor'}
-                              className="w-full h-full object-cover"
-                              referrerPolicy="no-referrer"
-                            />
-                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-2">
-                              <button
-                                type="button"
-                                onClick={() => profileFileInputRef.current?.click()}
-                                className="w-full py-1 bg-white text-black text-[10px] font-bold uppercase tracking-wider hover:bg-slate-200 transition-colors"
-                              >
-                                변경
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedPhotoFile(null);
-                                  setPhotoPreviewUrl(null);
-                                  setEditingArtist(prev => prev ? ({ ...prev, profileImage: '', profileImageUrl: '', image: '' }) : null);
-                                }}
-                                className="w-full py-1 bg-red-950/80 text-red-300 border border-red-800 text-[10px] font-bold uppercase tracking-wider hover:bg-red-900 transition-colors"
-                              >
-                                삭제
-                              </button>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center text-gray-500 text-[9px] font-mono leading-tight">
-                            <Upload className="w-5 h-5 mb-1 text-gray-600" />
-                            <span>OFFICIAL PROFILE<br />IMAGE NOT<br />UPLOADED</span>
+                      {(() => {
+                        const previewSrc = photoPreviewUrl || editingArtist.profileImageUrl || editingArtist.profileImage || editingArtist.image || resolveArtistRepresentativeImage(editingArtist);
+                        const hasCustom = Boolean(photoPreviewUrl || editingArtist.profileImageUrl || editingArtist.profileImage || editingArtist.image);
+                        return (
+                          <div className="w-32 aspect-[3/4] bg-black border border-white/20 overflow-hidden shrink-0 relative group">
+                            {previewSrc ? (
+                              <>
+                                <img
+                                  src={previewSrc}
+                                  alt={editingArtist.nameKo || 'Actor'}
+                                  className="w-full h-full object-cover"
+                                  referrerPolicy="no-referrer"
+                                />
+                                <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-black/80 border border-white/20 text-[9px] font-mono text-gray-200">
+                                  {photoPreviewUrl ? '저장대기' : hasCustom ? '등록사진' : '기본사진'}
+                                </div>
+                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => profileFileInputRef.current?.click()}
+                                    className="w-full py-1 bg-white text-black text-[10px] font-bold uppercase tracking-wider hover:bg-slate-200 transition-colors"
+                                  >
+                                    변경
+                                  </button>
+                                  {hasCustom && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedPhotoFile(null);
+                                        setPhotoPreviewUrl(null);
+                                        setEditingArtist(prev => prev ? ({ ...prev, profileImage: '', profileImageUrl: '', image: '' }) : null);
+                                      }}
+                                      className="w-full py-1 bg-red-950/80 text-red-300 border border-red-800 text-[10px] font-bold uppercase tracking-wider hover:bg-red-900 transition-colors"
+                                    >
+                                      기본으로 복구
+                                    </button>
+                                  )}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center text-gray-500 text-[9px] font-mono leading-tight">
+                                <Upload className="w-5 h-5 mb-1 text-gray-600" />
+                                <span>OFFICIAL PROFILE<br />IMAGE NOT<br />UPLOADED</span>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
+                        );
+                      })()}
 
                       {/* Upload Controls and Guidance */}
                       <div className="flex-1 space-y-3">

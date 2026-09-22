@@ -12,6 +12,7 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { db, storage, ensureFirebaseAuth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Artist, ArtistPhoto } from '../types';
 import { OFFICIAL_ACTOR_IMAGES } from '../lib/seo';
+import { isValidArtistImageUrl } from '../utils/artistImageResolver';
 
 const COLLECTION_NAME = 'artists';
 
@@ -185,11 +186,8 @@ export async function uploadArtistPhoto(artistId: string, fileOrBlob: File | Blo
     console.log('[TK] 5. Storage Download URL generated:', downloadUrl);
     return downloadUrl;
   } catch (error: any) {
-    console.warn('[TK] Firebase Storage direct upload note (falling back to optimized cloud payload):', error?.message || error);
-    if (optimizedDataUrl) {
-      return optimizedDataUrl;
-    }
-    throw new Error(`Storage upload failed: ${error?.message || '스토리지 업로드 중 오류가 발생했습니다.'}`);
+    console.error('[TK] Firebase Storage direct upload failed:', error?.message || error);
+    throw new Error(`스토리지 업로드 실패: ${error?.message || '스토리지 업로드 중 오류가 발생했습니다.'}`);
   }
 }
 
@@ -209,11 +207,9 @@ export async function uploadArtistGalleryPhoto(
   console.log(`[TK Gallery] Uploading gallery image (Artist: ${cleanId}, Photo: ${photoId}, Size: ${fileOrBlob.size} bytes)`);
 
   let optimizedBlob: Blob = fileOrBlob;
-  let optimizedDataUrl: string = '';
   try {
     const compressed = await compressImage(fileOrBlob, 1000, 0.8);
     optimizedBlob = compressed.blob;
-    optimizedDataUrl = compressed.dataUrl;
   } catch (compErr) {
     console.warn('Gallery compression note:', compErr);
   }
@@ -243,15 +239,7 @@ export async function uploadArtistGalleryPhoto(
       createdAt: new Date().toISOString(),
     };
   } catch (error: any) {
-    console.warn('[TK Gallery] Storage upload fallback note (using optimized payload):', error?.message || error);
-    if (optimizedDataUrl) {
-      return {
-        id: photoId,
-        url: optimizedDataUrl,
-        order,
-        createdAt: new Date().toISOString(),
-      };
-    }
+    console.error('[TK Gallery] Storage upload failed:', error?.message || error);
     throw new Error(`갤러리 사진 업로드 실패: ${error?.message || '스토리지 업로드 중 오류'}`);
   }
 }
@@ -302,14 +290,14 @@ export function sanitizeArtistForFirestore(artist: Artist): Record<string, any> 
   
   if (typeof candidateUrl === 'string' && candidateUrl.trim()) {
     const trimmed = candidateUrl.trim();
-    if (!trimmed.startsWith('blob:')) {
+    if (isValidArtistImageUrl(trimmed)) {
       validPhotoUrl = trimmed;
     }
   }
 
-  // Clean gallery images
+  // Clean gallery images (strictly reject Base64 and blob)
   const cleanGalleryImages = (Array.isArray(artist.galleryImages) ? artist.galleryImages : [])
-    .filter((img) => img && typeof img.url === 'string' && img.url.trim() && !img.url.startsWith('blob:'))
+    .filter((img) => img && typeof img.url === 'string' && isValidArtistImageUrl(img.url))
     .map((img, idx) => ({
       id: String(img.id || `photo-${idx}`),
       url: String(img.url).trim(),
@@ -368,9 +356,9 @@ export function sanitizeArtistForFirestore(artist: Artist): Record<string, any> 
 /**
  * Unified single function to save an artist to Firebase:
  * 1. Validates inputs
- * 2. Uploads photo file to Firebase Storage (or optimizes into resilient payload)
+ * 2. Uploads photo file to Firebase Storage
  * 3. Retrieves download URL
- * 4. Prepares and sanitizes Firestore payload
+ * 4. Prepares and sanitizes Firestore payload (No Base64)
  * 5. Saves payload to Firestore
  * 6. Returns clean Artist object
  */
@@ -384,24 +372,15 @@ export async function saveArtistToDb(
   const cleanId = getCanonicalArtistId(artist.id || '', `${artist.nameKo} ${artist.nameEn}`);
   let finalProfileImageUrl: string | null = artist.profileImageUrl || artist.image || artist.profileImage || null;
 
-  // Step 1: Storage Upload / Optimization if new file provided
+  // Step 1: Storage Upload if new file provided
   if (newPhotoFile) {
     try {
       finalProfileImageUrl = await uploadArtistPhoto(cleanId, newPhotoFile);
     } catch (uploadErr: any) {
-      console.warn('[TK] Storage process note:', uploadErr);
-      const compressed = await compressImage(newPhotoFile, 800, 0.82);
-      finalProfileImageUrl = compressed.dataUrl;
+      console.error('[TK] Storage upload error:', uploadErr);
+      throw new Error(`대표이미지 스토리지 업로드 실패: ${uploadErr?.message || '스토리지 연결 불가'}`);
     }
-  } else if (finalProfileImageUrl && finalProfileImageUrl.startsWith('data:') && finalProfileImageUrl.length > 200000) {
-    try {
-      const blob = dataUrlToBlob(finalProfileImageUrl);
-      const compressed = await compressImage(blob, 800, 0.82);
-      finalProfileImageUrl = compressed.dataUrl;
-    } catch (uploadErr: any) {
-      console.warn('[TK] Base64 compression note:', uploadErr);
-    }
-  } else if (finalProfileImageUrl && finalProfileImageUrl.startsWith('blob:')) {
+  } else if (!isValidArtistImageUrl(finalProfileImageUrl)) {
     finalProfileImageUrl = null;
   }
 
@@ -518,18 +497,17 @@ export function getCachedArtistBySlug(slug: string): Artist | null {
 
     if (!found) return null;
 
-    // Guarantee verified official hashed image for official actors
-    if (cleanSlug in OFFICIAL_ACTOR_IMAGES) {
-      const officialImg = OFFICIAL_ACTOR_IMAGES[cleanSlug];
-      return {
-        ...found,
-        profileImageUrl: officialImg,
-        image: officialImg,
-        profileImage: officialImg,
-      };
-    }
+    // Use valid Firestore profileImageUrl if present, otherwise fallback to official static image
+    const validUrl = isValidArtistImageUrl(found.profileImageUrl)
+      ? found.profileImageUrl
+      : (cleanSlug in OFFICIAL_ACTOR_IMAGES ? OFFICIAL_ACTOR_IMAGES[cleanSlug] : null);
 
-    return found;
+    return {
+      ...found,
+      profileImageUrl: validUrl,
+      image: validUrl,
+      profileImage: validUrl,
+    };
   } catch {
     return null;
   }
@@ -543,16 +521,16 @@ export function saveCachedArtists(artists: Artist[]): void {
   try {
     const sanitized = artists.map(a => {
       const slug = (a.id ? a.id.replace('artist-', '') : '').toLowerCase();
-      if (slug in OFFICIAL_ACTOR_IMAGES) {
-        const officialImg = OFFICIAL_ACTOR_IMAGES[slug];
-        return {
-          ...a,
-          profileImageUrl: officialImg,
-          image: officialImg,
-          profileImage: officialImg,
-        };
-      }
-      return a;
+      const validUrl = isValidArtistImageUrl(a.profileImageUrl)
+        ? a.profileImageUrl
+        : (slug in OFFICIAL_ACTOR_IMAGES ? OFFICIAL_ACTOR_IMAGES[slug] : null);
+
+      return {
+        ...a,
+        profileImageUrl: validUrl,
+        image: validUrl,
+        profileImage: validUrl,
+      };
     });
     localStorage.setItem(CACHE_KEY_ARTISTS, JSON.stringify(sanitized));
   } catch (err) {
@@ -618,10 +596,7 @@ export function normalizeArtists(rawItems: Artist[]): { normalized: Artist[]; du
     // Find the best master record
     const scoredGroup = group.map(item => {
       let score = 0;
-      const hasRealPhoto = Boolean(
-        item.profileImageUrl &&
-        (item.profileImageUrl.startsWith('https://') || item.profileImageUrl.startsWith('data:image'))
-      );
+      const hasRealPhoto = Boolean(isValidArtistImageUrl(item.profileImageUrl));
       if (hasRealPhoto) score += 100;
       if (item.id === canonicalId) score += 50;
       if (item.galleryImages && item.galleryImages.length > 0) score += item.galleryImages.length * 5;
@@ -855,7 +830,7 @@ export async function updateArtistGalleryInDb(artistId: string, galleryImages: A
     url: String(img.url || ''),
     order: Number(img.order !== undefined ? img.order : idx),
     createdAt: img.createdAt || new Date().toISOString(),
-  })).filter(img => img.url && !img.url.startsWith('blob:'));
+  })).filter(img => img.url && isValidArtistImageUrl(img.url));
 
   try {
     await setDoc(docRef, { galleryImages: cleanGallery, updatedAt: Date.now() }, { merge: true });

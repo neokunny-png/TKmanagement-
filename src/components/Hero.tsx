@@ -3,6 +3,7 @@ import { ArrowRight, ChevronDown, Sparkles } from 'lucide-react';
 import { Artist } from '../types';
 import { ARTISTS } from '../data/artists';
 import { subscribeArtists } from '../services/artistService';
+import { resolveArtistRepresentativeImage } from '../utils/artistImageResolver';
 
 interface HeroProps {
   artists?: Artist[];
@@ -42,7 +43,7 @@ export const Hero: React.FC<HeroProps> = ({
     .filter(
       (a) =>
         a.isActive !== false &&
-        Boolean(a.profileImage || a.profileImageUrl || a.image)
+        Boolean(resolveArtistRepresentativeImage(a))
     )
     .sort((a, b) => {
       const orderA = typeof a.order === 'number' ? a.order : 99;
@@ -82,8 +83,7 @@ export const Hero: React.FC<HeroProps> = ({
       <div className="absolute inset-0 z-0 overflow-hidden bg-[#0B0C10]">
         {heroArtists.length > 0 ? (
           heroArtists.map((artist, idx) => {
-            const photoSrc =
-              artist.profileImage || artist.profileImageUrl || artist.image || '';
+            const photoSrc = resolveArtistRepresentativeImage(artist);
             if (!photoSrc) return null;
             const isCurrent = idx === currentIndex;
 

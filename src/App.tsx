@@ -323,18 +323,28 @@ export default function App() {
     const unsubArtists = subscribeArtists((updatedArtists) => {
       setArtists(updatedArtists);
 
-      // If an official actor route is active, update with fresh Firestore data
-      // Strictly for that matching actor, NEVER switching to another actor or artists[0]!
-      const currentRoute = resolveInitialRoute();
-      if (currentRoute.slug && isOfficialSlug(currentRoute.slug)) {
-        const canonicalId = mapSlugToArtistId(currentRoute.slug);
-        const match = updatedArtists.find(
-          a => a.id === canonicalId || getArtistSlug(a) === currentRoute.slug || (a.nameKo && currentRoute.slug!.includes(a.nameKo))
-        );
-        if (match) {
-          setSelectedArtist(match);
+      // Keep selectedArtist synchronized with fresh Firestore data
+      setSelectedArtist((prev) => {
+        if (!prev) {
+          const currentRoute = resolveInitialRoute();
+          if (currentRoute.slug && isOfficialSlug(currentRoute.slug)) {
+            const canonicalId = mapSlugToArtistId(currentRoute.slug);
+            return (
+              updatedArtists.find(
+                (a) =>
+                  a.id === canonicalId ||
+                  getArtistSlug(a) === currentRoute.slug ||
+                  (a.nameKo && currentRoute.slug!.includes(a.nameKo))
+              ) || null
+            );
+          }
+          return null;
         }
-      }
+        const updated = updatedArtists.find(
+          (a) => a.id === prev.id || (prev.nameKo && a.nameKo === prev.nameKo)
+        );
+        return updated || prev;
+      });
     });
     const unsubNews = subscribeNews((updatedNews) => {
       setNewsList(updatedNews);
