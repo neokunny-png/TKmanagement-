@@ -4,6 +4,7 @@ import { Artist, getGroupedFilmography } from '../types';
 import { TKLogoMark } from './TKLogo';
 import { getArtistSlug, OFFICIAL_ACTORS, isOfficialSlug } from '../lib/seo';
 import { resolveArtistRepresentativeImage } from '../utils/artistImageResolver';
+import { getActorStaticImage } from './ArtistsSection';
 
 interface ArtistModalProps {
   artist: Artist | null;
@@ -24,12 +25,15 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
 
   const slug = getArtistSlug(artist);
   const official = OFFICIAL_ACTORS[slug];
-  const profilePhoto = resolveArtistRepresentativeImage(artist);
+  const staticOfficialImage = getActorStaticImage(artist);
+  const profilePhoto = resolveArtistRepresentativeImage(artist) || staticOfficialImage;
 
   // Build full photo list: main profile photo + any additional gallery photos
   const allPhotos: Array<{ id: string; url: string; label: string }> = [];
   if (profilePhoto) {
     allPhotos.push({ id: 'main-profile', url: profilePhoto, label: '대표 프로필' });
+  } else if (staticOfficialImage) {
+    allPhotos.push({ id: 'main-profile', url: staticOfficialImage, label: '대표 프로필' });
   }
   if (Array.isArray(artist.galleryImages)) {
     artist.galleryImages.forEach((img, idx) => {
@@ -167,40 +171,20 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
             <div className="lg:col-span-5 relative bg-black/60 p-5 sm:p-6 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-white/10 space-y-4 lg:sticky lg:top-0 lg:self-start">
               {/* Main Photo Viewer Box */}
               <div className="relative aspect-[3/4] w-full overflow-hidden border border-white/10 bg-neutral-900 shadow-inner group select-none">
-                {!currentPhoto ? (
-                  <div className="w-full h-full bg-[#161922] flex flex-col items-center justify-center p-6 text-center select-none">
-                    <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center mb-3 text-gray-400 font-mono text-xs">
-                      TK
-                    </div>
-                    <span className="text-xs font-mono tracking-widest text-gray-400 uppercase font-semibold">
-                      OFFICIAL PROFILE IMAGE
-                    </span>
-                    <span className="text-[10px] text-gray-500 font-mono mt-1">
-                      NOT UPLOADED
-                    </span>
-                  </div>
-                ) : imgError ? (
-                  <div className="w-full h-full bg-[#161922] flex flex-col items-center justify-center p-6 text-center select-none">
-                    <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center mb-3 text-gray-400 font-mono text-xs">
-                      TK
-                    </div>
-                    <span className="text-xs font-mono tracking-widest text-gray-400 uppercase font-semibold">
-                      OFFICIAL PROFILE IMAGE
-                    </span>
-                    <span className="text-[10px] text-gray-500 font-mono mt-1">
-                      NOT AVAILABLE
-                    </span>
-                  </div>
-                ) : (
-                  <img
-                    key={currentPhoto}
-                    src={currentPhoto}
-                    alt={`TK매니지먼트 소속 배우 ${artist.nameKo} 프로필`}
-                    onError={() => setImgError(true)}
-                    className="w-full h-full object-cover object-center transition-all duration-300"
-                    referrerPolicy="no-referrer"
-                  />
-                )}
+                <img
+                  key={currentPhoto || staticOfficialImage}
+                  src={imgError ? staticOfficialImage : (currentPhoto || staticOfficialImage)}
+                  alt={`TK매니지먼트 소속 배우 ${artist.nameKo} 프로필`}
+                  onError={() => {
+                    // Fall back to static official image if current photo failed
+                    if (!imgError) {
+                      setImgError(true);
+                    }
+                  }}
+                  className="w-full h-full object-cover object-center transition-all duration-300"
+                  loading="eager"
+                  decoding="async"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-50 pointer-events-none" />
 
                 {/* Photo Badge & Index Pill */}

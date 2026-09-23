@@ -321,6 +321,11 @@ export default function App() {
   // Real-time Firestore Subscriptions
   useEffect(() => {
     const unsubArtists = subscribeArtists((updatedArtists) => {
+      // Guarantee the 4 official actors are never emptied if Firestore returns empty or errors
+      if (!Array.isArray(updatedArtists) || updatedArtists.length === 0) {
+        setArtists([...STATIC_OFFICIAL_ARTISTS]);
+        return;
+      }
       setArtists(updatedArtists);
 
       // Keep selectedArtist synchronized with fresh Firestore data

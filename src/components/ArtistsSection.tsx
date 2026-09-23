@@ -1,95 +1,94 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowRight, UserCheck, Users } from 'lucide-react';
 import { Artist } from '../types';
-import { getArtistSlug } from '../lib/seo';
-import { resolveArtistRepresentativeImage, getOfficialActorStaticImage, isValidArtistImageUrl } from '../utils/artistImageResolver';
+import { getArtistSlug, OFFICIAL_ACTOR_IMAGES } from '../lib/seo';
+import { STATIC_OFFICIAL_ARTISTS } from '../data/artists';
 
 interface ArtistsSectionProps {
   artists: Artist[];
   onSelectArtist: (artist: Artist) => void;
 }
 
-const ArtistCardImage: React.FC<{
-  artist: Artist;
-  alt: string;
-}> = ({ artist, alt }) => {
-  const slug = getArtistSlug(artist) || (artist.id ? artist.id.replace('artist-', '') : '').toLowerCase();
-  const staticFallback = getOfficialActorStaticImage(slug);
+/**
+ * Maps an artist to their official static profile image.
+ * Safely handles slug, id, or Korean name fallback so static image is NEVER empty.
+ */
+export function getActorStaticImage(artist: Artist): string {
+  const name = (artist.nameKo || '').trim();
+  const rawSlug = getArtistSlug(artist) || (artist.id ? artist.id.replace(/^artist-/, '') : '').toLowerCase().trim();
 
-  const [displayedImageUrl, setDisplayedImageUrl] = useState<string>(staticFallback);
-  const [hasFallbackError, setHasFallbackError] = useState<boolean>(false);
-  const failedUrlsRef = useRef<Set<string>>(new Set());
+  if (name.includes('최은서') || rawSlug.includes('choi') || rawSlug.includes('eunseo')) {
+    return OFFICIAL_ACTOR_IMAGES['choi-eunseo'];
+  }
+  if (name.includes('이은수') || rawSlug.includes('lee') || rawSlug.includes('eunsoo') || rawSlug.includes('eunsu')) {
+    return OFFICIAL_ACTOR_IMAGES['lee-eunsoo'];
+  }
+  if (name.includes('박민욱') || rawSlug.includes('minwook') || rawSlug.includes('minjun')) {
+    return OFFICIAL_ACTOR_IMAGES['park-minwook'];
+  }
+  if (name.includes('박현진') || rawSlug.includes('hyunjin')) {
+    return OFFICIAL_ACTOR_IMAGES['park-hyunjin'];
+  }
+  if (rawSlug in OFFICIAL_ACTOR_IMAGES) {
+    return OFFICIAL_ACTOR_IMAGES[rawSlug];
+  }
+  return OFFICIAL_ACTOR_IMAGES['choi-eunseo'];
+}
+
+interface ArtistCardImageProps {
+  artist: Artist;
+  staticImage: string;
+}
+
+/**
+ * 2-tier robust artist card image:
+ * Tier 1: Immediately render the official static image (zero delay, zero flicker, 100% availability).
+ * Tier 2: If Firestore has a valid remote Storage URL, preload in background and swap only on success.
+ * If preload fails or Firestore is null, the static official image is always maintained.
+ */
+const ArtistCardImage: React.FC<ArtistCardImageProps> = ({ artist, staticImage }) => {
+  const [currentSrc, setCurrentSrc] = useState<string>(staticImage);
 
   useEffect(() => {
-    const currentStatic = getOfficialActorStaticImage(slug);
-    const rawFirestoreUrl = artist.profileImageUrl || artist.image || artist.profileImage;
+    // Always guarantee staticImage as base
+    setCurrentSrc(staticImage);
 
-    // If no valid Firestore URL or it matches staticFallback, keep staticFallback
-    if (!rawFirestoreUrl || !isValidArtistImageUrl(rawFirestoreUrl) || rawFirestoreUrl === currentStatic) {
-      setDisplayedImageUrl(currentStatic);
-      return;
+    const remoteUrl = artist.profileImageUrl || artist.image || artist.profileImage;
+    if (
+      remoteUrl &&
+      typeof remoteUrl === 'string' &&
+      (remoteUrl.startsWith('https://') || remoteUrl.startsWith('http://')) &&
+      !remoteUrl.includes('placeholder') &&
+      !remoteUrl.includes('dummy') &&
+      !remoteUrl.includes('default') &&
+      remoteUrl !== staticImage
+    ) {
+      let isSubscribed = true;
+      const preloader = new Image();
+      preloader.onload = () => {
+        if (isSubscribed) {
+          setCurrentSrc(remoteUrl);
+        }
+      };
+      preloader.onerror = () => {
+        if (isSubscribed) {
+          setCurrentSrc(staticImage);
+        }
+      };
+      preloader.src = remoteUrl;
+
+      return () => {
+        isSubscribed = false;
+      };
     }
-
-    // If this URL previously failed, avoid retrying and maintain static fallback
-    if (failedUrlsRef.current.has(rawFirestoreUrl)) {
-      setDisplayedImageUrl(currentStatic);
-      return;
-    }
-
-    // Preload image before applying to prevent any broken frame or flicker
-    let isCancelled = false;
-    const img = new Image();
-    img.onload = () => {
-      if (!isCancelled) {
-        setDisplayedImageUrl(rawFirestoreUrl);
-      }
-    };
-    img.onerror = () => {
-      if (!isCancelled) {
-        console.warn(`[TK] Actor image preload failed for ${artist.nameKo} (${rawFirestoreUrl}), falling back to static`);
-        failedUrlsRef.current.add(rawFirestoreUrl);
-        setDisplayedImageUrl(currentStatic);
-      }
-    };
-    img.src = rawFirestoreUrl;
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [artist.profileImageUrl, artist.image, artist.profileImage, slug, artist.nameKo]);
-
-  const handleImageError = () => {
-    const currentStatic = getOfficialActorStaticImage(slug);
-    if (displayedImageUrl !== currentStatic) {
-      failedUrlsRef.current.add(displayedImageUrl);
-      setDisplayedImageUrl(currentStatic);
-    } else {
-      setHasFallbackError(true);
-    }
-  };
-
-  if (hasFallbackError) {
-    return (
-      <div className="w-full h-full bg-[#141722] flex flex-col items-center justify-center p-6 text-center border border-white/5 select-none">
-        <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center mb-3 text-gray-400 font-mono text-xs">
-          TK
-        </div>
-        <span className="text-[11px] font-mono tracking-wider text-gray-400 uppercase font-semibold">
-          OFFICIAL PROFILE IMAGE
-        </span>
-        <span className="text-[10px] text-gray-500 font-mono mt-0.5">
-          NOT AVAILABLE
-        </span>
-      </div>
-    );
-  }
+  }, [artist.profileImageUrl, artist.image, artist.profileImage, staticImage]);
 
   return (
     <img
-      src={displayedImageUrl}
-      alt={alt}
-      onError={handleImageError}
-      className="w-full h-full object-cover object-center filter grayscale-[15%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700 ease-out"
+      src={currentSrc || staticImage}
+      alt={`TK매니지먼트 소속 배우 ${artist.nameKo} 프로필`}
+      onError={() => setCurrentSrc(staticImage)}
+      className="relative z-[1] w-full h-full object-cover object-center filter grayscale-[15%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700 ease-out"
       loading="eager"
       decoding="async"
     />
@@ -102,7 +101,9 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
 }) => {
   const [filter, setFilter] = useState<'ALL' | 'FEMALE' | 'MALE'>('ALL');
 
-  const activeArtists = artists.filter((a) => a.isActive !== false);
+  // Ground truth fallback: If artists is empty or null due to Firestore offline/quota error, strictly use STATIC_OFFICIAL_ARTISTS
+  const effectiveArtists = (Array.isArray(artists) && artists.length > 0) ? artists : STATIC_OFFICIAL_ARTISTS;
+  const activeArtists = effectiveArtists.filter((a) => a.isActive !== false);
 
   const filteredArtists = activeArtists.filter((artist) => {
     if (filter === 'FEMALE') return artist.gender === 'Female';
@@ -203,7 +204,7 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
             {filteredArtists.map((artist) => {
               const engUpper = (artist.nameEn || '').toUpperCase();
               const slug = getArtistSlug(artist) || artist.id;
-              const photoSrc = resolveArtistRepresentativeImage(artist);
+              const staticImage = getActorStaticImage(artist);
 
               return (
                 <a
@@ -222,14 +223,14 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
                   <div className="aspect-[3/4] w-full overflow-hidden relative bg-neutral-900">
                     <ArtistCardImage
                       artist={artist}
-                      alt={`TK매니지먼트 소속 배우 ${artist.nameKo} 프로필`}
+                      staticImage={staticImage}
                     />
 
-                    {/* Dramatic multi-stop gradient for text readability */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B0C10] via-[#0B0C10]/30 to-transparent opacity-85 group-hover:opacity-95 transition-opacity" />
+                    {/* Dramatic multi-stop gradient for text readability - layered with z-[2] and pointer-events-none */}
+                    <div className="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-[#0B0C10] via-[#0B0C10]/30 to-transparent opacity-85 group-hover:opacity-95 transition-opacity" />
 
-                    {/* Bottom Text Details */}
-                    <div className="absolute bottom-0 left-0 right-0 p-6 z-10 flex flex-col justify-end">
+                    {/* Bottom Text Details - layered with z-[3] and pointer-events-none */}
+                    <div className="absolute bottom-0 left-0 right-0 p-6 z-[3] pointer-events-none flex flex-col justify-end">
                       {/* Actor Korean Name & Birth */}
                       <div className="flex items-baseline justify-between mb-1.5">
                         <h3 className="text-2xl sm:text-3xl font-display font-black text-white tracking-tight group-hover:text-sky-200 transition-colors">

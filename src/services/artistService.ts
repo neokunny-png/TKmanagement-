@@ -13,6 +13,7 @@ import { db, storage, ensureFirebaseAuth, handleFirestoreError, OperationType } 
 import { Artist, ArtistPhoto } from '../types';
 import { OFFICIAL_ACTOR_IMAGES } from '../lib/seo';
 import { isValidArtistImageUrl, getOfficialActorStaticImage } from '../utils/artistImageResolver';
+import { STATIC_OFFICIAL_ARTISTS } from '../data/artists';
 
 const COLLECTION_NAME = 'artists';
 
@@ -672,6 +673,14 @@ export function normalizeArtists(rawItems: Artist[]): { normalized: Artist[]; du
     result.push(mergedMaster);
   }
 
+  // Always guarantee that all 4 official actors are present in the final roster
+  const existingIds = new Set(result.map(r => r.id));
+  for (const officialActor of STATIC_OFFICIAL_ARTISTS) {
+    if (!existingIds.has(officialActor.id)) {
+      result.push({ ...officialActor });
+    }
+  }
+
   // Sort by order ascending, then by nameKo
   result.sort((a, b) => {
     if ((a.order ?? 99) !== (b.order ?? 99)) {
@@ -765,8 +774,8 @@ export function subscribeArtists(
       if (onError) {
         onError(error);
       }
-      // Non-fatal fallback: Never crash the public application on subscription error.
-      // Static roster and local cache maintain 100% availability.
+      // Guarantee instant fallback to static official roster on subscription error/offline/quota limit
+      onUpdate([...STATIC_OFFICIAL_ARTISTS]);
     }
   );
 }
