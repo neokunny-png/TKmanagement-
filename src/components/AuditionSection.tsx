@@ -159,7 +159,7 @@ export const AuditionSection: React.FC<AuditionSectionProps> = ({ id = 'audition
               AUDITION RECRUITMENT
             </span>
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-display font-black text-white tracking-tighter leading-tight mb-4">
-              신인배우 모집
+              TK매니지먼트 신인배우 오디션
             </h1>
             <p className="text-xl sm:text-2xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-sky-300 mb-4">
               FIND YOUR NEXT SCENE.

@@ -120,9 +120,9 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
             <span className="text-xs font-mono tracking-widest text-sky-400 uppercase mb-2 block">
               MANAGEMENT ROSTER
             </span>
-            <h2 className="text-3xl sm:text-5xl lg:text-6xl font-display font-black text-white tracking-tighter">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-display font-black text-white tracking-tighter">
               TK매니지먼트 소속 배우
-            </h2>
+            </h1>
             <p className="text-xs sm:text-sm font-mono tracking-widest text-gray-400 uppercase mt-1">
               ARTISTS ROSTER
             </p>

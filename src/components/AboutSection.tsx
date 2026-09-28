@@ -49,6 +49,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ artistCount, id = 'a
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-20 border-b border-white/10 pb-10">
           <div>
+            <h1 className="sr-only">TK매니지먼트</h1>
             <span className="text-xs font-mono tracking-widest text-sky-400 uppercase block mb-3">
               ABOUT TK MANAGEMENT
             </span>

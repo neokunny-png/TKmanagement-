@@ -50,7 +50,7 @@ export const NewsSection: React.FC<NewsSectionProps> = ({ newsList }) => {
               PRESS &amp; ANNOUNCEMENTS
             </span>
             <h1 className="text-3xl sm:text-5xl font-display font-black text-white tracking-tighter">
-              TK매니지먼트 뉴스
+              TK매니지먼트 NEWS
             </h1>
             <p className="text-xs sm:text-sm font-mono tracking-widest text-gray-400 uppercase mt-1">
               NEWS &amp; NOTICE

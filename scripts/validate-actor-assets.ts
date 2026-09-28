@@ -96,7 +96,7 @@ for (const spec of OFFICIAL_SPECS) {
   }
 
   // Must contain actor Korean name in H1
-  if (!html.includes(`>${spec.nameKo}</h1>`)) {
+  if (!html.includes(`>${spec.nameKo} 배우</h1>`) && !html.includes(`>${spec.nameKo}</h1>`)) {
     console.error(`❌ [ERROR] ${spec.slug}/index.html missing H1 for ${spec.nameKo}`);
     hasError = true;
   }

@@ -19,7 +19,7 @@ export const OFFICIAL_STATIC_ACTORS: StaticActor[] = [
     nameKo: '최은서',
     nameEn: 'CHOI EUN SEO',
     title: '최은서 배우 | TK매니지먼트',
-    description: '최은서 배우의 프로필과 활동 정보를 확인하세요. TK매니지먼트 소속 배우 최은서의 공식 프로필 페이지입니다.',
+    description: 'TK매니지먼트 소속 배우 최은서의 프로필과 주요 경력, 활동 정보를 확인하세요.',
     canonical: 'https://www.tkm.kr/artists/choi-eunseo',
     image: 'https://www.tkm.kr/images/actors/choi-eunseo-v5-8fe5a05d.jpg',
     alt: 'TK매니지먼트 소속 배우 최은서 프로필',
@@ -30,7 +30,7 @@ export const OFFICIAL_STATIC_ACTORS: StaticActor[] = [
     nameKo: '이은수',
     nameEn: 'LEE EUN SOO',
     title: '이은수 배우 | TK매니지먼트',
-    description: '이은수 배우의 프로필과 활동 정보를 확인하세요. TK매니지먼트 소속 배우 이은수의 공식 프로필 페이지입니다.',
+    description: 'TK매니지먼트 소속 배우 이은수의 프로필과 주요 경력, 활동 정보를 확인하세요.',
     canonical: 'https://www.tkm.kr/artists/lee-eunsoo',
     image: 'https://www.tkm.kr/images/actors/lee-eunsoo-v5-26e9ac09.jpg',
     alt: 'TK매니지먼트 소속 배우 이은수 프로필',
@@ -41,7 +41,7 @@ export const OFFICIAL_STATIC_ACTORS: StaticActor[] = [
     nameKo: '박민욱',
     nameEn: 'PARK MIN WOOK',
     title: '박민욱 배우 | TK매니지먼트',
-    description: '박민욱 배우의 프로필과 활동 정보를 확인하세요. TK매니지먼트 소속 배우 박민욱의 공식 프로필 페이지입니다.',
+    description: 'TK매니지먼트 소속 배우 박민욱의 프로필과 주요 경력, 활동 정보를 확인하세요.',
     canonical: 'https://www.tkm.kr/artists/park-minwook',
     image: 'https://www.tkm.kr/images/actors/park-minwook-v5-973012cc.jpg',
     alt: 'TK매니지먼트 소속 배우 박민욱 프로필',
@@ -52,7 +52,7 @@ export const OFFICIAL_STATIC_ACTORS: StaticActor[] = [
     nameKo: '박현진',
     nameEn: 'PARK HYUN JIN',
     title: '박현진 배우 | TK매니지먼트',
-    description: '박현진 배우의 프로필과 활동 정보를 확인하세요. TK매니지먼트 소속 배우 박현진의 공식 프로필 페이지입니다.',
+    description: 'TK매니지먼트 소속 배우 박현진의 프로필과 주요 경력, 활동 정보를 확인하세요.',
     canonical: 'https://www.tkm.kr/artists/park-hyunjin',
     image: 'https://www.tkm.kr/images/actors/park-hyunjin-v5-d3cb5da4.jpg',
     alt: 'TK매니지먼트 소속 배우 박현진 프로필',
@@ -77,66 +77,66 @@ export interface StaticPageConfig {
 export const STATIC_SECTIONS: StaticPageConfig[] = [
   {
     path: 'artists',
-    title: '소속 배우 | TK매니지먼트',
-    description: 'TK매니지먼트 소속 배우들의 프로필과 경력, 활동 정보를 확인하세요.',
+    title: 'TK매니지먼트 소속 배우 | 최은서·이은수·박민욱·박현진',
+    description: 'TK매니지먼트 소속 배우 최은서, 이은수, 박민욱, 박현진의 프로필과 주요 경력 및 활동 정보를 확인하세요.',
     canonical: 'https://www.tkm.kr/artists',
-    ogTitle: '소속 배우 | TK매니지먼트',
-    ogDescription: 'TK매니지먼트 소속 배우들의 프로필과 경력, 활동 정보를 확인하세요.',
+    ogTitle: 'TK매니지먼트 소속 배우 | 최은서·이은수·박민욱·박현진',
+    ogDescription: 'TK매니지먼트 소속 배우 최은서, 이은수, 박민욱, 박현진의 프로필과 주요 경력 및 활동 정보를 확인하세요.',
     ogImage: 'https://www.tkm.kr/images/about/about-main.jpg',
     ogImageAlt: 'TK매니지먼트 소속 배우',
-    h1: '소속 배우',
+    h1: 'TK매니지먼트 소속 배우',
     subtitle: 'TK MANAGEMENT ARTISTS',
     breadcrumbName: '소속 배우',
   },
   {
     path: 'audition',
-    title: '신인배우 오디션·배우 모집 | TK매니지먼트',
-    description: 'TK매니지먼트 신인배우 모집 및 배우 오디션 안내. 새로운 가능성을 가진 배우들의 지원을 기다립니다.',
+    title: 'TK매니지먼트 신인배우 오디션 | 배우 모집',
+    description: 'TK매니지먼트에서 새로운 가능성을 가진 신인배우를 모집합니다. 배우 오디션 지원 방법과 모집 정보를 확인하세요.',
     canonical: 'https://www.tkm.kr/audition',
-    ogTitle: '신인배우 오디션·배우 모집 | TK매니지먼트',
-    ogDescription: 'TK매니지먼트 신인배우 모집 및 배우 오디션 안내. 새로운 가능성을 가진 배우들의 지원을 기다립니다.',
+    ogTitle: 'TK매니지먼트 신인배우 오디션 | 배우 모집',
+    ogDescription: 'TK매니지먼트에서 새로운 가능성을 가진 신인배우를 모집합니다. 배우 오디션 지원 방법과 모집 정보를 확인하세요.',
     ogImage: 'https://www.tkm.kr/images/about/about-main.jpg',
     ogImageAlt: 'TK매니지먼트 신인배우 오디션',
-    h1: '신인배우 오디션',
+    h1: 'TK매니지먼트 신인배우 오디션',
     subtitle: 'AUDITION & CASTING',
-    breadcrumbName: '오디션',
+    breadcrumbName: '신인배우 오디션',
   },
   {
     path: 'news',
-    title: 'TK매니지먼트 뉴스 | 배우·매니지먼트 소식',
-    description: 'TK매니지먼트의 배우 활동 및 매니지먼트 관련 최신 소식을 확인하세요.',
+    title: 'TK매니지먼트 NEWS | 배우·캐스팅·오디션 소식',
+    description: 'TK매니지먼트의 배우 활동, 캐스팅, 오디션, 패션 및 엔터테인먼트 관련 최신 소식을 확인하세요.',
     canonical: 'https://www.tkm.kr/news',
-    ogTitle: 'TK매니지먼트 뉴스 | 배우·매니지먼트 소식',
-    ogDescription: 'TK매니지먼트의 배우 활동 및 매니지먼트 관련 최신 소식을 확인하세요.',
+    ogTitle: 'TK매니지먼트 NEWS | 배우·캐스팅·오디션 소식',
+    ogDescription: 'TK매니지먼트의 배우 활동, 캐스팅, 오디션, 패션 및 엔터테인먼트 관련 최신 소식을 확인하세요.',
     ogImage: 'https://www.tkm.kr/images/about/about-main.jpg',
     ogImageAlt: 'TK매니지먼트 뉴스',
-    h1: '뉴스',
+    h1: 'TK매니지먼트 NEWS',
     subtitle: 'PRESS & UPDATES',
     breadcrumbName: '뉴스',
   },
   {
     path: 'contact',
-    title: '문의 | TK매니지먼트',
-    description: 'TK매니지먼트의 매니지먼트, 캐스팅, 오디션 및 기타 문의 방법을 확인하세요.',
+    title: 'TK매니지먼트 | 배우 캐스팅·매니지먼트 문의',
+    description: 'TK매니지먼트의 배우 캐스팅, 매니지먼트 및 비즈니스 관련 문의 정보를 확인하세요.',
     canonical: 'https://www.tkm.kr/contact',
-    ogTitle: '문의 | TK매니지먼트',
-    ogDescription: 'TK매니지먼트의 매니지먼트, 캐스팅, 오디션 및 기타 문의 방법을 확인하세요.',
+    ogTitle: 'TK매니지먼트 | 배우 캐스팅·매니지먼트 문의',
+    ogDescription: 'TK매니지먼트의 배우 캐스팅, 매니지먼트 및 비즈니스 관련 문의 정보를 확인하세요.',
     ogImage: 'https://www.tkm.kr/images/about/about-main.jpg',
     ogImageAlt: 'TK매니지먼트 문의',
-    h1: '문의',
+    h1: 'TK매니지먼트 문의',
     subtitle: 'CONTACT & LOCATION',
     breadcrumbName: '문의',
   },
   {
     path: 'about',
-    title: 'TK매니지먼트 소개 | YOUR NEXT SCENE',
-    description: '새로운 얼굴을 발견하고, 배우의 다음 장면을 만들어가는 프리미엄 액터스 매니지먼트 TK MANAGEMENT.',
+    title: 'TK매니지먼트 | 배우 매니지먼트 회사 소개',
+    description: 'TK매니지먼트는 배우의 가능성을 발굴하고 체계적인 매니지먼트를 통해 새로운 기회를 만들어가는 배우 전문 매니지먼트입니다.',
     canonical: 'https://www.tkm.kr/about',
-    ogTitle: 'TK매니지먼트 소개 | YOUR NEXT SCENE',
-    ogDescription: '새로운 얼굴을 발견하고, 배우의 다음 장면을 만들어가는 프리미엄 액터스 매니지먼트 TK MANAGEMENT.',
+    ogTitle: 'TK매니지먼트 | 배우 매니지먼트 회사 소개',
+    ogDescription: 'TK매니지먼트는 배우의 가능성을 발굴하고 체계적인 매니지먼트를 통해 새로운 기회를 만들어가는 배우 전문 매니지먼트입니다.',
     ogImage: 'https://www.tkm.kr/images/about/about-main.jpg',
     ogImageAlt: 'TK매니지먼트 소개',
-    h1: 'TK매니지먼트 소개',
+    h1: 'TK매니지먼트',
     subtitle: 'ABOUT TK MANAGEMENT',
     breadcrumbName: '회사 소개',
   },
@@ -276,7 +276,7 @@ export function buildActorHtml(baseHtml: string, actor: StaticActor): string {
         <img src="${actor.image}" alt="${actor.alt}" class="w-full h-full object-cover" />
       </div>
       <span class="text-xs font-mono tracking-widest text-sky-400 uppercase block mb-1">TK MANAGEMENT ACTOR</span>
-      <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-white mb-2">${actor.nameKo}</h1>
+      <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-white mb-2">${actor.nameKo} 배우</h1>
       <p class="text-sm font-mono text-gray-400 uppercase mb-4 tracking-widest">${actor.nameEn}</p>
       <p class="text-sm text-gray-300 leading-relaxed max-w-lg mx-auto mb-6">${actor.description}</p>
       <div class="pt-4 border-t border-white/10 flex justify-center gap-4 text-xs font-mono">
@@ -288,7 +288,7 @@ export function buildActorHtml(baseHtml: string, actor: StaticActor): string {
   </div>
 </div>`;
 
-  html = html.replace(/<div id="root"><\/div>/i, actorRootHtml);
+  html = html.replace(/<div id="root">[\s\S]*?<\/div>/i, actorRootHtml);
 
   return html;
 }
@@ -381,7 +381,7 @@ export function buildSectionHtml(baseHtml: string, section: StaticPageConfig): s
   </div>
 </div>`;
 
-  html = html.replace(/<div id="root"><\/div>/i, sectionRootHtml);
+  html = html.replace(/<div id="root">[\s\S]*?<\/div>/i, sectionRootHtml);
 
   return html;
 }

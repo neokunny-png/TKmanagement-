@@ -131,12 +131,14 @@ export const Hero: React.FC<HeroProps> = ({
 
           {/* Slogan & SEO Heading */}
           <div className="space-y-3 mb-4 sm:mb-6">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-black tracking-tight text-white flex flex-col gap-1">
-              <span className="tracking-wide text-white">TK매니지먼트</span>
-              <span className="text-xs sm:text-sm md:text-base font-normal text-sky-300 font-sans tracking-normal">
+            <div>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-black tracking-tight text-white">
+                TK매니지먼트
+              </h1>
+              <p className="text-xs sm:text-sm md:text-base font-normal text-sky-300 font-sans tracking-normal mt-1">
                 배우의 가능성을 발견하고 함께 성장하는 매니지먼트
-              </span>
-            </h1>
+              </p>
+            </div>
             <p className="font-display text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tighter text-white leading-[1.05] break-words">
               WE DEVELOP
               <br />

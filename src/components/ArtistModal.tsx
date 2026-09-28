@@ -294,7 +294,7 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
                         TK MANAGEMENT ACTOR
                       </span>
                       <h1 className="text-3xl sm:text-4xl font-display font-black text-white tracking-tight">
-                        {artist.nameKo}
+                        {artist.nameKo?.endsWith('배우') ? artist.nameKo : `${artist.nameKo} 배우`}
                       </h1>
                       <p className="text-sm font-mono tracking-widest text-gray-300 uppercase mt-1">
                         {artist.nameEn}
