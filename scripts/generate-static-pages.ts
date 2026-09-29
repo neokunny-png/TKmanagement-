@@ -91,10 +91,10 @@ export const STATIC_SECTIONS: StaticPageConfig[] = [
   {
     path: 'audition',
     title: 'TK매니지먼트 신인배우 오디션 | 배우 모집',
-    description: 'TK매니지먼트에서 새로운 가능성을 가진 신인배우를 모집합니다. 배우 오디션 지원 방법과 모집 정보를 확인하세요.',
+    description: 'TK매니지먼트 신인배우 오디션 안내. 배우 모집, 지원 방법, 제출 자료 및 오디션 진행 과정을 확인하고 새로운 배우의 가능성을 TK매니지먼트와 함께 시작하세요.',
     canonical: 'https://www.tkm.kr/audition',
     ogTitle: 'TK매니지먼트 신인배우 오디션 | 배우 모집',
-    ogDescription: 'TK매니지먼트에서 새로운 가능성을 가진 신인배우를 모집합니다. 배우 오디션 지원 방법과 모집 정보를 확인하세요.',
+    ogDescription: 'TK매니지먼트 신인배우 오디션 안내. 배우 모집, 지원 방법, 제출 자료 및 오디션 진행 과정을 확인하고 새로운 배우의 가능성을 TK매니지먼트와 함께 시작하세요.',
     ogImage: 'https://www.tkm.kr/images/about/about-main.jpg',
     ogImageAlt: 'TK매니지먼트 신인배우 오디션',
     h1: 'TK매니지먼트 신인배우 오디션',
@@ -362,7 +362,62 @@ export function buildSectionHtml(baseHtml: string, section: StaticPageConfig): s
   html = html.replace('</head>', jsonLdString);
 
   // 7. Pre-rendered section root
-  const sectionRootHtml = `<div id="root">
+  let sectionRootHtml = '';
+
+  if (section.path === 'audition') {
+    sectionRootHtml = `<div id="root">
+  <div class="tk-section-seo-prerender bg-[#0B0C10] text-[#E5E7EB] min-h-screen py-16 px-4 flex flex-col items-center justify-center">
+    <nav aria-label="Breadcrumb" class="w-full max-w-3xl mb-6 text-xs text-gray-400 font-mono">
+      <a href="/" class="hover:text-white transition-colors">홈</a> &gt; <span class="text-white">${section.breadcrumbName}</span>
+    </nav>
+    <article class="w-full max-w-3xl bg-[#111319] border border-white/10 p-6 sm:p-10 rounded-lg text-left shadow-2xl space-y-6">
+      <div class="text-center border-b border-white/10 pb-6">
+        <span class="text-xs font-mono tracking-widest text-sky-400 uppercase block mb-1">AUDITION RECRUITMENT</span>
+        <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-white mb-2">TK매니지먼트 신인배우 오디션</h1>
+        <p class="text-sm font-mono text-gray-400 uppercase mb-3 tracking-widest">${section.subtitle}</p>
+        <p class="text-sm text-gray-300 leading-relaxed max-w-xl mx-auto">${section.description}</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs leading-relaxed">
+        <div class="bg-[#161A26] p-4 border border-white/5">
+          <strong class="text-sky-400 block mb-1 uppercase font-mono">01. 모집 분야</strong>
+          <p class="text-gray-300">드라마, 영화, OTT 오리지널 시리즈, 연극, 광고 등 연기 활동 전반. 전문 배우 매니지먼트로서 스크린과 브라운관 전 분야에 걸친 캐스팅과 작품 활동을 지원합니다.</p>
+        </div>
+        <div class="bg-[#161A26] p-4 border border-white/5">
+          <strong class="text-sky-400 block mb-1 uppercase font-mono">02. 지원 대상</strong>
+          <p class="text-gray-300">연기에 대한 진정성과 열정, 고유한 개성을 지닌 신인배우 및 배우 지망생 (성별·연령 제한 없음, 신인 및 기성 배우 모두 가능).</p>
+        </div>
+        <div class="bg-[#161A26] p-4 border border-white/5">
+          <strong class="text-sky-400 block mb-1 uppercase font-mono">03. 지원 방법</strong>
+          <p class="text-gray-300">온라인 오디션 지원서 양식을 통해 상시 접수합니다. 24시간 언제나 온라인으로 간편하게 신인배우 오디션에 지원하실 수 있습니다.</p>
+        </div>
+        <div class="bg-[#161A26] p-4 border border-white/5">
+          <strong class="text-sky-400 block mb-1 uppercase font-mono">04. 제출 자료</strong>
+          <p class="text-gray-300">기본 인적사항, 프로필 사진(클로즈업/전신), 자기소개 및 배우로서의 포부, 연기 영상 또는 쇼릴 링크(선택).</p>
+        </div>
+        <div class="bg-[#161A26] p-4 border border-white/5">
+          <strong class="text-sky-400 block mb-1 uppercase font-mono">05. 오디션 진행 과정</strong>
+          <p class="text-gray-300">1차 온라인 서류 심사 → 2차 실물 카메라 오디션 &amp; 심층 심사 → 최종 미팅 및 전속 매니지먼트 계약 체결.</p>
+        </div>
+        <div class="bg-[#161A26] p-4 border border-white/5">
+          <strong class="text-sky-400 block mb-1 uppercase font-mono">06. 심사 및 문의</strong>
+          <p class="text-gray-300">합격자에 한하여 개별 안내드립니다. 배우 캐스팅 문의 및 오디션 접수 상담은 공식 CONTACT 페이지를 통해 가능합니다.</p>
+        </div>
+      </div>
+
+      <div class="pt-6 border-t border-white/10">
+        <span class="text-xs font-mono text-gray-400 uppercase block mb-3 text-center">관련 페이지 바로가기</span>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center text-xs font-mono">
+          <a href="/artists" class="p-3 bg-[#161A26] text-sky-400 hover:text-white border border-white/5 transition-colors">TK매니지먼트 소속 배우</a>
+          <a href="/contact" class="p-3 bg-[#161A26] text-sky-400 hover:text-white border border-white/5 transition-colors">배우 캐스팅 및 매니지먼트 문의</a>
+          <a href="/news" class="p-3 bg-[#161A26] text-sky-400 hover:text-white border border-white/5 transition-colors">TK매니지먼트 NEWS</a>
+        </div>
+      </div>
+    </article>
+  </div>
+</div>`;
+  } else {
+    sectionRootHtml = `<div id="root">
   <div class="tk-section-seo-prerender bg-[#0B0C10] text-[#E5E7EB] min-h-screen py-16 px-4 flex flex-col items-center justify-center">
     <nav aria-label="Breadcrumb" class="w-full max-w-2xl mb-6 text-xs text-gray-400 font-mono">
       <a href="/" class="hover:text-white transition-colors">홈</a> &gt; <span class="text-white">${section.breadcrumbName}</span>
@@ -380,6 +435,7 @@ export function buildSectionHtml(baseHtml: string, section: StaticPageConfig): s
     </article>
   </div>
 </div>`;
+  }
 
   html = html.replace(/<div id="root">[\s\S]*?<\/div>/i, sectionRootHtml);
 

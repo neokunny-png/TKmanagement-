@@ -779,7 +779,7 @@ export default function App() {
 
         {/* 5. Audition (Desktop only in flow; on mobile, accessed via AUDITION click) */}
         <div className="hidden md:block">
-          <AuditionSection id="audition" />
+          <AuditionSection id="audition" onNavigate={handleNavigate} />
         </div>
 
         {/* 6. Contact (Desktop only in flow; on mobile, accessed via CONTACT click) */}
@@ -837,6 +837,7 @@ export default function App() {
               <AuditionSection
                 id="audition-mobile"
                 isMobileView={true}
+                onNavigate={handleNavigate}
               />
             )}
             {activeMobileView === 'contact' && (

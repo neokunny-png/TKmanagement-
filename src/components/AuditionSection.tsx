@@ -7,9 +7,14 @@ import { submitAuditionApplication } from '../services/inquiryService';
 interface AuditionSectionProps {
   id?: string;
   isMobileView?: boolean;
+  onNavigate?: (sectionId: string) => void;
 }
 
-export const AuditionSection: React.FC<AuditionSectionProps> = ({ id = 'audition', isMobileView = false }) => {
+export const AuditionSection: React.FC<AuditionSectionProps> = ({
+  id = 'audition',
+  isMobileView = false,
+  onNavigate
+}) => {
   const [formData, setFormData] = useState({
     name: '',
     birth: '',
@@ -153,8 +158,8 @@ export const AuditionSection: React.FC<AuditionSectionProps> = ({ id = 'audition
     <section id={id} className={`relative ${isMobileView ? 'py-14 sm:py-20' : 'py-28'} bg-[#0E1017] border-t border-white/10`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header & Manifesto */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-20 items-start">
-          <div className="lg:col-span-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-16 items-start">
+          <div className="lg:col-span-5">
             <span className="text-xs font-mono tracking-widest text-sky-400 uppercase block mb-3">
               AUDITION RECRUITMENT
             </span>
@@ -165,7 +170,7 @@ export const AuditionSection: React.FC<AuditionSectionProps> = ({ id = 'audition
               FIND YOUR NEXT SCENE.
             </p>
             <p className="text-base sm:text-lg text-gray-200 font-medium leading-relaxed mb-6">
-              TK MANAGEMENT와 함께 배우로서의 첫 장면을 시작하세요.
+              TK MANAGEMENT와 함께 배우로서의 첫 장면을 시작하세요. 배우 전문 매니지먼트 TK매니지먼트는 무한한 잠재력과 독창적인 개성을 지닌 신인배우를 상시 모집하고 있습니다.
             </p>
 
             {/* TK Audition Identity Manifesto */}
@@ -175,7 +180,8 @@ export const AuditionSection: React.FC<AuditionSectionProps> = ({ id = 'audition
               </p>
               <p className="text-xs sm:text-sm text-gray-300 font-light leading-relaxed">
                 TK MANAGEMENT는 아직 발견되지 않은 배우의 가능성을 찾습니다.
-                경력보다 가능성을, 유명함보다 매력을, 완성된 모습보다 성장할 가능성을 봅니다.
+                경력보다 가능성을, 유명함보다 매력을, 완성된 모습보다 함께 성장할 가능성을 봅니다.
+                체계적인 인큐베이팅과 매니지먼트 지원을 통해 차세대 주역으로 발돋움할 배우들의 도전을 기다립니다.
               </p>
               <p className="text-xs font-mono tracking-widest text-sky-400 pt-2 uppercase">
                 YOUR SCENE STARTS HERE.
@@ -183,15 +189,15 @@ export const AuditionSection: React.FC<AuditionSectionProps> = ({ id = 'audition
             </div>
           </div>
 
-          {/* Criteria Cards */}
-          <div className="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Criteria & Audition Guide Cards */}
+          <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-[#131620] p-6 border border-white/5">
               <span className="text-[10px] font-mono text-sky-400 uppercase block mb-1">
-                01. CATEGORY
+                01. RECRUITMENT FIELD
               </span>
-              <h4 className="text-base font-bold text-white mb-2">신인 배우 상시 모집</h4>
-              <p className="text-xs text-gray-400">
-                드라마, 영화, OTT, 광고 등 전 분야 액팅 탤런트
+              <h3 className="text-base font-bold text-white mb-2">모집 분야</h3>
+              <p className="text-xs text-gray-300 leading-relaxed">
+                영화, 드라마, OTT 오리지널 시리즈, 연극, 광고 등 연기 활동 전반. 전문 배우 매니지먼트로서 스크린과 브라운관 전 분야에 걸친 캐스팅과 작품 활동을 지원합니다.
               </p>
             </div>
 
@@ -199,31 +205,69 @@ export const AuditionSection: React.FC<AuditionSectionProps> = ({ id = 'audition
               <span className="text-[10px] font-mono text-sky-400 uppercase block mb-1">
                 02. QUALIFICATIONS
               </span>
-              <h4 className="text-base font-bold text-white mb-2">지원 자격</h4>
-              <ul className="text-xs text-gray-300 space-y-1">
-                <li>• 성별 제한 없음</li>
-                <li>• 연령 제한 없음</li>
-                <li>• 경력 제한 없음 (신인·지망생 환영)</li>
+              <h3 className="text-base font-bold text-white mb-2">지원 대상</h3>
+              <p className="text-xs text-gray-300 leading-relaxed mb-2">
+                연기에 대한 진정성과 열정, 고유한 개성을 지닌 신인배우 및 배우 지망생
+              </p>
+              <ul className="text-xs text-gray-400 space-y-1">
+                <li>• 성별 및 연령 제한 없음</li>
+                <li>• 경력 무관 (신인·지망생 및 기성 배우 모두 가능)</li>
+                <li>• 국내외 연기 활동 결격사유 없는 자</li>
               </ul>
             </div>
 
             <div className="bg-[#131620] p-6 border border-white/5">
               <span className="text-[10px] font-mono text-sky-400 uppercase block mb-1">
-                03. PROCESS
+                03. APPLICATION
               </span>
-              <h4 className="text-base font-bold text-white mb-2">선발 전형</h4>
-              <p className="text-xs text-gray-400">
-                1차 온라인 서류 심사 → 2차 실물 카메라 오디션 &amp; 심층 면접 → 전속 계약 체결
+              <h3 className="text-base font-bold text-white mb-2">지원 방법</h3>
+              <p className="text-xs text-gray-300 leading-relaxed">
+                하단의 온라인 오디션 지원서 양식을 통해 상시 접수합니다. 별도의 접수 마감 기한 없이 24시간 언제나 온라인으로 간편하게 신인배우 오디션에 지원하실 수 있습니다.
               </p>
             </div>
 
             <div className="bg-[#131620] p-6 border border-white/5">
               <span className="text-[10px] font-mono text-sky-400 uppercase block mb-1">
-                04. BENEFITS
+                04. REQUIRED MATERIALS
               </span>
-              <h4 className="text-base font-bold text-white mb-2">소속 혜택</h4>
-              <p className="text-xs text-gray-400">
-                전문 트레이닝, 프로필 화보 촬영, 캐스팅 디렉팅 및 작품 매니지먼트 전폭 지원
+              <h3 className="text-base font-bold text-white mb-2">제출 자료</h3>
+              <ul className="text-xs text-gray-300 space-y-1 leading-relaxed">
+                <li>• 기본 인적사항 및 연락처 (필수)</li>
+                <li>• 프로필 사진 (얼굴 클로즈업 또는 상반신 / 필수)</li>
+                <li>• 자기소개 및 배우로서의 포부 서술</li>
+                <li>• 자유 연기 영상 또는 쇼릴 링크 (선택 제출 우대)</li>
+                <li>• SNS 및 포트폴리오 링크 (선택)</li>
+              </ul>
+            </div>
+
+            <div className="bg-[#131620] p-6 border border-white/5">
+              <span className="text-[10px] font-mono text-sky-400 uppercase block mb-1">
+                05. PROCESS
+              </span>
+              <h3 className="text-base font-bold text-white mb-2">오디션 진행 과정</h3>
+              <div className="text-xs text-gray-300 space-y-1 leading-relaxed">
+                <p>
+                  <strong className="text-white">1단계:</strong> 온라인 서류 및 포트폴리오 심사
+                </p>
+                <p>
+                  <strong className="text-white">2단계:</strong> 실물 카메라 오디션 &amp; 심층 심사
+                </p>
+                <p>
+                  <strong className="text-white">3단계:</strong> 최종 미팅 및 전속 매니지먼트 계약 체결
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-[#131620] p-6 border border-white/5">
+              <span className="text-[10px] font-mono text-sky-400 uppercase block mb-1">
+                06. EVALUATION &amp; INQUIRY
+              </span>
+              <h3 className="text-base font-bold text-white mb-2">심사 및 결과 안내 · 문의</h3>
+              <p className="text-xs text-gray-300 leading-relaxed mb-2">
+                접수된 지원서는 전문 캐스팅 팀이 상시 검토하며, 1차 서류 심사 합격자에 한하여 기재된 연락처로 개별 안내드립니다.
+              </p>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                오디션 접수 및 배우 캐스팅 문의는 하단 문의 링크 또는 CONTACT 페이지를 이용해 주시기 바랍니다.
               </p>
             </div>
           </div>
@@ -565,6 +609,101 @@ export const AuditionSection: React.FC<AuditionSectionProps> = ({ id = 'audition
               </div>
             </form>
           )}
+        </div>
+
+        {/* Internal Links for SEO & Seamless Navigation */}
+        <div className="mt-16 pt-10 border-t border-white/10 max-w-4xl mx-auto">
+          <div className="text-center mb-6">
+            <span className="text-[10px] font-mono tracking-widest text-sky-400 uppercase block mb-1">
+              TK MANAGEMENT NAVIGATION
+            </span>
+            <h3 className="text-lg sm:text-xl font-display font-bold text-white">
+              TK매니지먼트 둘러보기
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <a
+              href="/artists"
+              onClick={(e) => {
+                if (onNavigate) {
+                  e.preventDefault();
+                  onNavigate('artists');
+                } else if (typeof window !== 'undefined') {
+                  e.preventDefault();
+                  const el = document.getElementById('artists');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  window.history.pushState(null, '', '/artists');
+                }
+              }}
+              className="p-5 bg-[#131620] border border-white/5 hover:border-sky-500/40 transition-all block group text-left"
+            >
+              <span className="text-[10px] font-mono text-sky-400 uppercase block mb-1">
+                ARTISTS
+              </span>
+              <h4 className="text-sm font-bold text-white group-hover:text-sky-300 transition-colors mb-2 flex items-center justify-between">
+                <span>TK매니지먼트 소속 배우</span>
+                <span className="text-gray-500 group-hover:text-sky-400 transition-transform group-hover:translate-x-1">→</span>
+              </h4>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                스크린과 브라운관에서 개성 있는 연기를 펼치는 TK매니지먼트 소속 배우들의 프로필과 주요 작품 정보를 확인하세요.
+              </p>
+            </a>
+
+            <a
+              href="/contact"
+              onClick={(e) => {
+                if (onNavigate) {
+                  e.preventDefault();
+                  onNavigate('contact');
+                } else if (typeof window !== 'undefined') {
+                  e.preventDefault();
+                  const el = document.getElementById('contact');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  window.history.pushState(null, '', '/contact');
+                }
+              }}
+              className="p-5 bg-[#131620] border border-white/5 hover:border-sky-500/40 transition-all block group text-left"
+            >
+              <span className="text-[10px] font-mono text-sky-400 uppercase block mb-1">
+                CONTACT
+              </span>
+              <h4 className="text-sm font-bold text-white group-hover:text-sky-300 transition-colors mb-2 flex items-center justify-between">
+                <span>배우 캐스팅 및 매니지먼트 문의</span>
+                <span className="text-gray-500 group-hover:text-sky-400 transition-transform group-hover:translate-x-1">→</span>
+              </h4>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                영화·드라마·광고 캐스팅 제안, 매니지먼트 업무 제휴 및 신인배우 오디션 관련 문의 사항을 접수하실 수 있습니다.
+              </p>
+            </a>
+
+            <a
+              href="/news"
+              onClick={(e) => {
+                if (onNavigate) {
+                  e.preventDefault();
+                  onNavigate('news');
+                } else if (typeof window !== 'undefined') {
+                  e.preventDefault();
+                  const el = document.getElementById('news');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  window.history.pushState(null, '', '/news');
+                }
+              }}
+              className="p-5 bg-[#131620] border border-white/5 hover:border-sky-500/40 transition-all block group text-left"
+            >
+              <span className="text-[10px] font-mono text-sky-400 uppercase block mb-1">
+                NEWS
+              </span>
+              <h4 className="text-sm font-bold text-white group-hover:text-sky-300 transition-colors mb-2 flex items-center justify-between">
+                <span>TK매니지먼트 NEWS</span>
+                <span className="text-gray-500 group-hover:text-sky-400 transition-transform group-hover:translate-x-1">→</span>
+              </h4>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                배우들의 최신 캐스팅 소식, 작품 활동, 화보 및 공식 보도자료를 가장 빠르게 전해드립니다.
+              </p>
+            </a>
+          </div>
         </div>
       </div>
     </section>

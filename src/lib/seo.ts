@@ -123,10 +123,10 @@ export const SEO_PAGE_CONFIGS: Record<string, PageSEOConfig> = {
   },
   audition: {
     title: 'TK매니지먼트 신인배우 오디션 | 배우 모집',
-    description: 'TK매니지먼트에서 새로운 가능성을 가진 신인배우를 모집합니다. 배우 오디션 지원 방법과 모집 정보를 확인하세요.',
+    description: 'TK매니지먼트 신인배우 오디션 안내. 배우 모집, 지원 방법, 제출 자료 및 오디션 진행 과정을 확인하고 새로운 배우의 가능성을 TK매니지먼트와 함께 시작하세요.',
     canonical: `${SITE_DOMAIN}/audition`,
     ogTitle: 'TK매니지먼트 신인배우 오디션 | 배우 모집',
-    ogDescription: 'TK매니지먼트에서 새로운 가능성을 가진 신인배우를 모집합니다. 배우 오디션 지원 방법과 모집 정보를 확인하세요.',
+    ogDescription: 'TK매니지먼트 신인배우 오디션 안내. 배우 모집, 지원 방법, 제출 자료 및 오디션 진행 과정을 확인하고 새로운 배우의 가능성을 TK매니지먼트와 함께 시작하세요.',
     ogUrl: `${SITE_DOMAIN}/audition`,
     ogImage: DEFAULT_OG_IMAGE,
     ogImageAlt: 'TK매니지먼트 신인배우 오디션',
