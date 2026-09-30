@@ -8,6 +8,8 @@ import { ArtistModal } from './components/ArtistModal';
 import { AuditionSection } from './components/AuditionSection';
 import { NewsSection } from './components/NewsSection';
 import { ContactSection } from './components/ContactSection';
+import { TermsView } from './components/TermsView';
+import { PrivacyView } from './components/PrivacyView';
 import { Footer } from './components/Footer';
 import { ProfilePrintSheet } from './components/ProfilePrintSheet';
 import { AdminDashboard } from './components/AdminDashboard';
@@ -20,7 +22,7 @@ import { subscribeNews } from './services/newsService';
 import { subscribeCompanyInfo, DEFAULT_COMPANY_INFO } from './services/companyService';
 import { applyPageSEO, getArtistSlug, mapSlugToArtistId, isOfficialSlug, OFFICIAL_ACTORS, OFFICIAL_ACTOR_IMAGES } from './lib/seo';
 
-type ActiveMobileView = 'home' | 'about' | 'audition' | 'contact';
+type ActiveMobileView = 'home' | 'about' | 'audition' | 'contact' | 'terms' | 'privacy';
 
 /**
  * Synchronously extracts and resolves the route on Frame 0 before any DOM rendering.
@@ -132,6 +134,12 @@ export function resolveInitialRoute(): {
   }
   if (pathname === '/about' || hash === '#about') {
     return { slug: null, artist: null, isNotFound: false, activeSection: 'about' };
+  }
+  if (pathname === '/terms' || hash === '#terms') {
+    return { slug: null, artist: null, isNotFound: false, activeSection: 'terms' };
+  }
+  if (pathname === '/privacy' || hash === '#privacy') {
+    return { slug: null, artist: null, isNotFound: false, activeSection: 'privacy' };
   }
 
   return { slug: null, artist: null, isNotFound: false, activeSection: 'hero' };
@@ -284,6 +292,20 @@ export default function App() {
         setTimeout(() => {
           document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
         }, 100);
+      }
+    } else if (pathname === '/terms' || hash === '#terms') {
+      if (isCurrentMobile) {
+        setActiveMobileView('terms');
+      } else {
+        setActiveSection('terms');
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+    } else if (pathname === '/privacy' || hash === '#privacy') {
+      if (isCurrentMobile) {
+        setActiveMobileView('privacy');
+      } else {
+        setActiveSection('privacy');
+        window.scrollTo({ top: 0, behavior: 'instant' });
       }
     }
   }, [artists]);
@@ -495,6 +517,12 @@ export default function App() {
       } else if (pathname === '/contact' || hash === '#contact') {
         if (isCurrentMobile) setActiveMobileView('contact');
         else setActiveSection('contact');
+      } else if (pathname === '/terms' || hash === '#terms') {
+        if (isCurrentMobile) setActiveMobileView('terms');
+        else setActiveSection('terms');
+      } else if (pathname === '/privacy' || hash === '#privacy') {
+        if (isCurrentMobile) setActiveMobileView('privacy');
+        else setActiveSection('privacy');
       } else if (pathname === '/artists' || hash === '#artists') {
         setActiveMobileView('home');
         setActiveSection('artists');
@@ -517,6 +545,11 @@ export default function App() {
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
+          if (activeSection === 'terms' || activeSection === 'privacy') {
+            ticking = false;
+            return;
+          }
+
           const sections = ['hero', 'about', 'artists', 'news', 'audition', 'contact'];
           const scrollPos = window.scrollY + 200;
 
@@ -591,9 +624,11 @@ export default function App() {
     else if (sectionId === 'news') targetPath = '/news';
     else if (sectionId === 'contact') targetPath = '/contact';
     else if (sectionId === 'about') targetPath = '/about';
+    else if (sectionId === 'terms') targetPath = '/terms';
+    else if (sectionId === 'privacy') targetPath = '/privacy';
 
-    // On Mobile: ABOUT, AUDITION, CONTACT open as dedicated views
-    if (isCurrentMobile && (sectionId === 'about' || sectionId === 'audition' || sectionId === 'contact')) {
+    // On Mobile: ABOUT, AUDITION, CONTACT, TERMS, PRIVACY open as dedicated views
+    if (isCurrentMobile && (sectionId === 'about' || sectionId === 'audition' || sectionId === 'contact' || sectionId === 'terms' || sectionId === 'privacy')) {
       setSavedScrollPos(window.scrollY);
       setActiveMobileView(sectionId as ActiveMobileView);
       try {
@@ -603,7 +638,7 @@ export default function App() {
       return;
     }
 
-    // If currently in a mobile sub-view and navigating to home/artists/news
+    // If currently in a mobile sub-view and navigating to home/artists/news/terms/privacy
     if (activeMobileView !== 'home') {
       setActiveMobileView('home');
     }
@@ -612,6 +647,11 @@ export default function App() {
     try {
       window.history.pushState({ section: sectionId }, '', targetPath);
     } catch {}
+
+    if (sectionId === 'terms' || sectionId === 'privacy') {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      return;
+    }
 
     setTimeout(() => {
       const element = document.getElementById(sectionId);
@@ -707,94 +747,108 @@ export default function App() {
 
       {/* Main Flow (Desktop always, Mobile only when in home view) */}
       <main className={`flex-grow ${activeMobileView !== 'home' ? 'hidden md:block' : 'block'}`}>
-        {/* 1. Hero */}
-        <Hero
-          artists={artists}
-          onExploreArtists={() => handleNavigate('artists')}
-          onApplyAudition={() => handleNavigate('audition')}
-        />
-
-        {/* Mobile Navigation Strip (Visible on mobile only, in exact order: ABOUT → ARTISTS → NEWS → AUDITION → CONTACT) */}
-        <div className="md:hidden sticky top-[57px] z-30 bg-[#0B0C10]/95 backdrop-blur-md border-y border-white/10 px-1.5 py-2 shadow-lg shadow-black/40">
-          <div className="flex items-center justify-between gap-1 max-w-md mx-auto">
-            <button
-              id="mobile-nav-about"
-              onClick={() => handleNavigate('about')}
-              className="flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider text-gray-300 hover:text-white active:bg-white/10 transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap"
-            >
-              ABOUT
-            </button>
-            <button
-              id="mobile-nav-artists"
-              onClick={() => handleNavigate('artists')}
-              className={`flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap ${
-                activeSection === 'artists'
-                  ? 'text-sky-400 bg-sky-950/50 border border-sky-800/60 font-bold'
-                  : 'text-gray-300 hover:text-white'
-              }`}
-            >
-              ARTISTS
-            </button>
-            <button
-              id="mobile-nav-news"
-              onClick={() => handleNavigate('news')}
-              className={`flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap ${
-                activeSection === 'news'
-                  ? 'text-sky-400 bg-sky-950/50 border border-sky-800/60 font-bold'
-                  : 'text-gray-300 hover:text-white'
-              }`}
-            >
-              NEWS
-            </button>
-            <button
-              id="mobile-nav-audition"
-              onClick={() => handleNavigate('audition')}
-              className="flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider text-gray-300 hover:text-white active:bg-white/10 transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap"
-            >
-              AUDITION
-            </button>
-            <button
-              id="mobile-nav-contact"
-              onClick={() => handleNavigate('contact')}
-              className="flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider text-gray-300 hover:text-white active:bg-white/10 transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap"
-            >
-              CONTACT
-            </button>
-          </div>
-        </div>
-
-        {/* 2. About TK (Desktop only in flow; on mobile, accessed via ABOUT click) */}
-        <div className="hidden md:block">
-          <AboutSection artistCount={artists.filter(a => a.isActive).length} id="about" />
-        </div>
-
-        {/* 3. Artists (Core - shown directly on both mobile and desktop) */}
-        <ArtistsSection
-          artists={artists}
-          onSelectArtist={handleSelectArtist}
-        />
-
-        {/* 4. News (Core - shown directly on both mobile and desktop) */}
-        <NewsSection newsList={newsList} />
-
-        {/* 5. Audition (Desktop only in flow; on mobile, accessed via AUDITION click) */}
-        <div className="hidden md:block">
-          <AuditionSection id="audition" onNavigate={handleNavigate} />
-        </div>
-
-        {/* 6. Contact (Desktop only in flow; on mobile, accessed via CONTACT click) */}
-        <div className="hidden md:block">
-          <ContactSection
-            artists={artists.filter(a => a.isActive)}
+        {activeSection === 'terms' ? (
+          <TermsView
             companyInfo={companyInfo}
-            preselectedActor={preselectedActorForContact}
-            onClearPreselectedActor={() => setPreselectedActorForContact(null)}
-            id="contact"
+            onNavigateHome={() => handleNavigate('hero')}
           />
-        </div>
+        ) : activeSection === 'privacy' ? (
+          <PrivacyView
+            companyInfo={companyInfo}
+            onNavigateHome={() => handleNavigate('hero')}
+          />
+        ) : (
+          <>
+            {/* 1. Hero */}
+            <Hero
+              artists={artists}
+              onExploreArtists={() => handleNavigate('artists')}
+              onApplyAudition={() => handleNavigate('audition')}
+            />
+
+            {/* Mobile Navigation Strip (Visible on mobile only, in exact order: ABOUT → ARTISTS → NEWS → AUDITION → CONTACT) */}
+            <div className="md:hidden sticky top-[57px] z-30 bg-[#0B0C10]/95 backdrop-blur-md border-y border-white/10 px-1.5 py-2 shadow-lg shadow-black/40">
+              <div className="flex items-center justify-between gap-1 max-w-md mx-auto">
+                <button
+                  id="mobile-nav-about"
+                  onClick={() => handleNavigate('about')}
+                  className="flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider text-gray-300 hover:text-white active:bg-white/10 transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap"
+                >
+                  ABOUT
+                </button>
+                <button
+                  id="mobile-nav-artists"
+                  onClick={() => handleNavigate('artists')}
+                  className={`flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap ${
+                    activeSection === 'artists'
+                      ? 'text-sky-400 bg-sky-950/50 border border-sky-800/60 font-bold'
+                      : 'text-gray-300 hover:text-white'
+                  }`}
+                >
+                  ARTISTS
+                </button>
+                <button
+                  id="mobile-nav-news"
+                  onClick={() => handleNavigate('news')}
+                  className={`flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap ${
+                    activeSection === 'news'
+                      ? 'text-sky-400 bg-sky-950/50 border border-sky-800/60 font-bold'
+                      : 'text-gray-300 hover:text-white'
+                  }`}
+                >
+                  NEWS
+                </button>
+                <button
+                  id="mobile-nav-audition"
+                  onClick={() => handleNavigate('audition')}
+                  className="flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider text-gray-300 hover:text-white active:bg-white/10 transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap"
+                >
+                  AUDITION
+                </button>
+                <button
+                  id="mobile-nav-contact"
+                  onClick={() => handleNavigate('contact')}
+                  className="flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider text-gray-300 hover:text-white active:bg-white/10 transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap"
+                >
+                  CONTACT
+                </button>
+              </div>
+            </div>
+
+            {/* 2. About TK (Desktop only in flow; on mobile, accessed via ABOUT click) */}
+            <div className="hidden md:block">
+              <AboutSection artistCount={artists.filter(a => a.isActive).length} id="about" />
+            </div>
+
+            {/* 3. Artists (Core - shown directly on both mobile and desktop) */}
+            <ArtistsSection
+              artists={artists}
+              onSelectArtist={handleSelectArtist}
+            />
+
+            {/* 4. News (Core - shown directly on both mobile and desktop) */}
+            <NewsSection newsList={newsList} />
+
+            {/* 5. Audition (Desktop only in flow; on mobile, accessed via AUDITION click) */}
+            <div className="hidden md:block">
+              <AuditionSection id="audition" onNavigate={handleNavigate} />
+            </div>
+
+            {/* 6. Contact (Desktop only in flow; on mobile, accessed via CONTACT click) */}
+            <div className="hidden md:block">
+              <ContactSection
+                artists={artists.filter(a => a.isActive)}
+                companyInfo={companyInfo}
+                preselectedActor={preselectedActorForContact}
+                onClearPreselectedActor={() => setPreselectedActorForContact(null)}
+                id="contact"
+              />
+            </div>
+          </>
+        )}
       </main>
 
-      {/* Mobile Dedicated View (ABOUT / AUDITION / CONTACT) */}
+      {/* Mobile Dedicated View (ABOUT / AUDITION / CONTACT / TERMS / PRIVACY) */}
       {activeMobileView !== 'home' && (
         <div className="md:hidden min-h-screen min-h-[100dvh] bg-[#0B0C10] text-[#E5E7EB] flex flex-col z-50">
           {/* Top Sticky Header with ← BACK and CLOSE × */}
@@ -812,6 +866,8 @@ export default function App() {
               {activeMobileView === 'about' && 'ABOUT TK'}
               {activeMobileView === 'audition' && 'AUDITION'}
               {activeMobileView === 'contact' && 'CONTACT'}
+              {activeMobileView === 'terms' && 'TERMS OF SERVICE'}
+              {activeMobileView === 'privacy' && 'PRIVACY POLICY'}
             </span>
 
             <button
@@ -848,6 +904,18 @@ export default function App() {
                 onClearPreselectedActor={() => setPreselectedActorForContact(null)}
                 id="contact-mobile"
                 isMobileView={true}
+              />
+            )}
+            {activeMobileView === 'terms' && (
+              <TermsView
+                companyInfo={companyInfo}
+                onNavigateHome={handleCloseMobileView}
+              />
+            )}
+            {activeMobileView === 'privacy' && (
+              <PrivacyView
+                companyInfo={companyInfo}
+                onNavigateHome={handleCloseMobileView}
               />
             )}
           </div>

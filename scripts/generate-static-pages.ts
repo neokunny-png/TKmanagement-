@@ -140,6 +140,32 @@ export const STATIC_SECTIONS: StaticPageConfig[] = [
     subtitle: 'ABOUT TK MANAGEMENT',
     breadcrumbName: '회사 소개',
   },
+  {
+    path: 'terms',
+    title: 'TK MANAGEMENT 이용약관',
+    description: 'TK MANAGEMENT 홈페이지 이용약관입니다. 사이트 이용에 관한 권리와 의무, 오디션 및 문의 서비스 이용에 관한 사항을 안내합니다.',
+    canonical: 'https://www.tkm.kr/terms',
+    ogTitle: 'TK MANAGEMENT 이용약관',
+    ogDescription: 'TK MANAGEMENT 홈페이지 이용약관입니다. 사이트 이용에 관한 권리와 의무, 오디션 및 문의 서비스 이용에 관한 사항을 안내합니다.',
+    ogImage: 'https://www.tkm.kr/images/about/about-main.jpg',
+    ogImageAlt: 'TK MANAGEMENT 이용약관',
+    h1: 'TK MANAGEMENT 이용약관',
+    subtitle: 'TERMS OF SERVICE',
+    breadcrumbName: '이용약관',
+  },
+  {
+    path: 'privacy',
+    title: 'TK MANAGEMENT 개인정보처리방침',
+    description: 'TK MANAGEMENT의 개인정보처리방침입니다. 오디션 지원 및 문의 과정에서의 개인정보 처리 목적과 보유기간, 이용자의 권리 및 개인정보 보호 관련 사항을 안내합니다.',
+    canonical: 'https://www.tkm.kr/privacy',
+    ogTitle: 'TK MANAGEMENT 개인정보처리방침',
+    ogDescription: 'TK MANAGEMENT의 개인정보처리방침입니다. 오디션 지원 및 문의 과정에서의 개인정보 처리 목적과 보유기간, 이용자의 권리 및 개인정보 보호 관련 사항을 안내합니다.',
+    ogImage: 'https://www.tkm.kr/images/about/about-main.jpg',
+    ogImageAlt: 'TK MANAGEMENT 개인정보처리방침',
+    h1: 'TK MANAGEMENT 개인정보처리방침',
+    subtitle: 'PRIVACY POLICY',
+    breadcrumbName: '개인정보처리방침',
+  },
 ];
 
 /**
@@ -412,6 +438,69 @@ export function buildSectionHtml(baseHtml: string, section: StaticPageConfig): s
           <a href="/contact" class="p-3 bg-[#161A26] text-sky-400 hover:text-white border border-white/5 transition-colors">배우 캐스팅 및 매니지먼트 문의</a>
           <a href="/news" class="p-3 bg-[#161A26] text-sky-400 hover:text-white border border-white/5 transition-colors">TK매니지먼트 NEWS</a>
         </div>
+      </div>
+    </article>
+  </div>
+</div>`;
+  } else if (section.path === 'terms') {
+    sectionRootHtml = `<div id="root">
+  <div class="tk-section-seo-prerender bg-[#0B0C10] text-[#E5E7EB] min-h-screen py-16 px-4 flex flex-col items-center justify-center">
+    <nav aria-label="Breadcrumb" class="w-full max-w-4xl mb-6 text-xs text-gray-400 font-mono">
+      <a href="/" class="hover:text-white transition-colors">홈</a> &gt; <span class="text-white">${section.breadcrumbName}</span>
+    </nav>
+    <article class="w-full max-w-4xl bg-[#111319] border border-white/10 p-6 sm:p-10 rounded-lg text-left shadow-2xl space-y-6">
+      <div class="border-b border-white/10 pb-6">
+        <span class="text-xs font-mono tracking-widest text-sky-400 uppercase block mb-1">TERMS OF SERVICE</span>
+        <h1 class="text-2xl sm:text-4xl font-black tracking-tight text-white mb-2">TK MANAGEMENT 이용약관</h1>
+        <p class="text-xs text-gray-400 font-mono">시행일자: 2026년 9월 30일</p>
+      </div>
+      <div class="text-xs sm:text-sm text-gray-300 space-y-4 leading-relaxed">
+        <p>${section.description}</p>
+        <p>본 약관은 회사가 운영하는 공식 사이트(https://www.tkm.kr/)에서 제공하는 정보 및 관련 서비스의 이용에 관한 권리와 의무, 오디션 및 문의 서비스 이용 기준을 규정합니다.</p>
+        <div class="bg-[#161A26] p-4 border border-white/5 rounded text-xs space-y-1 font-mono">
+          <div>• 상호: ㈜TK Company (티케이컴퍼니)</div>
+          <div>• 사업자등록번호: 291-88-03353</div>
+          <div>• 대중문화예술기획업 등록: 제2025-서울강남-0418호(등록대기중)</div>
+          <div>• 홈페이지: https://www.tkm.kr/</div>
+        </div>
+      </div>
+      <div class="pt-6 border-t border-white/10 flex justify-center gap-4 text-xs font-mono">
+        <a href="/" class="text-sky-400 hover:underline">홈으로 이동</a>
+        <span class="text-gray-600">|</span>
+        <a href="/privacy" class="text-sky-400 hover:underline">개인정보처리방침</a>
+        <span class="text-gray-600">|</span>
+        <a href="/contact" class="text-sky-400 hover:underline">문의하기</a>
+      </div>
+    </article>
+  </div>
+</div>`;
+  } else if (section.path === 'privacy') {
+    sectionRootHtml = `<div id="root">
+  <div class="tk-section-seo-prerender bg-[#0B0C10] text-[#E5E7EB] min-h-screen py-16 px-4 flex flex-col items-center justify-center">
+    <nav aria-label="Breadcrumb" class="w-full max-w-4xl mb-6 text-xs text-gray-400 font-mono">
+      <a href="/" class="hover:text-white transition-colors">홈</a> &gt; <span class="text-white">${section.breadcrumbName}</span>
+    </nav>
+    <article class="w-full max-w-4xl bg-[#111319] border border-white/10 p-6 sm:p-10 rounded-lg text-left shadow-2xl space-y-6">
+      <div class="border-b border-white/10 pb-6">
+        <span class="text-xs font-mono tracking-widest text-sky-400 uppercase block mb-1">PRIVACY POLICY</span>
+        <h1 class="text-2xl sm:text-4xl font-black tracking-tight text-white mb-2">TK MANAGEMENT 개인정보처리방침</h1>
+        <p class="text-xs text-gray-400 font-mono">시행일자: 2026년 9월 30일</p>
+      </div>
+      <div class="text-xs sm:text-sm text-gray-300 space-y-4 leading-relaxed">
+        <p>${section.description}</p>
+        <p>TK MANAGEMENT는 이용자의 개인정보를 소중하게 보호하며, 「개인정보 보호법」 등 관련 법령을 철저히 준수합니다. 오디션 지원 및 문의 과정에서 수집된 정보는 명시된 목적 범위 내에서만 안전하게 처리됩니다.</p>
+        <div class="bg-[#161A26] p-4 border border-white/5 rounded text-xs space-y-1 font-mono">
+          <div>• 개인정보 보호 담당부서: TK MANAGEMENT 개인정보 보호 담당</div>
+          <div>• 대표전화: 02-540-8820</div>
+          <div>• 공식 이메일: taz0206@naver.com</div>
+        </div>
+      </div>
+      <div class="pt-6 border-t border-white/10 flex justify-center gap-4 text-xs font-mono">
+        <a href="/" class="text-sky-400 hover:underline">홈으로 이동</a>
+        <span class="text-gray-600">|</span>
+        <a href="/terms" class="text-sky-400 hover:underline">이용약관</a>
+        <span class="text-gray-600">|</span>
+        <a href="/contact" class="text-sky-400 hover:underline">문의하기</a>
       </div>
     </article>
   </div>

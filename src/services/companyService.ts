@@ -5,10 +5,10 @@ import { CompanyInfo } from '../types';
 export const DEFAULT_COMPANY_INFO: CompanyInfo = {
   companyName: '㈜TK Company (티케이컴퍼니)',
   brandName: 'TK MANAGEMENT (티케이 매니지먼트)',
-  ceo: '조태경',
-  privacyOfficer: '조태경',
-  businessNumber: '211-88-92410',
-  entertainmentRegistration: '제2025-서울강남-0418호',
+  ceo: '',
+  privacyOfficer: '개인정보보호 담당 부서',
+  businessNumber: '291-88-03353',
+  entertainmentRegistration: '제2025-서울강남-0418호(등록대기중)',
   address: '서울특별시 마포구 마포나루길 442 마포인트 3층',
   addressEn: '3F Mapoint, 442 Maponaru-gil, Mapo-gu, Seoul, Korea',
   tel: '02-540-8820',
@@ -17,7 +17,7 @@ export const DEFAULT_COMPANY_INFO: CompanyInfo = {
   description: '새로운 얼굴을 발견하고, 배우의 다음 장면을 만들어가는 프리미엄 액터스 매니지먼트. 우리는 가능성을 발견하고 인재를 개발하며 새로운 기회를 창출합니다.',
   sloganKo: '새로운 얼굴을 발견하고, 배우의 다음 장면을 만들어가는 프리미엄 액터스 매니지먼트.',
   sloganEn: 'YOUR NEXT SCENE. STARTS HERE.',
-  copyright: '© 2026 TK Company Co., Ltd. All Rights Reserved.',
+  copyright: '© TK MANAGEMENT. All rights reserved.',
 };
 
 const SETTINGS_COLLECTION = 'settings';
@@ -41,8 +41,8 @@ export function subscribeCompanyInfo(
         onUpdate({
           companyName: data.companyName || DEFAULT_COMPANY_INFO.companyName,
           brandName: data.brandName || DEFAULT_COMPANY_INFO.brandName,
-          ceo: data.ceo || DEFAULT_COMPANY_INFO.ceo,
-          privacyOfficer: data.privacyOfficer || DEFAULT_COMPANY_INFO.privacyOfficer,
+          ceo: '',
+          privacyOfficer: data.privacyOfficer && data.privacyOfficer.includes('부서') ? data.privacyOfficer : DEFAULT_COMPANY_INFO.privacyOfficer,
           businessNumber: data.businessNumber || DEFAULT_COMPANY_INFO.businessNumber,
           entertainmentRegistration: data.entertainmentRegistration || DEFAULT_COMPANY_INFO.entertainmentRegistration,
           address: data.address || DEFAULT_COMPANY_INFO.address,

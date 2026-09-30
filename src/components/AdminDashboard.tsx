@@ -1798,15 +1798,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                     <div>
                       <label className="block text-gray-300 font-medium mb-1">
-                        대표이사 (CEO) *
+                        대표이사 (CEO)
                       </label>
                       <input
                         type="text"
                         value={companyForm.ceo}
                         onChange={(e) => setCompanyForm({ ...companyForm, ceo: e.target.value })}
-                        placeholder="예: 조태경"
+                        placeholder="대표이사"
                         className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
-                        required
                       />
                     </div>
 
@@ -1818,7 +1817,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         type="text"
                         value={companyForm.privacyOfficer}
                         onChange={(e) => setCompanyForm({ ...companyForm, privacyOfficer: e.target.value })}
-                        placeholder="예: 조태경"
+                        placeholder="예: 개인정보보호 담당 부서"
                         className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
                         required
                       />
@@ -1832,7 +1831,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         type="text"
                         value={companyForm.businessNumber}
                         onChange={(e) => setCompanyForm({ ...companyForm, businessNumber: e.target.value })}
-                        placeholder="예: 211-88-92410"
+                        placeholder="예: 291-88-03353"
                         className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
                         required
                       />
@@ -1846,7 +1845,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         type="text"
                         value={companyForm.entertainmentRegistration}
                         onChange={(e) => setCompanyForm({ ...companyForm, entertainmentRegistration: e.target.value })}
-                        placeholder="예: 제2025-서울강남-0418호"
+                        placeholder="예: 제2025-서울강남-0418호(등록대기중)"
                         className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
                         required
                       />

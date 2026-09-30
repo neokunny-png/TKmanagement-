@@ -116,20 +116,54 @@ export const Footer: React.FC<FooterProps> = ({
             <h4 className="text-xs font-mono text-white uppercase tracking-widest font-bold mb-3">
               COMPANY INFORMATION
             </h4>
-            <div>상호명 : {companyInfo.companyName}</div>
-            <div>브랜드 : {companyInfo.brandName}</div>
-            <div>대표이사 : {companyInfo.ceo} | 개인정보보호책임자 : {companyInfo.privacyOfficer}</div>
-            <div>사업자등록번호 : {companyInfo.businessNumber}</div>
-            <div>대중문화예술기획업 등록번호 : {companyInfo.entertainmentRegistration}</div>
-            <div>주소 : {companyInfo.address}</div>
-            <div>대표전화 : {companyInfo.tel} | 팩스 : {companyInfo.fax}</div>
+            <div className="text-white font-bold font-display text-xs">
+              {companyInfo.companyName || '㈜TK Company (티케이컴퍼니)'}
+            </div>
+            <div>사업자등록번호 : {companyInfo.businessNumber || '291-88-03353'}</div>
+            <div>대중문화예술기획업 등록 : {companyInfo.entertainmentRegistration || '제2025-서울강남-0418호(등록대기중)'}</div>
+
+            {/* Legal Links */}
+            <div className="pt-2.5 flex items-center space-x-2 text-xs font-medium">
+              <a
+                href="/terms"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onNavigate('terms');
+                }}
+                className="text-gray-300 hover:text-white underline underline-offset-4 transition-colors"
+              >
+                이용약관
+              </a>
+              <span className="text-gray-600">|</span>
+              <a
+                href="/privacy"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onNavigate('privacy');
+                }}
+                className="text-gray-300 hover:text-white underline underline-offset-4 transition-colors"
+              >
+                개인정보처리방침
+              </a>
+              <span className="text-gray-600">|</span>
+              <a
+                href="/contact"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onNavigate('contact');
+                }}
+                className="text-gray-300 hover:text-white underline underline-offset-4 transition-colors"
+              >
+                문의
+              </a>
+            </div>
           </div>
         </div>
 
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-gray-400">
           <div>
-            {companyInfo.copyright || '© 2026 TK Company Co., Ltd. All Rights Reserved.'}
+            © TK MANAGEMENT. All rights reserved.
           </div>
 
           <div className="flex items-center space-x-6">

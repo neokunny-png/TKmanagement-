@@ -28,6 +28,10 @@ http://www.tkm.kr/*               https://www.tkm.kr/:splat    301!
 /contact/                         /contact/index.html                200
 /about                            /about/index.html                  200
 /about/                           /about/index.html                  200
+/terms                            /terms/index.html                  200
+/terms/                           /terms/index.html                  200
+/privacy                          /privacy/index.html                200
+/privacy/                         /privacy/index.html                200
 
 # 5. React SPA Fallback for client-side routing
 /*                                /index.html                        200
