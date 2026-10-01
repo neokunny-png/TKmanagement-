@@ -299,6 +299,10 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
                       <p className="text-sm font-mono tracking-widest text-gray-300 uppercase mt-1">
                         {artist.nameEn}
                       </p>
+                      <div className="flex items-center gap-1.5 mt-2 text-xs font-mono text-gray-300">
+                        <span className="text-sky-400 font-semibold">소속:</span>
+                        <span className="text-white font-medium">TK MANAGEMENT (TK매니지먼트)</span>
+                      </div>
                     </div>
 
                     {artist.instagram && (

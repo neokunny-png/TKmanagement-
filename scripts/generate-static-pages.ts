@@ -1,5 +1,7 @@
 import fs from 'fs';
 import path from 'path';
+import { STATIC_OFFICIAL_ARTISTS } from '../src/data/artists';
+import { getGroupedFilmography } from '../src/types';
 
 export interface StaticActor {
   slug: string;
@@ -40,8 +42,8 @@ export const OFFICIAL_STATIC_ACTORS: StaticActor[] = [
     slug: 'park-minwook',
     nameKo: '박민욱',
     nameEn: 'PARK MIN WOOK',
-    title: '박민욱 배우 | TK매니지먼트',
-    description: 'TK매니지먼트 소속 배우 박민욱의 프로필과 주요 경력, 활동 정보를 확인하세요.',
+    title: '박민욱 배우 프로필 | TK매니지먼트',
+    description: '박민욱 배우의 프로필과 활동 정보를 확인할 수 있습니다. 박민욱은 TK MANAGEMENT 소속 배우로 작품 활동과 다양한 캐스팅 기회를 통해 활동 영역을 넓혀가고 있습니다.',
     canonical: 'https://www.tkm.kr/artists/park-minwook',
     image: 'https://www.tkm.kr/images/actors/park-minwook-v5-973012cc.jpg',
     alt: 'TK매니지먼트 소속 배우 박민욱 프로필',
@@ -51,8 +53,8 @@ export const OFFICIAL_STATIC_ACTORS: StaticActor[] = [
     slug: 'park-hyunjin',
     nameKo: '박현진',
     nameEn: 'PARK HYUN JIN',
-    title: '박현진 배우 | TK매니지먼트',
-    description: 'TK매니지먼트 소속 배우 박현진의 프로필과 주요 경력, 활동 정보를 확인하세요.',
+    title: '박현진 배우 프로필 | TK매니지먼트',
+    description: '박현진 배우의 프로필과 활동 정보를 확인할 수 있습니다. 박현진은 TK MANAGEMENT 소속 배우로 작품 활동과 다양한 캐스팅 기회를 통해 활동 영역을 넓혀가고 있습니다.',
     canonical: 'https://www.tkm.kr/artists/park-hyunjin',
     image: 'https://www.tkm.kr/images/actors/park-hyunjin-v5-d3cb5da4.jpg',
     alt: 'TK매니지먼트 소속 배우 박현진 프로필',
@@ -230,6 +232,10 @@ export function buildActorHtml(baseHtml: string, actor: StaticActor): string {
   );
 
   // 6. Inject Schema.org Person, WebPage, and BreadcrumbList
+  const artist = STATIC_OFFICIAL_ARTISTS.find(
+    (a) => a.id === `artist-${actor.slug}` || a.nameKo === actor.nameKo
+  );
+
   const jsonLdData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -237,16 +243,21 @@ export function buildActorHtml(baseHtml: string, actor: StaticActor): string {
         "@type": "Person",
         "@id": `${actor.canonical}#person`,
         "name": actor.nameKo,
-        "alternateName": actor.nameEn,
+        "alternateName": [actor.nameEn, `${actor.nameKo} 배우`],
         "url": actor.canonical,
         "image": actor.image,
         "jobTitle": "배우 (Actor)",
+        "description": actor.description,
         "worksFor": {
           "@type": "Organization",
           "@id": "https://www.tkm.kr/#organization",
           "name": "TK매니지먼트",
+          "alternateName": ["TK MANAGEMENT", "티케이매니지먼트", "㈜TK Company"],
           "url": "https://www.tkm.kr/"
-        }
+        },
+        ...(artist?.birth ? { "birthDate": artist.birth.replace(/\./g, '-') } : {}),
+        ...(artist?.height ? { "height": `${artist.height} cm` } : {}),
+        ...(artist?.education ? { "alumniOf": artist.education } : {})
       },
       {
         "@type": "WebPage",
@@ -291,24 +302,101 @@ export function buildActorHtml(baseHtml: string, actor: StaticActor): string {
   const jsonLdString = `\n    <!-- Actor Schema.org JSON-LD (Pre-rendered) -->\n    <script type="application/ld+json" id="actor-jsonld">\n${JSON.stringify(jsonLdData, null, 2)}\n    </script>\n  </head>`;
   html = html.replace('</head>', jsonLdString);
 
+  // Render filmography categories if artist data exists
+  let filmographyHtml = '';
+  if (artist && artist.filmography && artist.filmography.length > 0) {
+    const groups = getGroupedFilmography(artist.filmography);
+    filmographyHtml = `
+      <div class="mt-8 pt-6 border-t border-white/10 text-left space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-sky-500/30">
+          <h2 class="text-sm font-bold text-white tracking-wider uppercase font-mono">
+            FILMOGRAPHY <span class="text-sky-400 font-normal">(${artist.filmography.length}편)</span>
+          </h2>
+          <span class="text-[11px] font-mono text-gray-400">주요 출연 작품</span>
+        </div>
+        <div class="space-y-4">
+          ${groups.map(group => `
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between pb-1 border-b border-white/10 text-xs font-mono">
+                <span class="text-sky-300 font-bold">${group.categoryLabelEn} (${group.categoryLabelKo})</span>
+                <span class="text-gray-400">${group.items.length}편</span>
+              </div>
+              <div class="divide-y divide-white/5 bg-[#161A26] border border-white/5 rounded">
+                ${group.items.map(item => `
+                  <div class="p-2.5 sm:p-3 flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 text-xs">
+                    <div class="flex items-baseline space-x-2.5">
+                      <span class="font-mono text-sky-400 font-bold min-w-[36px]">${item.year}</span>
+                      <strong class="text-white">${item.title}</strong>
+                    </div>
+                    <div class="text-gray-300 font-mono sm:text-right pl-11 sm:pl-0 text-[11px]">
+                      <span>${item.role}</span>
+                      ${item.note ? `<span class="text-gray-500 ml-1">(${item.note})</span>` : ''}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
   // 7. Inject meaningful pre-rendered HTML with strict H1 and alt text inside #root
   const actorRootHtml = `<div id="root">
   <div class="tk-actor-seo-prerender bg-[#0B0C10] text-[#E5E7EB] min-h-screen py-16 px-4 flex flex-col items-center justify-center">
-    <nav aria-label="Breadcrumb" class="w-full max-w-2xl mb-6 text-xs text-gray-400 font-mono">
-      <a href="/" class="hover:text-white transition-colors">홈</a> &gt; <a href="/artists" class="hover:text-white transition-colors">소속 배우</a> &gt; <span class="text-white">${actor.nameKo}</span>
+    <nav aria-label="Breadcrumb" class="w-full max-w-3xl mb-6 text-xs text-gray-400 font-mono">
+      <a href="/" class="hover:text-white transition-colors">홈</a> &gt; <a href="/artists" class="hover:text-white transition-colors">소속 배우</a> &gt; <span class="text-white">${actor.nameKo} 배우</span>
     </nav>
-    <article class="w-full max-w-2xl bg-[#111319] border border-white/10 p-6 sm:p-8 rounded-lg text-center shadow-2xl">
-      <div class="aspect-[3/4] max-w-sm mx-auto overflow-hidden rounded mb-6 border border-white/10 bg-black/40">
+    <article class="w-full max-w-3xl bg-[#111319] border border-white/10 p-6 sm:p-8 rounded-lg text-center shadow-2xl">
+      <div class="aspect-[3/4] max-w-xs sm:max-w-sm mx-auto overflow-hidden rounded mb-6 border border-white/10 bg-black/40">
         <img src="${actor.image}" alt="${actor.alt}" class="w-full h-full object-cover" />
       </div>
       <span class="text-xs font-mono tracking-widest text-sky-400 uppercase block mb-1">TK MANAGEMENT ACTOR</span>
       <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-white mb-2">${actor.nameKo} 배우</h1>
-      <p class="text-sm font-mono text-gray-400 uppercase mb-4 tracking-widest">${actor.nameEn}</p>
-      <p class="text-sm text-gray-300 leading-relaxed max-w-lg mx-auto mb-6">${actor.description}</p>
-      <div class="pt-4 border-t border-white/10 flex justify-center gap-4 text-xs font-mono">
+      <p class="text-sm font-mono text-gray-400 uppercase mb-3 tracking-widest">${actor.nameEn}</p>
+      
+      <div class="inline-flex items-center gap-2 bg-[#161A26] border border-white/10 px-3.5 py-1.5 text-xs font-mono text-gray-300 rounded mb-4">
+        <span class="text-sky-400">소속:</span>
+        <strong class="text-white">TK MANAGEMENT (TK매니지먼트)</strong>
+      </div>
+
+      <p class="text-sm text-gray-300 leading-relaxed max-w-xl mx-auto mb-6">${actor.description}</p>
+
+      ${artist?.bio && artist.bio !== actor.description ? `
+        <div class="mb-6 p-4 bg-[#141824] border-l-2 border-sky-400 text-xs sm:text-sm text-gray-300 leading-relaxed text-left max-w-xl mx-auto">
+          <span class="text-[10px] font-mono text-sky-400 uppercase font-bold block mb-1">배우 소개</span>
+          <p>${artist.bio}</p>
+        </div>
+      ` : ''}
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono text-left max-w-xl mx-auto my-6">
+        <div class="bg-[#161A26] p-2.5 border border-white/5">
+          <span class="text-gray-500 block text-[10px]">소속사</span>
+          <strong class="text-white">TK MANAGEMENT</strong>
+        </div>
+        <div class="bg-[#161A26] p-2.5 border border-white/5">
+          <span class="text-gray-500 block text-[10px]">직업</span>
+          <strong class="text-white">배우 (Actor)</strong>
+        </div>
+        <div class="bg-[#161A26] p-2.5 border border-white/5">
+          <span class="text-gray-500 block text-[10px]">생년월일</span>
+          <strong class="text-white">${artist?.birth || '-'}</strong>
+        </div>
+        <div class="bg-[#161A26] p-2.5 border border-white/5">
+          <span class="text-gray-500 block text-[10px]">신장 / 성별</span>
+          <strong class="text-white">${artist?.height ? `${artist.height}cm` : '-'} · ${actor.gender === 'Female' ? '여성' : '남성'}</strong>
+        </div>
+      </div>
+
+      ${filmographyHtml}
+
+      <div class="mt-8 pt-6 border-t border-white/10 flex flex-wrap justify-center gap-4 text-xs font-mono">
         <a href="/artists" class="text-sky-400 hover:underline">소속 배우 목록</a>
         <span class="text-gray-600">|</span>
         <a href="/contact" class="text-sky-400 hover:underline">캐스팅 및 비즈니스 문의</a>
+        <span class="text-gray-600">|</span>
+        <a href="/" class="text-sky-400 hover:underline">TK매니지먼트 홈</a>
       </div>
     </article>
   </div>
