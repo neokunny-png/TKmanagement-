@@ -23,20 +23,31 @@ export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 
-// Configure Storage retry timeouts so it doesn't block indefinitely
+// Configure Storage retry timeouts so unprovisioned bucket fails fast and falls back cleanly
 try {
-  storage.maxUploadRetryTime = 8000;
-  storage.maxOperationRetryTime = 8000;
+  storage.maxUploadRetryTime = 2500;
+  storage.maxOperationRetryTime = 2500;
 } catch {
   // Ignore
 }
 
+let anonymousAuthUnavailable = false;
+
 // Automatically ensure Firebase Auth is initialized to support Storage/Firestore rules
 export async function ensureFirebaseAuth(): Promise<void> {
-  if (auth.currentUser) return;
+  if (typeof window === 'undefined') return;
+  if (auth.currentUser || anonymousAuthUnavailable) return;
   try {
     await signInAnonymously(auth);
-  } catch (err) {
+  } catch (err: any) {
+    if (
+      err?.code === 'auth/admin-restricted-operation' ||
+      err?.code === 'auth/operation-not-allowed' ||
+      err?.code === 'auth/configuration-not-found'
+    ) {
+      anonymousAuthUnavailable = true;
+      return;
+    }
     console.warn('Anonymous auth note:', err);
   }
 }

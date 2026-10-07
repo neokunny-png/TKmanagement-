@@ -550,7 +550,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const processAndUploadGalleryFiles = async (fileList: File[]) => {
     if (!editingArtist) return;
-    const imageFiles = fileList.filter(f => f.type.startsWith('image/'));
+    const imageFiles = fileList.filter(
+      f =>
+        f.type.startsWith('image/') ||
+        /\.(jpe?g|png|webp|gif|avif|bmp)$/i.test(f.name || '')
+    );
     if (imageFiles.length === 0) {
       showToast('⚠️ 이미지 파일(JPG, PNG, WEBP 등)만 등록 가능합니다.');
       return;
@@ -567,7 +571,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     for (let i = 0; i < imageFiles.length; i++) {
       const file = imageFiles[i];
-      setGalleryUploadProgress(`사진 ${i + 1}/${imageFiles.length}장 Firebase Storage 업로드 중...`);
+      // Normalize repeated extensions like "choi-eunseo-profile03.jpg.jpg" -> "choi-eunseo-profile03.jpg"
+      const displayFileName = (file.name || `photo-${i + 1}.jpg`).replace(
+        /(\.(jpe?g|png|webp|gif|avif|bmp))+$/i,
+        '$1'
+      );
+
+      if (file.size > 25 * 1024 * 1024) {
+        showToast(`⚠️ 사진 ${displayFileName} 용량이 너무 큽니다 (최대 25MB).`);
+        continue;
+      }
+
+      setGalleryUploadProgress(`사진 ${i + 1}/${imageFiles.length}장 최적화 및 업로드 중... (${displayFileName})`);
       try {
         const photoResult = await uploadArtistGalleryPhoto(
           artistId,
@@ -577,23 +592,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         uploadedPhotos.push(photoResult);
       } catch (err: any) {
         console.error('Gallery item upload error:', err);
-        showToast(`⚠️ 사진 ${file.name} 업로드 실패: ${err.message || '오류'}`);
+        showToast(`⚠️ 사진 ${displayFileName} 업로드 실패: ${err.message || '오류'}`);
       }
     }
 
     if (uploadedPhotos.length > 0) {
-      const mergedGallery = [...currentGallery, ...uploadedPhotos];
+      const mergedGallery = [...currentGallery, ...uploadedPhotos].map((item, idx) => ({
+        ...item,
+        order: idx,
+      }));
       setEditingArtist(prev => prev ? ({
         ...prev,
         galleryImages: mergedGallery
       }) : null);
-      showToast(`📸 ${uploadedPhotos.length}장의 갤러리 사진이 등록되었습니다.`);
 
       // Auto-sync updated gallery to Firestore if editing an existing artist
       if (!isNewArtist && editingArtist.nameKo) {
-        updateArtistGalleryInDb(artistId, mergedGallery).catch(syncErr => {
+        try {
+          await updateArtistGalleryInDb(artistId, mergedGallery);
+          if (onUpdateArtists) {
+            onUpdateArtists(
+              artists.map(a => (a.id === artistId ? { ...a, galleryImages: mergedGallery } : a))
+            );
+          }
+          showToast(`📸 ${uploadedPhotos.length}장의 갤러리 사진이 등록 및 저장되었습니다.`);
+        } catch (syncErr) {
           console.warn('Auto-sync gallery to DB note:', syncErr);
-        });
+          showToast(`📸 ${uploadedPhotos.length}장의 갤러리 사진이 추가되었습니다.`);
+        }
+      } else {
+        showToast(`📸 ${uploadedPhotos.length}장의 갤러리 사진이 등록되었습니다.`);
       }
     }
 
@@ -609,7 +637,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     );
 
     const currentGallery = editingArtist.galleryImages ? [...editingArtist.galleryImages] : [];
-    const filtered = currentGallery.filter(p => p.id !== photoId);
+    const filtered = currentGallery
+      .filter(p => p.id !== photoId)
+      .map((item, idx) => ({ ...item, order: idx }));
 
     setEditingArtist(prev => prev ? ({
       ...prev,
@@ -623,9 +653,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     // Auto-sync updated gallery to Firestore if editing an existing artist
     if (!isNewArtist && editingArtist.nameKo) {
-      updateArtistGalleryInDb(artistId, filtered).catch(syncErr => {
-        console.warn('Auto-sync gallery delete to DB note:', syncErr);
-      });
+      updateArtistGalleryInDb(artistId, filtered)
+        .then(() => {
+          if (onUpdateArtists) {
+            onUpdateArtists(
+              artists.map(a => (a.id === artistId ? { ...a, galleryImages: filtered } : a))
+            );
+          }
+        })
+        .catch(syncErr => {
+          console.warn('Auto-sync gallery delete to DB note:', syncErr);
+        });
     }
 
     showToast('🗑️ 갤러리 사진이 삭제되었습니다.');
@@ -646,6 +684,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       ...prev,
       galleryImages: updatedList
     }) : null);
+
+    if (!isNewArtist && editingArtist.nameKo) {
+      const artistId = getCanonicalArtistId(
+        editingArtist.id || '',
+        `${editingArtist.nameKo || ''} ${editingArtist.nameEn || ''}`
+      );
+      updateArtistGalleryInDb(artistId, updatedList)
+        .then(() => {
+          if (onUpdateArtists) {
+            onUpdateArtists(
+              artists.map(a => (a.id === artistId ? { ...a, galleryImages: updatedList } : a))
+            );
+          }
+        })
+        .catch(syncErr => {
+          console.warn('Auto-sync gallery reorder to DB note:', syncErr);
+        });
+    }
   };
 
   const handleSignOut = () => {

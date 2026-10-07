@@ -14,9 +14,14 @@ export function isValidArtistImageUrl(url?: string | null): boolean {
   const trimmed = url.trim();
   if (!trimmed) return false;
 
-  // Strictly forbidden patterns
-  if (trimmed.startsWith('data:')) return false;
+  // Strictly reject temporary browser blob URLs
   if (trimmed.startsWith('blob:')) return false;
+
+  // Allow optimized compressed data:image/* URLs (used when Firebase Storage bucket is unavailable)
+  if (trimmed.startsWith('data:image/')) {
+    return trimmed.length > 64 && trimmed.length < 450000;
+  }
+
   const lower = trimmed.toLowerCase();
   if (
     lower.includes('placeholder') ||

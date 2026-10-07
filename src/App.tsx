@@ -50,17 +50,28 @@ export function resolveInitialRoute(): {
     }
 
     if (isOfficialSlug(rawSlug)) {
-      // 1. Static verified official record (immediate Frame 0, complete data, zero network dependence)
       const canonicalId = mapSlugToArtistId(rawSlug);
+      const cached = getCachedArtistBySlug(rawSlug);
       const staticMatch = STATIC_OFFICIAL_ARTISTS.find(
         a => getArtistSlug(a) === rawSlug || a.id === canonicalId
       );
       if (staticMatch) {
-        return { slug: rawSlug, artist: staticMatch, isNotFound: false, activeSection: 'artists' };
+        const mergedInitial: Artist = cached
+          ? {
+              ...staticMatch,
+              ...cached,
+              id: staticMatch.id,
+              nameKo: staticMatch.nameKo,
+              nameEn: staticMatch.nameEn,
+              galleryImages:
+                cached.galleryImages && cached.galleryImages.length > 0
+                  ? cached.galleryImages
+                  : staticMatch.galleryImages || [],
+            }
+          : staticMatch;
+        return { slug: rawSlug, artist: mergedInitial, isNotFound: false, activeSection: 'artists' };
       }
 
-      // 2. Look up cached record
-      const cached = getCachedArtistBySlug(rawSlug);
       if (cached) {
         return { slug: rawSlug, artist: cached, isNotFound: false, activeSection: 'artists' };
       }

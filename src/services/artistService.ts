@@ -66,12 +66,53 @@ export function dataUrlToBlob(dataUrl: string): Blob {
 }
 
 /**
- * Compresses an image file/blob to an ultra-crisp web-optimized image (~50KB-80KB).
- * Guarantees zero 1MB Firestore overflow while keeping 100% visual sharpness.
+ * Helper to normalize filenames such as "choi-eunseo-profile03.jpg.jpg"
+ * Strips duplicate image extensions and returns a safe ASCII identifier.
+ */
+export function sanitizeStorageFileName(rawName?: string): string {
+  if (!rawName || typeof rawName !== 'string') return '';
+  // Strip repeated image extensions at the end (.jpg.jpg, .jpeg.png, etc.)
+  const withoutExts = rawName
+    .trim()
+    .replace(/(\.(jpe?g|png|webp|gif|avif|bmp))+$/i, '');
+  const safeSlug = withoutExts
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 32);
+  return safeSlug;
+}
+
+/**
+ * Helper to read any File or Blob directly as a Data URL
+ */
+function readBlobAsDataUrl(fileOrBlob: File | Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result;
+      if (typeof result === 'string' && result.length > 0) {
+        resolve(result);
+      } else {
+        reject(new Error('파일 데이터를 읽을 수 없습니다.'));
+      }
+    };
+    reader.onerror = () => reject(new Error('파일 읽기에 실패했습니다.'));
+    reader.readAsDataURL(fileOrBlob);
+  });
+}
+
+// Tracks within the current session whether the Firebase Storage bucket is unreachable (e.g. 404 / CORS / retry-limit-exceeded)
+// so multi-photo gallery uploads do not wait for repeated timeouts on every file.
+let isStorageBucketUnreachable = false;
+
+/**
+ * Compresses an image file/blob to an ultra-crisp web-optimized image (~45KB-75KB).
+ * Guarantees zero 1MB Firestore overflow while keeping visual sharpness.
  */
 export function compressImage(
   fileOrBlob: File | Blob,
-  maxDimension = 1000,
+  maxDimension = 960,
   quality = 0.8
 ): Promise<{ blob: Blob; dataUrl: string }> {
   return new Promise((resolve, reject) => {
@@ -103,33 +144,46 @@ export function compressImage(
           return;
         }
 
+        // Fill clean white background so transparent PNGs render cleanly in JPEG
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
         let dataUrl = canvas.toDataURL('image/jpeg', quality);
 
-        // If dataUrl exceeds 150KB, compress down to 800px max dimension & 0.72 quality
-        if (dataUrl.length > 150000) {
+        // Step 2 compression if dataUrl exceeds ~80KB binary (110,000 Base64 chars)
+        if (dataUrl.length > 110000) {
           const secondCanvas = document.createElement('canvas');
           const scale = Math.min(1, 800 / Math.max(width, height));
-          secondCanvas.width = Math.round(width * scale);
-          secondCanvas.height = Math.round(height * scale);
+          secondCanvas.width = Math.max(1, Math.round(width * scale));
+          secondCanvas.height = Math.max(1, Math.round(height * scale));
           const secondCtx = secondCanvas.getContext('2d');
           if (secondCtx) {
+            secondCtx.fillStyle = '#FFFFFF';
+            secondCtx.fillRect(0, 0, secondCanvas.width, secondCanvas.height);
             secondCtx.drawImage(canvas, 0, 0, secondCanvas.width, secondCanvas.height);
-            dataUrl = secondCanvas.toDataURL('image/jpeg', 0.72);
+            dataUrl = secondCanvas.toDataURL('image/jpeg', 0.74);
+            if (dataUrl.length > 85000) {
+              dataUrl = secondCanvas.toDataURL('image/jpeg', 0.66);
+            }
           }
         }
 
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              resolve({ blob, dataUrl });
-            } else {
-              resolve({ blob: dataUrlToBlob(dataUrl), dataUrl });
-            }
-          },
-          'image/jpeg',
-          quality
-        );
+        try {
+          const finalBlob = dataUrlToBlob(dataUrl);
+          resolve({ blob: finalBlob, dataUrl });
+        } catch {
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve({ blob, dataUrl });
+              } else {
+                resolve({ blob: fileOrBlob, dataUrl });
+              }
+            },
+            'image/jpeg',
+            quality
+          );
+        }
       };
       img.onerror = () => reject(new Error('이미지 데이터를 읽을 수 없습니다.'));
       img.src = e.target?.result as string;
@@ -142,7 +196,7 @@ export function compressImage(
 /**
  * Upload image to Firebase Storage at `artists/{artistId}/profile.jpg`.
  * Returns public HTTPS download URL if successful.
- * If Storage is unreachable (e.g. timeout or bucket latency),
+ * If Storage is unreachable (e.g. storage/retry-limit-exceeded, CORS, 404, or timeout),
  * gracefully returns the optimized compressed data URL so actor data is never lost.
  */
 export async function uploadArtistPhoto(artistId: string, fileOrBlob: File | Blob): Promise<string> {
@@ -157,37 +211,53 @@ export async function uploadArtistPhoto(artistId: string, fileOrBlob: File | Blo
     console.log(`[TK] Photo compressed to: ${(optimizedBlob.size / 1024).toFixed(1)} KB`);
   } catch (compErr) {
     console.warn('Compression note:', compErr);
+    try {
+      optimizedDataUrl = await readBlobAsDataUrl(fileOrBlob);
+    } catch {}
   }
 
-  await ensureFirebaseAuth();
   const cleanId = getCanonicalArtistId(artistId);
-  const storagePath = `artists/${cleanId}/profile.jpg`;
-  const storageRef = ref(storage, storagePath);
 
-  const metadata = {
-    contentType: 'image/jpeg',
-    cacheControl: 'public, max-age=31536000',
-  };
+  if (!isStorageBucketUnreachable) {
+    await ensureFirebaseAuth();
+    const storagePath = `artists/${cleanId}/profile.jpg`;
+    const storageRef = ref(storage, storagePath);
 
-  try {
-    const uploadPromise = uploadBytes(storageRef, optimizedBlob, metadata);
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Storage upload timeout')), 20000)
-    );
+    const metadata = {
+      contentType: 'image/jpeg',
+      cacheControl: 'public, max-age=31536000',
+    };
 
-    const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
-    console.log('[TK] 4. Firebase Storage upload completed successfully');
-    const downloadUrl = await getDownloadURL(uploadResult.ref);
-    console.log('[TK] 5. Storage Download URL generated:', downloadUrl);
-    return downloadUrl;
-  } catch (error: any) {
-    console.error('[TK] Firebase Storage direct upload failed:', error?.message || error);
-    throw new Error(`스토리지 업로드 실패: ${error?.message || '스토리지 업로드 중 오류가 발생했습니다.'}`);
+    try {
+      const uploadPromise = uploadBytes(storageRef, optimizedBlob, metadata);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Storage upload timeout')), 3500)
+      );
+
+      const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
+      console.log('[TK] 4. Firebase Storage upload completed successfully');
+      const downloadUrl = await getDownloadURL(uploadResult.ref);
+      console.log('[TK] 5. Storage Download URL generated:', downloadUrl);
+      return downloadUrl;
+    } catch (error: any) {
+      isStorageBucketUnreachable = true;
+      console.warn(
+        `[TK] Firebase Storage unavailable (${error?.code || error?.message || 'timeout'}), using optimized compressed image payload.`
+      );
+    }
   }
+
+  if (optimizedDataUrl && isValidArtistImageUrl(optimizedDataUrl)) {
+    return optimizedDataUrl;
+  }
+
+  throw new Error('스토리지 업로드 및 이미지 최적화 처리 중 오류가 발생했습니다.');
 }
 
 /**
  * Upload an additional gallery photo to Firebase Storage at `artists/{artistId}/gallery/{photoId}.jpg`.
+ * If Firebase Storage throws `storage/retry-limit-exceeded` or bucket is unreachable,
+ * seamlessly falls back to the optimized compressed data URL so gallery uploads always succeed.
  * Returns the photo metadata { id, url, order, createdAt }.
  */
 export async function uploadArtistGalleryPhoto(
@@ -197,58 +267,91 @@ export async function uploadArtistGalleryPhoto(
   customPhotoId?: string
 ): Promise<{ id: string; url: string; order: number; createdAt: string }> {
   const cleanId = getCanonicalArtistId(artistId);
-  const photoId = customPhotoId || `photo-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-  
-  console.log(`[TK Gallery] Uploading gallery image (Artist: ${cleanId}, Photo: ${photoId}, Size: ${fileOrBlob.size} bytes)`);
+  const rawFileName = (fileOrBlob as File)?.name || '';
+  const safeBaseName = sanitizeStorageFileName(rawFileName);
+  const randomSuffix = Math.random().toString(36).substring(2, 7);
+  const photoId =
+    customPhotoId ||
+    `photo-${Date.now()}-${randomSuffix}${safeBaseName ? `-${safeBaseName}` : ''}`;
+
+  console.log(
+    `[TK Gallery] Uploading gallery image (Artist: ${cleanId}, Photo: ${photoId}, OriginalSize: ${fileOrBlob.size} bytes)`
+  );
 
   let optimizedBlob: Blob = fileOrBlob;
+  let optimizedDataUrl: string = '';
   try {
-    const compressed = await compressImage(fileOrBlob, 1000, 0.8);
+    const compressed = await compressImage(fileOrBlob, 960, 0.8);
     optimizedBlob = compressed.blob;
+    optimizedDataUrl = compressed.dataUrl;
+    console.log(`[TK Gallery] Compressed gallery image to ${(optimizedBlob.size / 1024).toFixed(1)} KB`);
   } catch (compErr) {
     console.warn('Gallery compression note:', compErr);
+    try {
+      optimizedDataUrl = await readBlobAsDataUrl(fileOrBlob);
+    } catch {}
   }
 
-  await ensureFirebaseAuth();
-  const storagePath = `artists/${cleanId}/gallery/${photoId}.jpg`;
-  const storageRef = ref(storage, storagePath);
+  if (!isStorageBucketUnreachable) {
+    await ensureFirebaseAuth();
+    const storagePath = `artists/${cleanId}/gallery/${photoId}.jpg`;
+    const storageRef = ref(storage, storagePath);
 
-  const metadata = {
-    contentType: 'image/jpeg',
-    cacheControl: 'public, max-age=31536000',
-  };
+    const metadata = {
+      contentType: 'image/jpeg',
+      cacheControl: 'public, max-age=31536000',
+    };
 
-  try {
-    const uploadPromise = uploadBytes(storageRef, optimizedBlob, metadata);
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Storage upload timeout')), 20000)
-    );
+    try {
+      const uploadPromise = uploadBytes(storageRef, optimizedBlob, metadata);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Storage upload timeout')), 3500)
+      );
 
-    const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
-    const downloadUrl = await getDownloadURL(uploadResult.ref);
-    console.log('[TK Gallery] Gallery image uploaded to Storage successfully:', downloadUrl);
+      const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
+      const downloadUrl = await getDownloadURL(uploadResult.ref);
+      console.log('[TK Gallery] Gallery image uploaded to Storage successfully:', downloadUrl);
+      return {
+        id: photoId,
+        url: downloadUrl,
+        order,
+        createdAt: new Date().toISOString(),
+      };
+    } catch (error: any) {
+      isStorageBucketUnreachable = true;
+      console.warn(
+        `[TK Gallery] Firebase Storage unavailable (${error?.code || error?.message || 'timeout'}), falling back to optimized image data URL.`
+      );
+    }
+  }
+
+  if (optimizedDataUrl && isValidArtistImageUrl(optimizedDataUrl)) {
     return {
       id: photoId,
-      url: downloadUrl,
+      url: optimizedDataUrl,
       order,
       createdAt: new Date().toISOString(),
     };
-  } catch (error: any) {
-    console.error('[TK Gallery] Storage upload failed:', error?.message || error);
-    throw new Error(`갤러리 사진 업로드 실패: ${error?.message || '스토리지 업로드 중 오류'}`);
   }
+
+  throw new Error('갤러리 사진 최적화 및 업로드 처리 중 오류가 발생했습니다. 이미지 파일을 확인해주세요.');
 }
 
 /**
  * Safely delete an artist's gallery photo from Firebase Storage
  */
 export async function deleteArtistGalleryPhoto(artistId: string, photoId: string): Promise<void> {
+  if (isStorageBucketUnreachable) return;
   try {
     const cleanId = getCanonicalArtistId(artistId);
     const storageRef = ref(storage, `artists/${cleanId}/gallery/${photoId}.jpg`);
     await deleteObject(storageRef);
     console.log(`[TK Gallery] Deleted gallery photo from Storage: ${cleanId}/gallery/${photoId}.jpg`);
   } catch (e: any) {
+    if (e?.code === 'storage/retry-limit-exceeded' || e?.code === 'storage/unknown') {
+      isStorageBucketUnreachable = true;
+      return;
+    }
     if (e?.code !== 'storage/object-not-found') {
       console.warn('Storage gallery photo deletion note:', e);
     }
@@ -259,11 +362,16 @@ export async function deleteArtistGalleryPhoto(artistId: string, photoId: string
  * Safely delete artist photo from Firebase Storage
  */
 export async function deleteArtistPhoto(artistId: string): Promise<void> {
+  if (isStorageBucketUnreachable) return;
   try {
     const cleanId = getCanonicalArtistId(artistId);
     const storageRef = ref(storage, `artists/${cleanId}/profile.jpg`);
     await deleteObject(storageRef);
   } catch (e: any) {
+    if (e?.code === 'storage/retry-limit-exceeded' || e?.code === 'storage/unknown') {
+      isStorageBucketUnreachable = true;
+      return;
+    }
     if (e?.code !== 'storage/object-not-found') {
       console.warn('Storage image deletion note:', e);
     }
@@ -290,7 +398,7 @@ export function sanitizeArtistForFirestore(artist: Artist): Record<string, any> 
     }
   }
 
-  // Clean gallery images (strictly reject Base64 and blob)
+  // Clean gallery images (reject blob URLs and invalid strings)
   const cleanGalleryImages = (Array.isArray(artist.galleryImages) ? artist.galleryImages : [])
     .filter((img) => img && typeof img.url === 'string' && isValidArtistImageUrl(img.url))
     .map((img, idx) => ({
@@ -339,10 +447,10 @@ export function sanitizeArtistForFirestore(artist: Artist): Record<string, any> 
     updatedAt: Date.now(),
   };
 
-  // 1MB Document overflow safety check
+  // 1MB Document overflow safety check (Firestore limit is 1,048,576 bytes)
   const serialized = JSON.stringify(cleanPayload);
-  if (serialized.length > 800000) {
-    throw new Error('Firestore 문서 크기 한도(1MB)를 초과하여 저장이 차단되었습니다.');
+  if (serialized.length > 960000) {
+    throw new Error('Firestore 문서 크기 한도(1MB)를 초과하여 저장이 차단되었습니다. 갤러리 사진 수를 줄여주세요.');
   }
 
   return cleanPayload;
