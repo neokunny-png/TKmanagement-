@@ -48,8 +48,8 @@ export const OFFICIAL_ACTORS: Record<string, ActorSEOData> = {
     nameKo: '최은서',
     nameEn: 'CHOI EUN SEO',
     slug: 'choi-eunseo',
-    title: '최은서 배우 | TK매니지먼트',
-    description: 'TK매니지먼트 소속 배우 최은서의 프로필과 주요 경력, 활동 정보를 확인하세요.',
+    title: '최은서 배우 프로필 | TK매니지먼트',
+    description: '최은서 배우의 프로필과 활동 정보를 확인할 수 있습니다. TK매니지먼트 소속 배우 최은서(TK 최은서)의 주요 출연 작품과 캐스팅 정보를 확인하세요.',
     canonical: `${SITE_DOMAIN}/artists/choi-eunseo`,
     image: `${SITE_DOMAIN}${OFFICIAL_ACTOR_IMAGES['choi-eunseo']}`,
     alt: 'TK매니지먼트 소속 배우 최은서 프로필',
@@ -59,8 +59,8 @@ export const OFFICIAL_ACTORS: Record<string, ActorSEOData> = {
     nameKo: '이은수',
     nameEn: 'LEE EUN SOO',
     slug: 'lee-eunsoo',
-    title: '이은수 배우 | TK매니지먼트',
-    description: 'TK매니지먼트 소속 배우 이은수의 프로필과 주요 경력, 활동 정보를 확인하세요.',
+    title: '이은수 배우 프로필 | TK매니지먼트',
+    description: '이은수 배우의 프로필과 활동 정보를 확인할 수 있습니다. TK매니지먼트 소속 배우 이은수(TK 이은수)의 주요 공연 경력과 캐스팅 정보를 확인하세요.',
     canonical: `${SITE_DOMAIN}/artists/lee-eunsoo`,
     image: `${SITE_DOMAIN}${OFFICIAL_ACTOR_IMAGES['lee-eunsoo']}`,
     alt: 'TK매니지먼트 소속 배우 이은수 프로필',
@@ -108,6 +108,42 @@ export const SEO_PAGE_CONFIGS: Record<string, PageSEOConfig> = {
     ogImageAlt: 'TK매니지먼트 공식 대표 이미지',
     ogType: 'website',
     breadcrumbName: '홈',
+  },
+  management: {
+    title: '배우 매니지먼트 | TK매니지먼트',
+    description: 'TK매니지먼트의 배우 매니지먼트 시스템을 안내합니다. 소속 배우 활동 지원, 배우 프로필 관리, 작품 캐스팅 및 신인배우 성장 지원을 체계적으로 수행합니다.',
+    canonical: `${SITE_DOMAIN}/management`,
+    ogTitle: '배우 매니지먼트 | TK매니지먼트',
+    ogDescription: 'TK매니지먼트의 배우 매니지먼트 시스템을 안내합니다. 소속 배우 활동 지원, 배우 프로필 관리, 작품 캐스팅 및 신인배우 성장 지원을 체계적으로 수행합니다.',
+    ogUrl: `${SITE_DOMAIN}/management`,
+    ogImage: DEFAULT_OG_IMAGE,
+    ogImageAlt: '배우 매니지먼트 TK매니지먼트',
+    ogType: 'website',
+    breadcrumbName: '배우 매니지먼트',
+  },
+  'actor-agency': {
+    title: '배우 소속사 | TK매니지먼트',
+    description: '배우 소속사 TK매니지먼트를 소개합니다. 배우 소속사의 역할, 신인배우가 소속사를 선택할 때 확인할 사항, 배우 프로필 준비와 오디션 정보를 확인하세요.',
+    canonical: `${SITE_DOMAIN}/actor-agency`,
+    ogTitle: '배우 소속사 | TK매니지먼트',
+    ogDescription: '배우 소속사 TK매니지먼트를 소개합니다. 배우 소속사의 역할, 신인배우가 소속사를 선택할 때 확인할 사항, 배우 프로필 준비와 오디션 정보를 확인하세요.',
+    ogUrl: `${SITE_DOMAIN}/actor-agency`,
+    ogImage: DEFAULT_OG_IMAGE,
+    ogImageAlt: '배우 소속사 TK매니지먼트',
+    ogType: 'website',
+    breadcrumbName: '배우 소속사',
+  },
+  'actor-management-company': {
+    title: '배우 기획사 | TK매니지먼트',
+    description: '배우 기획사 TK매니지먼트의 아티스트 기획과 배우 매니지먼트 운영 체계를 안내합니다. 제작사 캐스팅 협업 및 소속 배우 정보를 확인하세요.',
+    canonical: `${SITE_DOMAIN}/actor-management-company`,
+    ogTitle: '배우 기획사 | TK매니지먼트',
+    ogDescription: '배우 기획사 TK매니지먼트의 아티스트 기획과 배우 매니지먼트 운영 체계를 안내합니다. 제작사 캐스팅 협업 및 소속 배우 정보를 확인하세요.',
+    ogUrl: `${SITE_DOMAIN}/actor-management-company`,
+    ogImage: DEFAULT_OG_IMAGE,
+    ogImageAlt: '배우 기획사 TK매니지먼트',
+    ogType: 'website',
+    breadcrumbName: '배우 기획사',
   },
   artists: {
     title: 'TK매니지먼트 소속 배우 | 최은서·이은수·박민욱·박현진',
@@ -317,9 +353,15 @@ function setOrCreateCanonical(canonicalUrl: string) {
 }
 
 /**
- * Dynamically injects or updates JSON-LD structured data for BreadcrumbList and Person
+ * Dynamically injects or updates JSON-LD structured data for BreadcrumbList, WebPage, and Person
  */
 function updateDynamicJsonLd(schema: object) {
+  // Remove static pre-rendered JSON-LD blocks if present so there is no duplication after hydration
+  const prerenderedActorJsonLd = document.getElementById('actor-jsonld');
+  if (prerenderedActorJsonLd) prerenderedActorJsonLd.remove();
+  const prerenderedSectionJsonLd = document.getElementById('section-jsonld');
+  if (prerenderedSectionJsonLd) prerenderedSectionJsonLd.remove();
+
   const scriptId = 'tk-dynamic-jsonld';
   let script = document.getElementById(scriptId) as HTMLScriptElement | null;
   if (!script) {
@@ -358,7 +400,7 @@ export function applyPageSEO(view: string, artistOrSlug?: Artist | string | null
             "@type": "Person",
             "@id": `${official.canonical}#person`,
             "name": official.nameKo,
-            "alternateName": [official.nameEn, `${official.nameKo} 배우`],
+            "alternateName": [official.nameEn, `${official.nameKo} 배우`, `TK ${official.nameKo}`, `${official.nameKo} 프로필`],
             "url": official.canonical,
             "image": photoUrl,
             "jobTitle": "배우 (Actor)",
@@ -367,7 +409,7 @@ export function applyPageSEO(view: string, artistOrSlug?: Artist | string | null
               "@type": "Organization",
               "@id": `${SITE_DOMAIN}/#organization`,
               "name": "TK매니지먼트",
-              "alternateName": ["TK MANAGEMENT", "티케이매니지먼트", "㈜TK Company"],
+              "alternateName": ["TK MANAGEMENT", "티케이매니지먼트", "tkmanagement", "㈜TK Company"],
               "url": `${SITE_DOMAIN}/`
             },
             ...(artistObj?.birth ? { "birthDate": artistObj.birth.replace(/\./g, '-') } : {}),
@@ -424,19 +466,37 @@ export function applyPageSEO(view: string, artistOrSlug?: Artist | string | null
     if (view && view !== 'home' && config.breadcrumbName) {
       dynamicSchema = {
         "@context": "https://schema.org",
-        "@type": "BreadcrumbList",
-        "itemListElement": [
+        "@graph": [
           {
-            "@type": "ListItem",
-            "position": 1,
-            "name": "홈",
-            "item": `${SITE_DOMAIN}/`
+            "@type": "WebPage",
+            "@id": `${config.canonical}#webpage`,
+            "name": config.title,
+            "url": config.canonical,
+            "description": config.description,
+            "isPartOf": {
+              "@type": "WebSite",
+              "@id": `${SITE_DOMAIN}/#website`,
+              "name": "TK매니지먼트",
+              "url": `${SITE_DOMAIN}/`
+            }
           },
           {
-            "@type": "ListItem",
-            "position": 2,
-            "name": config.breadcrumbName,
-            "item": config.canonical
+            "@type": "BreadcrumbList",
+            "@id": `${config.canonical}#breadcrumb`,
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "홈",
+                "item": `${SITE_DOMAIN}/`
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": config.breadcrumbName,
+                "item": config.canonical
+              }
+            ]
           }
         ]
       };
@@ -480,5 +540,9 @@ export function applyPageSEO(view: string, artistOrSlug?: Artist | string | null
   } else {
     const existing = document.getElementById('tk-dynamic-jsonld');
     if (existing) existing.remove();
+    const prerenderedActorJsonLd = document.getElementById('actor-jsonld');
+    if (prerenderedActorJsonLd) prerenderedActorJsonLd.remove();
+    const prerenderedSectionJsonLd = document.getElementById('section-jsonld');
+    if (prerenderedSectionJsonLd) prerenderedSectionJsonLd.remove();
   }
 }

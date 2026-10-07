@@ -12,6 +12,7 @@ interface ArtistModalProps {
   onGoHome?: () => void;
   onCastingInquiry: (artist: Artist) => void;
   onOpenPrintSheet: (artist: Artist) => void;
+  onNavigate?: (sectionId: string) => void;
 }
 
 export const ArtistModal: React.FC<ArtistModalProps> = ({
@@ -20,6 +21,7 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
   onGoHome,
   onCastingInquiry,
   onOpenPrintSheet,
+  onNavigate,
 }) => {
   if (!artist) return null;
 
@@ -301,7 +303,7 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
                       </p>
                       <div className="flex items-center gap-1.5 mt-2 text-xs font-mono text-gray-300">
                         <span className="text-sky-400 font-semibold">소속:</span>
-                        <span className="text-white font-medium">TK MANAGEMENT (TK매니지먼트)</span>
+                        <span className="text-white font-medium">TK매니지먼트 소속 배우 (TK MANAGEMENT)</span>
                       </div>
                     </div>
 
@@ -474,6 +476,48 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Internal Links: Actor Page -> ARTISTS, NEWS, CONTACT */}
+              <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-gray-400">
+                <span className="text-gray-500">바로가기:</span>
+                <div className="flex flex-wrap items-center gap-3">
+                  <a
+                    href="/artists"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onClose();
+                      if (onNavigate) onNavigate('artists');
+                    }}
+                    className="text-sky-400 hover:underline"
+                  >
+                    소속 배우 목록
+                  </a>
+                  <span className="text-gray-600">|</span>
+                  <a
+                    href="/news"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onClose();
+                      if (onNavigate) onNavigate('news');
+                    }}
+                    className="text-sky-400 hover:underline"
+                  >
+                    TK매니지먼트 NEWS
+                  </a>
+                  <span className="text-gray-600">|</span>
+                  <a
+                    href="/contact"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onClose();
+                      onCastingInquiry(artist);
+                    }}
+                    className="text-sky-400 hover:underline"
+                  >
+                    캐스팅 및 매니지먼트 문의
+                  </a>
+                </div>
               </div>
 
               {/* Modal Bottom Action Controls */}

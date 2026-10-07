@@ -7,14 +7,17 @@ import { submitAuditionApplication } from '../services/inquiryService';
 interface AuditionSectionProps {
   id?: string;
   isMobileView?: boolean;
+  isStandalone?: boolean;
   onNavigate?: (sectionId: string) => void;
 }
 
 export const AuditionSection: React.FC<AuditionSectionProps> = ({
   id = 'audition',
   isMobileView = false,
+  isStandalone = false,
   onNavigate
 }) => {
+  const HeadingTag = (isStandalone || isMobileView) ? 'h1' : 'h2';
   const [formData, setFormData] = useState({
     name: '',
     birth: '',
@@ -163,9 +166,9 @@ export const AuditionSection: React.FC<AuditionSectionProps> = ({
             <span className="text-xs font-mono tracking-widest text-sky-400 uppercase block mb-3">
               AUDITION RECRUITMENT
             </span>
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-display font-black text-white tracking-tighter leading-tight mb-4">
+            <HeadingTag className="text-3xl sm:text-4xl lg:text-5xl font-display font-black text-white tracking-tighter leading-tight mb-4 break-keep">
               TK매니지먼트 신인배우 오디션
-            </h1>
+            </HeadingTag>
             <p className="text-xl sm:text-2xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-sky-300 mb-4">
               FIND YOUR NEXT SCENE.
             </p>

@@ -124,6 +124,56 @@
   to = "/about/index.html"
   status = 200
 
+[[redirects]]
+  from = "/management"
+  to = "/management/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/management/"
+  to = "/management/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/actor-agency"
+  to = "/actor-agency/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/actor-agency/"
+  to = "/actor-agency/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/actor-management-company"
+  to = "/actor-management-company/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/actor-management-company/"
+  to = "/actor-management-company/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/terms"
+  to = "/terms/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/terms/"
+  to = "/terms/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/privacy"
+  to = "/privacy/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/privacy/"
+  to = "/privacy/index.html"
+  status = 200
+
 # SPA Fallback for client-side routing
 [[redirects]]
   from = "/*"

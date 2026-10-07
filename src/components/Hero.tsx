@@ -9,13 +9,16 @@ interface HeroProps {
   artists?: Artist[];
   onExploreArtists: () => void;
   onApplyAudition: () => void;
+  isStandalone?: boolean;
 }
 
 export const Hero: React.FC<HeroProps> = ({
   artists: propArtists,
   onExploreArtists,
   onApplyAudition,
+  isStandalone = true,
 }) => {
+  const HeadingTag = isStandalone ? 'h1' : 'h2';
   const [activeList, setActiveList] = useState<Artist[]>(() => {
     if (propArtists && propArtists.length > 0) return propArtists;
     return ARTISTS;
@@ -132,9 +135,9 @@ export const Hero: React.FC<HeroProps> = ({
           {/* Slogan & SEO Heading */}
           <div className="space-y-3 mb-4 sm:mb-6">
             <div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-black tracking-tight text-white">
+              <HeadingTag className="text-xl sm:text-2xl md:text-3xl font-display font-black tracking-tight text-white">
                 TK매니지먼트
-              </h1>
+              </HeadingTag>
               <p className="text-xs sm:text-sm md:text-base font-normal text-sky-300 font-sans tracking-normal mt-1">
                 배우의 가능성을 발견하고 함께 성장하는 매니지먼트
               </p>

@@ -1887,33 +1887,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-gray-300 font-medium mb-1">
-                        대표 전화 (TEL) *
-                      </label>
-                      <input
-                        type="text"
-                        value={companyForm.tel}
-                        onChange={(e) => setCompanyForm({ ...companyForm, tel: e.target.value })}
-                        placeholder="예: 02-540-8820"
-                        className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-300 font-medium mb-1">
-                        팩스 번호 (FAX)
-                      </label>
-                      <input
-                        type="text"
-                        value={companyForm.fax}
-                        onChange={(e) => setCompanyForm({ ...companyForm, fax: e.target.value })}
-                        placeholder="예: 02-540-8821"
-                        className="w-full bg-[#161926] border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-sky-400 font-mono"
-                      />
-                    </div>
-
                     <div className="sm:col-span-2">
                       <label className="block text-gray-300 font-medium mb-1">
                         공식 이메일 (캐스팅 / 섭외 상시 접수 EMAIL) *

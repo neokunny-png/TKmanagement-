@@ -56,7 +56,7 @@ export function getOfficialActorStaticImage(slugOrId?: string | null): string {
   if (clean.includes('lee') || clean.includes('eunsoo') || clean.includes('eunsu') || clean.includes('이은수')) {
     return OFFICIAL_ACTOR_IMAGES['lee-eunsoo'];
   }
-  if (clean.includes('minwook') || clean.includes('minjun') || clean.includes('박민욱') || clean.includes('박민준')) {
+  if (clean.includes('minwook') || clean.includes('박민욱')) {
     return OFFICIAL_ACTOR_IMAGES['park-minwook'];
   }
   if (clean.includes('hyunjin') || clean.includes('박현진')) {

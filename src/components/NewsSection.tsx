@@ -4,9 +4,17 @@ import { NewsArticle } from '../types';
 
 interface NewsSectionProps {
   newsList: NewsArticle[];
+  isStandalone?: boolean;
+  onNavigate?: (sectionId: string) => void;
+  onSelectArtistSlug?: (slug: string) => void;
 }
 
-export const NewsSection: React.FC<NewsSectionProps> = ({ newsList }) => {
+export const NewsSection: React.FC<NewsSectionProps> = ({
+  newsList,
+  isStandalone = false,
+  onNavigate,
+  onSelectArtistSlug,
+}) => {
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
 
@@ -40,8 +48,39 @@ export const NewsSection: React.FC<NewsSectionProps> = ({ newsList }) => {
     (item) => selectedCategory === 'ALL' || item.category === selectedCategory
   );
 
+  const HeadingTag = isStandalone ? 'h1' : 'h2';
+
+  const articlesJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': filteredNews.slice(0, 6).map((article) => ({
+      '@type': 'Article',
+      headline: article.title,
+      description: article.summary || (article.content ? article.content.slice(0, 120) : ''),
+      datePublished: article.date ? article.date.replace(/\./g, '-') : '2026-08-20',
+      author: {
+        '@type': 'Organization',
+        name: article.author || 'TK매니지먼트',
+        url: 'https://www.tkm.kr/',
+      },
+      publisher: {
+        '@type': 'Organization',
+        '@id': 'https://www.tkm.kr/#organization',
+        name: 'TK매니지먼트',
+        url: 'https://www.tkm.kr/',
+      },
+      mainEntityOfPage: 'https://www.tkm.kr/news',
+    })),
+  };
+
   return (
     <section id="news" className="relative py-28 bg-[#0B0C10] border-t border-white/10">
+      {isStandalone && (
+        <script
+          id="news-articles-jsonld"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(articlesJsonLd) }}
+        />
+      )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 border-b border-white/10 pb-8">
@@ -49,9 +88,9 @@ export const NewsSection: React.FC<NewsSectionProps> = ({ newsList }) => {
             <span className="text-xs font-mono tracking-widest text-sky-400 uppercase block mb-3">
               PRESS &amp; ANNOUNCEMENTS
             </span>
-            <h1 className="text-3xl sm:text-5xl font-display font-black text-white tracking-tighter">
+            <HeadingTag className="text-3xl sm:text-5xl font-display font-black text-white tracking-tighter">
               TK매니지먼트 NEWS
-            </h1>
+            </HeadingTag>
             <p className="text-xs sm:text-sm font-mono tracking-widest text-gray-400 uppercase mt-1">
               NEWS &amp; NOTICE
             </p>
@@ -142,6 +181,105 @@ export const NewsSection: React.FC<NewsSectionProps> = ({ newsList }) => {
             ))}
           </div>
         )}
+
+        {/* Internal Links: NEWS -> Actor Profiles, MANAGEMENT, AUDITION, CONTACT */}
+        <div className="mt-12 pt-8 border-t border-white/10 max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs font-mono text-gray-400">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <span className="text-sky-400 font-bold">소속 배우 프로필:</span>
+            <a
+              href="/artists/choi-eunseo"
+              onClick={(e) => {
+                if (onSelectArtistSlug) {
+                  e.preventDefault();
+                  onSelectArtistSlug('choi-eunseo');
+                }
+              }}
+              className="hover:text-white transition-colors"
+            >
+              최은서 배우
+            </a>
+            <span className="text-gray-600">·</span>
+            <a
+              href="/artists/lee-eunsoo"
+              onClick={(e) => {
+                if (onSelectArtistSlug) {
+                  e.preventDefault();
+                  onSelectArtistSlug('lee-eunsoo');
+                }
+              }}
+              className="hover:text-white transition-colors"
+            >
+              이은수 배우
+            </a>
+            <span className="text-gray-600">·</span>
+            <a
+              href="/artists/park-minwook"
+              onClick={(e) => {
+                if (onSelectArtistSlug) {
+                  e.preventDefault();
+                  onSelectArtistSlug('park-minwook');
+                }
+              }}
+              className="hover:text-white transition-colors"
+            >
+              박민욱 배우
+            </a>
+            <span className="text-gray-600">·</span>
+            <a
+              href="/artists/park-hyunjin"
+              onClick={(e) => {
+                if (onSelectArtistSlug) {
+                  e.preventDefault();
+                  onSelectArtistSlug('park-hyunjin');
+                }
+              }}
+              className="hover:text-white transition-colors"
+            >
+              박현진 배우
+            </a>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <a
+              href="/management"
+              onClick={(e) => {
+                if (onNavigate) {
+                  e.preventDefault();
+                  onNavigate('management');
+                }
+              }}
+              className="text-sky-400 hover:underline"
+            >
+              배우 매니지먼트
+            </a>
+            <span className="text-gray-600">|</span>
+            <a
+              href="/audition"
+              onClick={(e) => {
+                if (onNavigate) {
+                  e.preventDefault();
+                  onNavigate('audition');
+                }
+              }}
+              className="text-sky-400 hover:underline"
+            >
+              신인배우 오디션
+            </a>
+            <span className="text-gray-600">|</span>
+            <a
+              href="/contact"
+              onClick={(e) => {
+                if (onNavigate) {
+                  e.preventDefault();
+                  onNavigate('contact');
+                }
+              }}
+              className="text-sky-400 hover:underline"
+            >
+              캐스팅 및 매니지먼트 문의
+            </a>
+          </div>
+        </div>
       </div>
 
       {/* Article Detail Modal */}

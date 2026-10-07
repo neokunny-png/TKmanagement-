@@ -10,6 +10,7 @@ import { NewsSection } from './components/NewsSection';
 import { ContactSection } from './components/ContactSection';
 import { TermsView } from './components/TermsView';
 import { PrivacyView } from './components/PrivacyView';
+import { SeoGuideView, SeoGuidePageType } from './components/SeoGuideView';
 import { Footer } from './components/Footer';
 import { ProfilePrintSheet } from './components/ProfilePrintSheet';
 import { AdminDashboard } from './components/AdminDashboard';
@@ -22,7 +23,7 @@ import { subscribeNews } from './services/newsService';
 import { subscribeCompanyInfo, DEFAULT_COMPANY_INFO } from './services/companyService';
 import { applyPageSEO, getArtistSlug, mapSlugToArtistId, isOfficialSlug, OFFICIAL_ACTORS, OFFICIAL_ACTOR_IMAGES } from './lib/seo';
 
-type ActiveMobileView = 'home' | 'about' | 'audition' | 'contact' | 'terms' | 'privacy';
+type ActiveMobileView = 'home' | 'about' | 'audition' | 'contact' | 'terms' | 'privacy' | 'management' | 'actor-agency' | 'actor-management-company';
 
 /**
  * Synchronously extracts and resolves the route on Frame 0 before any DOM rendering.
@@ -141,6 +142,15 @@ export function resolveInitialRoute(): {
   if (pathname === '/privacy' || hash === '#privacy') {
     return { slug: null, artist: null, isNotFound: false, activeSection: 'privacy' };
   }
+  if (pathname === '/management' || hash === '#management') {
+    return { slug: null, artist: null, isNotFound: false, activeSection: 'management' };
+  }
+  if (pathname === '/actor-agency' || hash === '#actor-agency') {
+    return { slug: null, artist: null, isNotFound: false, activeSection: 'actor-agency' };
+  }
+  if (pathname === '/actor-management-company' || hash === '#actor-management-company') {
+    return { slug: null, artist: null, isNotFound: false, activeSection: 'actor-management-company' };
+  }
 
   return { slug: null, artist: null, isNotFound: false, activeSection: 'hero' };
 }
@@ -152,9 +162,29 @@ export default function App() {
   const [newsList, setNewsList] = useState<NewsArticle[]>(NEWS_ARTICLES);
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo>(DEFAULT_COMPANY_INFO);
   const [activeSection, setActiveSection] = useState<string>(() => initialRoute.activeSection);
+  const [canonicalView, setCanonicalView] = useState<string>(() =>
+    initialRoute.activeSection === 'hero' ? 'home' : initialRoute.activeSection
+  );
 
-  // Mobile dedicated view state ('home' | 'about' | 'audition' | 'contact')
-  const [activeMobileView, setActiveMobileView] = useState<ActiveMobileView>('home');
+  // Mobile dedicated view state ('home' | 'about' | 'audition' | 'contact' | 'terms' | 'privacy' | 'management' | 'actor-agency' | 'actor-management-company')
+  const [activeMobileView, setActiveMobileView] = useState<ActiveMobileView>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      const sec = initialRoute.activeSection;
+      if (
+        sec === 'about' ||
+        sec === 'audition' ||
+        sec === 'contact' ||
+        sec === 'terms' ||
+        sec === 'privacy' ||
+        sec === 'management' ||
+        sec === 'actor-agency' ||
+        sec === 'actor-management-company'
+      ) {
+        return sec;
+      }
+    }
+    return 'home';
+  });
   const [savedScrollPos, setSavedScrollPos] = useState<number>(0);
 
   // Responsive device breakpoint tracking (<768px matches Tailwind md:)
@@ -257,11 +287,13 @@ export default function App() {
 
     // 2. Direct section paths
     if (pathname === '/artists' || hash === '#artists') {
+      setCanonicalView('artists');
       setActiveSection('artists');
       setTimeout(() => {
         document.getElementById('artists')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
     } else if (pathname === '/audition' || hash === '#audition') {
+      setCanonicalView('audition');
       if (isCurrentMobile) {
         setActiveMobileView('audition');
       } else {
@@ -271,11 +303,13 @@ export default function App() {
         }, 100);
       }
     } else if (pathname === '/news' || hash === '#news') {
+      setCanonicalView('news');
       setActiveSection('news');
       setTimeout(() => {
         document.getElementById('news')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
     } else if (pathname === '/contact' || hash === '#contact') {
+      setCanonicalView('contact');
       if (isCurrentMobile) {
         setActiveMobileView('contact');
       } else {
@@ -285,6 +319,7 @@ export default function App() {
         }, 100);
       }
     } else if (pathname === '/about' || hash === '#about') {
+      setCanonicalView('about');
       if (isCurrentMobile) {
         setActiveMobileView('about');
       } else {
@@ -294,6 +329,7 @@ export default function App() {
         }, 100);
       }
     } else if (pathname === '/terms' || hash === '#terms') {
+      setCanonicalView('terms');
       if (isCurrentMobile) {
         setActiveMobileView('terms');
       } else {
@@ -301,12 +337,39 @@ export default function App() {
         window.scrollTo({ top: 0, behavior: 'instant' });
       }
     } else if (pathname === '/privacy' || hash === '#privacy') {
+      setCanonicalView('privacy');
       if (isCurrentMobile) {
         setActiveMobileView('privacy');
       } else {
         setActiveSection('privacy');
         window.scrollTo({ top: 0, behavior: 'instant' });
       }
+    } else if (pathname === '/management' || hash === '#management') {
+      setCanonicalView('management');
+      if (isCurrentMobile) {
+        setActiveMobileView('management');
+      } else {
+        setActiveSection('management');
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+    } else if (pathname === '/actor-agency' || hash === '#actor-agency') {
+      setCanonicalView('actor-agency');
+      if (isCurrentMobile) {
+        setActiveMobileView('actor-agency');
+      } else {
+        setActiveSection('actor-agency');
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+    } else if (pathname === '/actor-management-company' || hash === '#actor-management-company') {
+      setCanonicalView('actor-management-company');
+      if (isCurrentMobile) {
+        setActiveMobileView('actor-management-company');
+      } else {
+        setActiveSection('actor-management-company');
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+    } else {
+      setCanonicalView('home');
     }
   }, [artists]);
 
@@ -331,14 +394,9 @@ export default function App() {
       }
     }
 
-    let view = 'home';
-    if (activeMobileView !== 'home') {
-      view = activeMobileView;
-    } else if (activeSection && activeSection !== 'hero') {
-      view = activeSection;
-    }
+    const view = activeMobileView !== 'home' ? activeMobileView : (canonicalView || 'home');
     applyPageSEO(view, null);
-  }, [selectedArtist, activeMobileView, activeSection, isNotFound]);
+  }, [selectedArtist, activeMobileView, canonicalView, isNotFound]);
 
   // Real-time Firestore Subscriptions
   useEffect(() => {
@@ -509,27 +567,47 @@ export default function App() {
       // 3. Handle mobile dedicated views and desktop sections
       const isCurrentMobile = window.innerWidth < 768;
       if (pathname === '/about' || hash === '#about') {
+        setCanonicalView('about');
         if (isCurrentMobile) setActiveMobileView('about');
         else setActiveSection('about');
       } else if (pathname === '/audition' || hash === '#audition') {
+        setCanonicalView('audition');
         if (isCurrentMobile) setActiveMobileView('audition');
         else setActiveSection('audition');
       } else if (pathname === '/contact' || hash === '#contact') {
+        setCanonicalView('contact');
         if (isCurrentMobile) setActiveMobileView('contact');
         else setActiveSection('contact');
       } else if (pathname === '/terms' || hash === '#terms') {
+        setCanonicalView('terms');
         if (isCurrentMobile) setActiveMobileView('terms');
         else setActiveSection('terms');
       } else if (pathname === '/privacy' || hash === '#privacy') {
+        setCanonicalView('privacy');
         if (isCurrentMobile) setActiveMobileView('privacy');
         else setActiveSection('privacy');
+      } else if (pathname === '/management' || hash === '#management') {
+        setCanonicalView('management');
+        if (isCurrentMobile) setActiveMobileView('management');
+        else setActiveSection('management');
+      } else if (pathname === '/actor-agency' || hash === '#actor-agency') {
+        setCanonicalView('actor-agency');
+        if (isCurrentMobile) setActiveMobileView('actor-agency');
+        else setActiveSection('actor-agency');
+      } else if (pathname === '/actor-management-company' || hash === '#actor-management-company') {
+        setCanonicalView('actor-management-company');
+        if (isCurrentMobile) setActiveMobileView('actor-management-company');
+        else setActiveSection('actor-management-company');
       } else if (pathname === '/artists' || hash === '#artists') {
+        setCanonicalView('artists');
         setActiveMobileView('home');
         setActiveSection('artists');
       } else if (pathname === '/news' || hash === '#news') {
+        setCanonicalView('news');
         setActiveMobileView('home');
         setActiveSection('news');
       } else {
+        setCanonicalView('home');
         setActiveMobileView('home');
         setActiveSection('hero');
       }
@@ -545,7 +623,13 @@ export default function App() {
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          if (activeSection === 'terms' || activeSection === 'privacy') {
+          if (
+            activeSection === 'terms' ||
+            activeSection === 'privacy' ||
+            activeSection === 'management' ||
+            activeSection === 'actor-agency' ||
+            activeSection === 'actor-management-company'
+          ) {
             ticking = false;
             return;
           }
@@ -572,7 +656,7 @@ export default function App() {
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [activeSection]);
 
   const handleSelectArtist = (artist: Artist) => {
     setSelectedArtist(artist);
@@ -588,6 +672,8 @@ export default function App() {
     try {
       if (window.location.pathname.startsWith('/artists/')) {
         window.history.pushState(null, '', '/artists');
+        setCanonicalView('artists');
+        setActiveSection('artists');
       } else if (window.location.hash.startsWith('#artist/')) {
         window.history.replaceState(null, '', window.location.pathname);
       }
@@ -615,6 +701,7 @@ export default function App() {
     setSelectedArtist(null);
     setPrintArtist(null);
     setIsNotFound(false);
+    setCanonicalView(sectionId === 'hero' ? 'home' : sectionId);
 
     const isCurrentMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : isMobile;
 
@@ -626,9 +713,22 @@ export default function App() {
     else if (sectionId === 'about') targetPath = '/about';
     else if (sectionId === 'terms') targetPath = '/terms';
     else if (sectionId === 'privacy') targetPath = '/privacy';
+    else if (sectionId === 'management') targetPath = '/management';
+    else if (sectionId === 'actor-agency') targetPath = '/actor-agency';
+    else if (sectionId === 'actor-management-company') targetPath = '/actor-management-company';
 
-    // On Mobile: ABOUT, AUDITION, CONTACT, TERMS, PRIVACY open as dedicated views
-    if (isCurrentMobile && (sectionId === 'about' || sectionId === 'audition' || sectionId === 'contact' || sectionId === 'terms' || sectionId === 'privacy')) {
+    // On Mobile: ABOUT, AUDITION, CONTACT, TERMS, PRIVACY, and SEO GUIDE pages open as dedicated views
+    if (
+      isCurrentMobile &&
+      (sectionId === 'about' ||
+        sectionId === 'audition' ||
+        sectionId === 'contact' ||
+        sectionId === 'terms' ||
+        sectionId === 'privacy' ||
+        sectionId === 'management' ||
+        sectionId === 'actor-agency' ||
+        sectionId === 'actor-management-company')
+    ) {
       setSavedScrollPos(window.scrollY);
       setActiveMobileView(sectionId as ActiveMobileView);
       try {
@@ -648,7 +748,13 @@ export default function App() {
       window.history.pushState({ section: sectionId }, '', targetPath);
     } catch {}
 
-    if (sectionId === 'terms' || sectionId === 'privacy') {
+    if (
+      sectionId === 'terms' ||
+      sectionId === 'privacy' ||
+      sectionId === 'management' ||
+      sectionId === 'actor-agency' ||
+      sectionId === 'actor-management-company'
+    ) {
       window.scrollTo({ top: 0, behavior: 'instant' });
       return;
     }
@@ -665,6 +771,7 @@ export default function App() {
 
   const handleCloseMobileView = () => {
     setActiveMobileView('home');
+    setCanonicalView('home');
     try {
       window.history.pushState(null, '', '/');
     } catch {}
@@ -681,6 +788,7 @@ export default function App() {
     setIsAdminOpen(false);
     setIsAdminAuthModalOpen(false);
     setActiveMobileView('home');
+    setCanonicalView('home');
     setActiveSection('hero');
     try {
       window.history.pushState(null, '', '/');
@@ -746,107 +854,137 @@ export default function App() {
       </div>
 
       {/* Main Flow (Desktop always, Mobile only when in home view) */}
-      <main className={`flex-grow ${activeMobileView !== 'home' ? 'hidden md:block' : 'block'}`}>
-        {activeSection === 'terms' ? (
-          <TermsView
-            companyInfo={companyInfo}
-            onNavigateHome={() => handleNavigate('hero')}
-          />
-        ) : activeSection === 'privacy' ? (
-          <PrivacyView
-            companyInfo={companyInfo}
-            onNavigateHome={() => handleNavigate('hero')}
-          />
-        ) : (
-          <>
-            {/* 1. Hero */}
-            <Hero
-              artists={artists}
-              onExploreArtists={() => handleNavigate('artists')}
-              onApplyAudition={() => handleNavigate('audition')}
+      {activeMobileView === 'home' && (
+        <main className="flex-grow block">
+          {activeSection === 'terms' ? (
+            <TermsView
+              companyInfo={companyInfo}
+              onNavigateHome={() => handleNavigate('hero')}
             />
-
-            {/* Mobile Navigation Strip (Visible on mobile only, in exact order: ABOUT → ARTISTS → NEWS → AUDITION → CONTACT) */}
-            <div className="md:hidden sticky top-[57px] z-30 bg-[#0B0C10]/95 backdrop-blur-md border-y border-white/10 px-1.5 py-2 shadow-lg shadow-black/40">
-              <div className="flex items-center justify-between gap-1 max-w-md mx-auto">
-                <button
-                  id="mobile-nav-about"
-                  onClick={() => handleNavigate('about')}
-                  className="flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider text-gray-300 hover:text-white active:bg-white/10 transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap"
-                >
-                  ABOUT
-                </button>
-                <button
-                  id="mobile-nav-artists"
-                  onClick={() => handleNavigate('artists')}
-                  className={`flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap ${
-                    activeSection === 'artists'
-                      ? 'text-sky-400 bg-sky-950/50 border border-sky-800/60 font-bold'
-                      : 'text-gray-300 hover:text-white'
-                  }`}
-                >
-                  ARTISTS
-                </button>
-                <button
-                  id="mobile-nav-news"
-                  onClick={() => handleNavigate('news')}
-                  className={`flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap ${
-                    activeSection === 'news'
-                      ? 'text-sky-400 bg-sky-950/50 border border-sky-800/60 font-bold'
-                      : 'text-gray-300 hover:text-white'
-                  }`}
-                >
-                  NEWS
-                </button>
-                <button
-                  id="mobile-nav-audition"
-                  onClick={() => handleNavigate('audition')}
-                  className="flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider text-gray-300 hover:text-white active:bg-white/10 transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap"
-                >
-                  AUDITION
-                </button>
-                <button
-                  id="mobile-nav-contact"
-                  onClick={() => handleNavigate('contact')}
-                  className="flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider text-gray-300 hover:text-white active:bg-white/10 transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap"
-                >
-                  CONTACT
-                </button>
-              </div>
-            </div>
-
-            {/* 2. About TK (Desktop only in flow; on mobile, accessed via ABOUT click) */}
-            <div className="hidden md:block">
-              <AboutSection artistCount={artists.filter(a => a.isActive).length} id="about" />
-            </div>
-
-            {/* 3. Artists (Core - shown directly on both mobile and desktop) */}
-            <ArtistsSection
+          ) : activeSection === 'privacy' ? (
+            <PrivacyView
+              companyInfo={companyInfo}
+              onNavigateHome={() => handleNavigate('hero')}
+            />
+          ) : activeSection === 'management' || activeSection === 'actor-agency' || activeSection === 'actor-management-company' ? (
+            <SeoGuideView
+              pageType={activeSection as SeoGuidePageType}
               artists={artists}
+              companyInfo={companyInfo}
+              onNavigate={handleNavigate}
               onSelectArtist={handleSelectArtist}
             />
-
-            {/* 4. News (Core - shown directly on both mobile and desktop) */}
-            <NewsSection newsList={newsList} />
-
-            {/* 5. Audition (Desktop only in flow; on mobile, accessed via AUDITION click) */}
-            <div className="hidden md:block">
-              <AuditionSection id="audition" onNavigate={handleNavigate} />
-            </div>
-
-            {/* 6. Contact (Desktop only in flow; on mobile, accessed via CONTACT click) */}
-            <div className="hidden md:block">
-              <ContactSection
-                artists={artists.filter(a => a.isActive)}
-                companyInfo={companyInfo}
-                preselectedActor={preselectedActorForContact}
-                onClearPreselectedActor={() => setPreselectedActorForContact(null)}
-                id="contact"
+          ) : (
+            <>
+              {/* 1. Hero */}
+              <Hero
+                artists={artists}
+                onExploreArtists={() => handleNavigate('artists')}
+                onApplyAudition={() => handleNavigate('audition')}
+                isStandalone={canonicalView === 'home' && !selectedArtist && !isNotFound}
               />
-            </div>
-          </>
-        )}
-      </main>
+
+              {/* Mobile Navigation Strip (Visible on mobile only, in exact order: ABOUT → ARTISTS → NEWS → AUDITION → CONTACT) */}
+              <div className="md:hidden sticky top-[57px] z-30 bg-[#0B0C10]/95 backdrop-blur-md border-y border-white/10 px-1.5 py-2 shadow-lg shadow-black/40">
+                <div className="flex items-center justify-between gap-1 max-w-md mx-auto">
+                  <button
+                    id="mobile-nav-about"
+                    onClick={() => handleNavigate('about')}
+                    className="flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider text-gray-300 hover:text-white active:bg-white/10 transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap"
+                  >
+                    ABOUT
+                  </button>
+                  <button
+                    id="mobile-nav-artists"
+                    onClick={() => handleNavigate('artists')}
+                    className={`flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap ${
+                      activeSection === 'artists'
+                        ? 'text-sky-400 bg-sky-950/50 border border-sky-800/60 font-bold'
+                        : 'text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    ARTISTS
+                  </button>
+                  <button
+                    id="mobile-nav-news"
+                    onClick={() => handleNavigate('news')}
+                    className={`flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap ${
+                      activeSection === 'news'
+                        ? 'text-sky-400 bg-sky-950/50 border border-sky-800/60 font-bold'
+                        : 'text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    NEWS
+                  </button>
+                  <button
+                    id="mobile-nav-audition"
+                    onClick={() => handleNavigate('audition')}
+                    className="flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider text-gray-300 hover:text-white active:bg-white/10 transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap"
+                  >
+                    AUDITION
+                  </button>
+                  <button
+                    id="mobile-nav-contact"
+                    onClick={() => handleNavigate('contact')}
+                    className="flex-1 min-w-0 py-1.5 px-0.5 text-center text-[11px] sm:text-xs font-mono font-semibold tracking-tight sm:tracking-wider text-gray-300 hover:text-white active:bg-white/10 transition-all cursor-pointer rounded min-h-[40px] flex items-center justify-center whitespace-nowrap"
+                  >
+                    CONTACT
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. About TK (Desktop only in flow; on mobile, accessed via ABOUT click) */}
+              <div className="hidden md:block">
+                <AboutSection
+                  artistCount={artists.filter(a => a.isActive).length}
+                  id="about"
+                  isStandalone={canonicalView === 'about' && !selectedArtist && !isNotFound}
+                  onNavigate={handleNavigate}
+                />
+              </div>
+
+              {/* 3. Artists (Core - shown directly on both mobile and desktop) */}
+              <ArtistsSection
+                artists={artists}
+                onSelectArtist={handleSelectArtist}
+                isStandalone={canonicalView === 'artists' && !selectedArtist && !isNotFound}
+              />
+
+              {/* 4. News (Core - shown directly on both mobile and desktop) */}
+              <NewsSection
+                newsList={newsList}
+                isStandalone={canonicalView === 'news' && !selectedArtist && !isNotFound}
+                onNavigate={handleNavigate}
+                onSelectArtistSlug={(slug) => {
+                  const found = artists.find(a => getArtistSlug(a) === slug);
+                  if (found) handleSelectArtist(found);
+                }}
+              />
+
+              {/* 5. Audition (Desktop only in flow; on mobile, accessed via AUDITION click) */}
+              <div className="hidden md:block">
+                <AuditionSection
+                  id="audition"
+                  isStandalone={canonicalView === 'audition' && !selectedArtist && !isNotFound}
+                  onNavigate={handleNavigate}
+                />
+              </div>
+
+              {/* 6. Contact (Desktop only in flow; on mobile, accessed via CONTACT click) */}
+              <div className="hidden md:block">
+                <ContactSection
+                  artists={artists.filter(a => a.isActive)}
+                  companyInfo={companyInfo}
+                  preselectedActor={preselectedActorForContact}
+                  onClearPreselectedActor={() => setPreselectedActorForContact(null)}
+                  id="contact"
+                  isStandalone={canonicalView === 'contact' && !selectedArtist && !isNotFound}
+                />
+              </div>
+            </>
+          )}
+        </main>
+      )}
 
       {/* Mobile Dedicated View (ABOUT / AUDITION / CONTACT / TERMS / PRIVACY) */}
       {activeMobileView !== 'home' && (
@@ -868,6 +1006,9 @@ export default function App() {
               {activeMobileView === 'contact' && 'CONTACT'}
               {activeMobileView === 'terms' && 'TERMS OF SERVICE'}
               {activeMobileView === 'privacy' && 'PRIVACY POLICY'}
+              {activeMobileView === 'management' && 'MANAGEMENT'}
+              {activeMobileView === 'actor-agency' && 'ACTOR AGENCY'}
+              {activeMobileView === 'actor-management-company' && 'ACTOR COMPANY'}
             </span>
 
             <button
@@ -887,6 +1028,7 @@ export default function App() {
                 artistCount={artists.filter(a => a.isActive).length}
                 id="about-mobile"
                 isMobileView={true}
+                onNavigate={handleNavigate}
               />
             )}
             {activeMobileView === 'audition' && (
@@ -916,6 +1058,17 @@ export default function App() {
               <PrivacyView
                 companyInfo={companyInfo}
                 onNavigateHome={handleCloseMobileView}
+              />
+            )}
+            {(activeMobileView === 'management' ||
+              activeMobileView === 'actor-agency' ||
+              activeMobileView === 'actor-management-company') && (
+              <SeoGuideView
+                pageType={activeMobileView as SeoGuidePageType}
+                artists={artists}
+                companyInfo={companyInfo}
+                onNavigate={handleNavigate}
+                onSelectArtist={handleSelectArtist}
               />
             )}
           </div>
@@ -961,6 +1114,7 @@ export default function App() {
           onGoHome={handleNavigateHome}
           onCastingInquiry={handleCastingInquiry}
           onOpenPrintSheet={handleOpenPrintSheet}
+          onNavigate={handleNavigate}
         />
       )}
 

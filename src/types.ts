@@ -270,8 +270,6 @@ export interface CompanyInfo {
   entertainmentRegistration: string;
   address: string;
   addressEn?: string;
-  tel: string;
-  fax: string;
   email: string;
   description: string;
   sloganKo?: string;

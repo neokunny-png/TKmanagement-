@@ -117,7 +117,7 @@ export const PrivacyView: React.FC<PrivacyViewProps> = ({
                 <strong className="text-sky-300 block font-mono text-xs">2. 문의 시 (수집 항목)</strong>
                 <ul className="list-disc pl-5 space-y-1 text-xs text-gray-300">
                   <li>이름 또는 담당자명</li>
-                  <li>연락처(전화번호)</li>
+                  <li>연락처(휴대전화번호)</li>
                   <li>이메일 주소</li>
                   <li>문의 구분(캐스팅 제안, 업무 제휴, 언론/미디어, 일반 문의 등)</li>
                   <li>소속 또는 회사명</li>
@@ -281,7 +281,6 @@ export const PrivacyView: React.FC<PrivacyViewProps> = ({
             </p>
             <div className="bg-[#161A26] border border-white/5 p-4 rounded text-xs space-y-1.5 font-mono text-gray-300">
               <div>• 개인정보 보호 담당부서: TK MANAGEMENT 개인정보 보호 담당</div>
-              <div>• 전화번호: {companyInfo.tel || '02-540-8820'}</div>
               <div>• 이메일: {companyInfo.email || 'taz0206@naver.com'}</div>
             </div>
             <p className="text-xs text-gray-400">
@@ -300,7 +299,7 @@ export const PrivacyView: React.FC<PrivacyViewProps> = ({
             </p>
             <div className="bg-[#161A26] border border-white/5 p-4 rounded text-xs space-y-1.5 font-mono text-gray-300">
               <div>• 개인정보 보호책임자: 개인정보보호 담당 부서</div>
-              <div>• 문의처: {companyInfo.tel || '02-540-8820'} | {companyInfo.email || 'taz0206@naver.com'}</div>
+              <div>• 이메일: {companyInfo.email || 'taz0206@naver.com'}</div>
             </div>
             <p className="text-xs text-gray-300">
               개인정보 보호 관련 문의는 제10조에 기재된 개인정보 보호 담당부서를 통하여 접수 및 안내받으실 수 있습니다.

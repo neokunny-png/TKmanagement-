@@ -520,8 +520,8 @@ export const ProfilePrintSheet: React.FC<ProfilePrintSheetProps> = ({
             </div>
 
             <div className="text-left sm:text-right print:text-right">
-              <div>CASTING &amp; 섭외 : {companyInfo?.tel || '02-540-8820'} / {companyInfo?.email || 'taz0206@naver.com'}</div>
-              <div>OFFICIAL WEB : www.mtkent.com</div>
+              <div>CASTING &amp; 섭외 : {companyInfo?.email || 'taz0206@naver.com'}</div>
+              <div>OFFICIAL WEB : https://www.tkm.kr/</div>
             </div>
           </div>
         </div>

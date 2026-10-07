@@ -23,8 +23,8 @@ const COLLECTION_NAME = 'artists';
 export function getCanonicalArtistId(idOrKo: string, nameEn?: string): string {
   const str = `${idOrKo || ''} ${nameEn || ''}`.toLowerCase();
 
-  // Official actor IDs
-  if (str.includes('박민욱') || str.includes('minwook') || str.includes('park-minwook') || str.includes('박민준') || str.includes('minjun') || str.includes('park-minjun')) {
+  // Official actor IDs (4 official actors only)
+  if (str.includes('박민욱') || str.includes('minwook') || str.includes('park-minwook')) {
     return 'artist-park-minwook';
   }
   if (str.includes('최은서') || str.includes('eunseo') || str.includes('choi-eunseo')) {
@@ -33,14 +33,8 @@ export function getCanonicalArtistId(idOrKo: string, nameEn?: string): string {
   if (str.includes('이은수') || str.includes('eunsoo') || str.includes('eunsu') || str.includes('lee-eunsoo') || str.includes('lee-eunsu')) {
     return 'artist-lee-eunsoo';
   }
-  if (str.includes('박도이') || str.includes('doyi') || str.includes('park-doyi')) {
-    return 'artist-park-doyi';
-  }
   if (str.includes('박현진') || str.includes('hyunjin') || str.includes('park-hyunjin')) {
     return 'artist-park-hyunjin';
-  }
-  if (str.includes('박아론') || str.includes('아론') || str.includes('aron') || str.includes('park-aron')) {
-    return 'artist-park-aron';
   }
 
   if (idOrKo && idOrKo.startsWith('artist-') && idOrKo.length > 7) {
@@ -443,7 +437,7 @@ if (typeof window !== 'undefined') {
 
 /**
  * Strictly reads an actor from localStorage cache by slug.
- * PURGES legacy/obsolete test actors (박도이, 박아론, foreign models) if present.
+ * Retains ONLY the 4 official actors (최은서, 이은수, 박민욱, 박현진).
  * CRITICAL MANDATE: NEVER defaults to cachedArtists[0] or any other actor!
  * If not found, returns null so the caller falls back to verified OFFICIAL_ACTORS data.
  */
@@ -457,19 +451,22 @@ export function getCachedArtistBySlug(slug: string): Artist | null {
     const list = JSON.parse(raw);
     if (!Array.isArray(list)) return null;
 
-    // Filter out obsolete/deprecated actors
+    const OFFICIAL_NAMES = new Set(['최은서', '이은수', '박민욱', '박현진']);
+    const OFFICIAL_IDS = new Set([
+      'artist-choi-eunseo',
+      'artist-lee-eunsoo',
+      'artist-park-minwook',
+      'artist-park-hyunjin',
+    ]);
+
+    // Filter strictly to the 4 official actors
     const valid = list.filter((item: any) => {
       const name = (item.nameKo || '').trim();
       const id = (item.id || '').trim();
-      return (
-        name !== '박도이' &&
-        name !== '박아론' &&
-        !id.includes('doyi') &&
-        !id.includes('aron')
-      );
+      return OFFICIAL_NAMES.has(name) || OFFICIAL_IDS.has(id);
     });
 
-    // Save cleaned list back if legacy items were removed
+    // Save cleaned list back if non-official items were removed
     if (valid.length !== list.length) {
       localStorage.setItem(CACHE_KEY_ARTISTS, JSON.stringify(valid));
     }
@@ -487,7 +484,7 @@ export function getCachedArtistBySlug(slug: string): Artist | null {
         return itemSlug === 'lee-eunsoo' || itemSlug === 'lee-eunsu' || itemId === 'artist-lee-eunsoo' || itemName === '이은수';
       }
       if (cleanSlug === 'park-minwook') {
-        return itemSlug === 'park-minwook' || itemSlug === 'park-minjun' || itemId === 'artist-park-minwook' || itemName === '박민욱' || itemName === '박민준';
+        return itemSlug === 'park-minwook' || itemId === 'artist-park-minwook' || itemName === '박민욱';
       }
       if (cleanSlug === 'park-hyunjin') {
         return itemSlug === 'park-hyunjin' || itemId === 'artist-park-hyunjin' || itemName === '박현진';
@@ -566,15 +563,9 @@ export function normalizeArtists(rawItems: Artist[]): { normalized: Artist[]; du
   const result: Artist[] = [];
 
   for (const [canonicalId, group] of groupMap.entries()) {
-    // Strictly exclude past actors (박도이, 박아론) and any non-official actor from active roster
-    const isPastActor =
-      canonicalId === 'artist-park-doyi' ||
-      canonicalId === 'artist-park-aron' ||
-      group.some(g => (g.nameKo && (g.nameKo.includes('박도이') || g.nameKo.includes('박아론'))));
-
     const isNonOfficial = !OFFICIAL_CANONICAL_IDS.has(canonicalId);
 
-    if (isPastActor || isNonOfficial) {
+    if (isNonOfficial) {
       group.forEach(g => {
         if (g.id) duplicatesToDelete.push(g.id);
       });
@@ -586,7 +577,7 @@ export function normalizeArtists(rawItems: Artist[]): { normalized: Artist[]; du
 
     if (group.length === 1) {
       const single = group[0];
-      const isMinwook = canonicalId === 'artist-park-minwook' || (single.nameKo && single.nameKo.includes('박민준'));
+      const isMinwook = canonicalId === 'artist-park-minwook';
       const safePhoto = isValidArtistImageUrl(single.profileImageUrl)
         ? single.profileImageUrl
         : (isValidArtistImageUrl(single.image) ? single.image : staticImageFallback);
@@ -603,8 +594,7 @@ export function normalizeArtists(rawItems: Artist[]): { normalized: Artist[]; du
       continue;
     }
 
-    // Multiple entries for the same artist (e.g. Park Aron A with photo, Park Aron B without photo)
-    // Find the best master record
+    // Multiple entries for the same artist: find the best master record
     const scoredGroup = group.map(item => {
       let score = 0;
       const hasRealPhoto = Boolean(isValidArtistImageUrl(item.profileImageUrl));
@@ -645,7 +635,7 @@ export function normalizeArtists(rawItems: Artist[]): { normalized: Artist[]; du
       }
     }
 
-    const isMinwook = canonicalId === 'artist-park-minwook' || (master.nameKo && master.nameKo.includes('박민준'));
+    const isMinwook = canonicalId === 'artist-park-minwook';
     const masterRawPhoto = master.profileImageUrl || secondaryList.find(s => s.profileImageUrl)?.profileImageUrl || null;
     const masterSafePhoto = isValidArtistImageUrl(masterRawPhoto) ? masterRawPhoto : staticImageFallback;
 

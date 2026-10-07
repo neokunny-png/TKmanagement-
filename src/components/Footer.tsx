@@ -109,6 +109,40 @@ export const Footer: React.FC<FooterProps> = ({
                 </a>
               </li>
             </ul>
+            <div className="pt-2 border-t border-white/5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-gray-500">
+              <a
+                href="/management"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onNavigate('management');
+                }}
+                className="hover:text-gray-300 transition-colors"
+              >
+                배우 매니지먼트
+              </a>
+              <span>·</span>
+              <a
+                href="/actor-agency"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onNavigate('actor-agency');
+                }}
+                className="hover:text-gray-300 transition-colors"
+              >
+                배우 소속사
+              </a>
+              <span>·</span>
+              <a
+                href="/actor-management-company"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onNavigate('actor-management-company');
+                }}
+                className="hover:text-gray-300 transition-colors"
+              >
+                배우 기획사
+              </a>
+            </div>
           </div>
 
           {/* Corporate Legal Info */}

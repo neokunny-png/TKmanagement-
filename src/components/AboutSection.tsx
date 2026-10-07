@@ -5,9 +5,18 @@ interface AboutSectionProps {
   artistCount: number;
   id?: string;
   isMobileView?: boolean;
+  isStandalone?: boolean;
+  onNavigate?: (sectionId: string) => void;
 }
 
-export const AboutSection: React.FC<AboutSectionProps> = ({ artistCount, id = 'about', isMobileView = false }) => {
+export const AboutSection: React.FC<AboutSectionProps> = ({
+  artistCount,
+  id = 'about',
+  isMobileView = false,
+  isStandalone = false,
+  onNavigate,
+}) => {
+  const HeadingTag = (isStandalone || isMobileView) ? 'h1' : 'h2';
   const pillars = [
     {
       num: '01',
@@ -49,14 +58,16 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ artistCount, id = 'a
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-20 border-b border-white/10 pb-10">
           <div>
-            <h1 className="sr-only">TK매니지먼트</h1>
-            <span className="text-xs font-mono tracking-widest text-sky-400 uppercase block mb-3">
+            <span className="text-xs font-mono tracking-widest text-sky-400 uppercase block mb-2">
               ABOUT TK MANAGEMENT
             </span>
-            <h2 className="text-3xl sm:text-5xl font-display font-bold text-white tracking-tight leading-tight">
+            <HeadingTag className="text-xl sm:text-2xl font-display font-black text-white tracking-tight mb-2">
+              TK매니지먼트
+            </HeadingTag>
+            <p className="text-3xl sm:text-5xl font-display font-bold text-white tracking-tight leading-tight">
               WE CREATE <br />
               <span className="text-slate-400 font-light">YOUR NEXT SCENE.</span>
-            </h2>
+            </p>
           </div>
           <div className="mt-6 md:mt-0 max-w-md">
             <p className="text-sm sm:text-base text-gray-300 font-light leading-relaxed">
@@ -151,6 +162,77 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ artistCount, id = 'a
                 </div>
               );
             })}
+          </div>
+
+          {/* Internal Links to Management & Agency Guides */}
+          <div className="mt-12 pt-8 border-t border-white/10 flex flex-wrap items-center justify-between gap-4 text-xs font-mono text-gray-400">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <span className="text-sky-400 font-bold">매니지먼트 안내:</span>
+              <a
+                href="/management"
+                onClick={(e) => {
+                  if (onNavigate) {
+                    e.preventDefault();
+                    onNavigate('management');
+                  }
+                }}
+                className="hover:text-white transition-colors"
+              >
+                배우 매니지먼트
+              </a>
+              <span className="text-gray-600">|</span>
+              <a
+                href="/actor-agency"
+                onClick={(e) => {
+                  if (onNavigate) {
+                    e.preventDefault();
+                    onNavigate('actor-agency');
+                  }
+                }}
+                className="hover:text-white transition-colors"
+              >
+                배우 소속사
+              </a>
+              <span className="text-gray-600">|</span>
+              <a
+                href="/actor-management-company"
+                onClick={(e) => {
+                  if (onNavigate) {
+                    e.preventDefault();
+                    onNavigate('actor-management-company');
+                  }
+                }}
+                className="hover:text-white transition-colors"
+              >
+                배우 기획사
+              </a>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <a
+                href="/artists"
+                onClick={(e) => {
+                  if (onNavigate) {
+                    e.preventDefault();
+                    onNavigate('artists');
+                  }
+                }}
+                className="text-sky-400 hover:underline"
+              >
+                소속 배우 보기 →
+              </a>
+              <a
+                href="/audition"
+                onClick={(e) => {
+                  if (onNavigate) {
+                    e.preventDefault();
+                    onNavigate('audition');
+                  }
+                }}
+                className="text-sky-400 hover:underline"
+              >
+                신인배우 오디션 지원 →
+              </a>
+            </div>
           </div>
         </div>
       </div>

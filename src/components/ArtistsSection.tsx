@@ -7,6 +7,7 @@ import { STATIC_OFFICIAL_ARTISTS } from '../data/artists';
 interface ArtistsSectionProps {
   artists: Artist[];
   onSelectArtist: (artist: Artist) => void;
+  isStandalone?: boolean;
 }
 
 /**
@@ -23,7 +24,7 @@ export function getActorStaticImage(artist: Artist): string {
   if (name.includes('이은수') || rawSlug.includes('lee') || rawSlug.includes('eunsoo') || rawSlug.includes('eunsu')) {
     return OFFICIAL_ACTOR_IMAGES['lee-eunsoo'];
   }
-  if (name.includes('박민욱') || rawSlug.includes('minwook') || rawSlug.includes('minjun')) {
+  if (name.includes('박민욱') || rawSlug.includes('minwook')) {
     return OFFICIAL_ACTOR_IMAGES['park-minwook'];
   }
   if (name.includes('박현진') || rawSlug.includes('hyunjin')) {
@@ -98,8 +99,10 @@ const ArtistCardImage: React.FC<ArtistCardImageProps> = ({ artist, staticImage }
 export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
   artists,
   onSelectArtist,
+  isStandalone = false,
 }) => {
   const [filter, setFilter] = useState<'ALL' | 'FEMALE' | 'MALE'>('ALL');
+  const HeadingTag = isStandalone ? 'h1' : 'h2';
 
   // Ground truth fallback: If artists is empty or null due to Firestore offline/quota error, strictly use STATIC_OFFICIAL_ARTISTS
   const effectiveArtists = (Array.isArray(artists) && artists.length > 0) ? artists : STATIC_OFFICIAL_ARTISTS;
@@ -120,9 +123,9 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
             <span className="text-xs font-mono tracking-widest text-sky-400 uppercase mb-2 block">
               MANAGEMENT ROSTER
             </span>
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-display font-black text-white tracking-tighter">
+            <HeadingTag className="text-3xl sm:text-5xl lg:text-6xl font-display font-black text-white tracking-tighter">
               TK매니지먼트 소속 배우
-            </h1>
+            </HeadingTag>
             <p className="text-xs sm:text-sm font-mono tracking-widest text-gray-400 uppercase mt-1">
               ARTISTS ROSTER
             </p>

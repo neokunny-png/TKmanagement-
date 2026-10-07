@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Phone, MapPin, Send, CheckCircle2, AlertCircle, Building, User, Loader2 } from 'lucide-react';
+import { Mail, MapPin, Send, CheckCircle2, AlertCircle, Building } from 'lucide-react';
 import { Artist, CompanyInfo } from '../types';
 import { DEFAULT_COMPANY_INFO } from '../services/companyService';
 import { submitContactInquiry } from '../services/inquiryService';
@@ -10,6 +10,7 @@ interface ContactSectionProps {
   onClearPreselectedActor: () => void;
   id?: string;
   isMobileView?: boolean;
+  isStandalone?: boolean;
   companyInfo?: CompanyInfo;
 }
 
@@ -19,8 +20,10 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
   onClearPreselectedActor,
   id = 'contact',
   isMobileView = false,
+  isStandalone = false,
   companyInfo = DEFAULT_COMPANY_INFO,
 }) => {
+  const HeadingTag = (isStandalone || isMobileView) ? 'h1' : 'h2';
   const [formData, setFormData] = useState({
     name: '',
     company: '',
@@ -121,9 +124,9 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
           <span className="text-[11px] sm:text-xs font-mono tracking-widest text-sky-400 uppercase block mb-2 sm:mb-3">
             BUSINESS &amp; CASTING INQUIRY
           </span>
-          <h1 className="text-[clamp(1.75rem,8vw,3.5rem)] sm:text-5xl md:text-6xl font-display font-black text-white tracking-tight sm:tracking-tighter whitespace-nowrap leading-none">
+          <HeadingTag className="text-[clamp(1.75rem,8vw,3.5rem)] sm:text-5xl md:text-6xl font-display font-black text-white tracking-tight sm:tracking-tighter whitespace-nowrap leading-none">
             TK매니지먼트 문의
-          </h1>
+          </HeadingTag>
           <p className="text-xs sm:text-sm font-mono tracking-widest text-gray-400 uppercase mt-2">
             CONTACT • ㈜TK Company
           </p>
@@ -145,6 +148,42 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
             <div className="space-y-6 pt-4 border-t border-white/10 text-xs">
               <div className="flex items-start space-x-4">
                 <div className="w-10 h-10 rounded bg-[#131620] border border-white/10 flex items-center justify-center text-sky-400 shrink-0">
+                  <Building className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono text-gray-500 uppercase block">
+                    COMPANY / 회사명
+                  </span>
+                  <span className="text-sm font-bold text-white block">
+                    {companyInfo.companyName || '㈜TK Company (티케이컴퍼니)'}
+                  </span>
+                  <span className="block text-gray-400 text-[11px] font-mono mt-0.5">
+                    {companyInfo.brandName || 'TK MANAGEMENT (티케이매니지먼트)'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-4">
+                <div className="w-10 h-10 rounded bg-[#131620] border border-white/10 flex items-center justify-center text-sky-400 shrink-0">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono text-gray-500 uppercase block">
+                    HEADQUARTERS / 본사 위치
+                  </span>
+                  <span className="text-xs sm:text-sm text-gray-200 font-medium leading-relaxed block break-keep">
+                    {companyInfo.address}
+                  </span>
+                  {companyInfo.addressEn && (
+                    <span className="text-[11px] text-gray-500 font-mono block mt-1 break-words">
+                      {companyInfo.addressEn}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-4">
+                <div className="w-10 h-10 rounded bg-[#131620] border border-white/10 flex items-center justify-center text-sky-400 shrink-0">
                   <Mail className="w-4 h-4" />
                 </div>
                 <div>
@@ -160,42 +199,6 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
                   <span className="block text-gray-400 text-[11px] mt-0.5">
                     캐스팅 및 섭외 제안 상시 접수
                   </span>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-4">
-                <div className="w-10 h-10 rounded bg-[#131620] border border-white/10 flex items-center justify-center text-sky-400 shrink-0">
-                  <Phone className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-mono text-gray-500 uppercase block">
-                    TEL / 대표 전화
-                  </span>
-                  <span className="text-sm font-bold text-white font-mono">
-                    {companyInfo.tel || '02-540-8820'}
-                  </span>
-                  <span className="block text-gray-400 text-[11px] mt-0.5">
-                    FAX : {companyInfo.fax || '02-540-8821'} (평일 10:00 - 18:00)
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-4">
-                <div className="w-10 h-10 rounded bg-[#131620] border border-white/10 flex items-center justify-center text-sky-400 shrink-0">
-                  <MapPin className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-mono text-gray-500 uppercase block">
-                    HEADQUARTERS / 본사 위치
-                  </span>
-                  <span className="text-xs sm:text-sm text-gray-200 font-medium leading-relaxed block break-keep">
-                    {companyInfo.address} ({companyInfo.companyName})
-                  </span>
-                  {companyInfo.addressEn && (
-                    <span className="text-[11px] text-gray-500 font-mono block mt-1 break-words">
-                      {companyInfo.addressEn}
-                    </span>
-                  )}
                 </div>
               </div>
             </div>
