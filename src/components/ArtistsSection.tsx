@@ -115,19 +115,19 @@ export const ArtistsSection: React.FC<ArtistsSectionProps> = ({
   });
 
   return (
-    <section id="artists" className="relative py-28 bg-[#0B0C10] border-t border-white/10">
+    <section id="artists" className="relative py-20 sm:py-28 bg-[#0B0C10] border-t border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 border-b border-white/10 pb-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 border-b border-white/10 pb-8">
           <div>
             <span className="text-xs font-mono tracking-widest text-sky-400 uppercase mb-2 block">
-              MANAGEMENT ROSTER
+              ARTISTS
             </span>
             <HeadingTag className="text-3xl sm:text-5xl lg:text-6xl font-display font-black text-white tracking-tighter">
               TK매니지먼트 소속 배우
             </HeadingTag>
             <p className="text-xs sm:text-sm font-mono tracking-widest text-gray-400 uppercase mt-1">
-              ARTISTS ROSTER
+              TK MANAGEMENT ARTISTS
             </p>
           </div>
 

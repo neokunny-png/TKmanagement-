@@ -153,6 +153,7 @@ export const Footer: React.FC<FooterProps> = ({
             <div className="text-white font-bold font-display text-xs">
               {companyInfo.companyName || '㈜TK Company (티케이컴퍼니)'}
             </div>
+            <div>대표이사 : {companyInfo.ceo || '조태경'}</div>
             <div>사업자등록번호 : {companyInfo.businessNumber || '291-88-03353'}</div>
             <div>대중문화예술기획업 등록 : {companyInfo.entertainmentRegistration || '제2025-서울강남-0418호(등록대기중)'}</div>
 

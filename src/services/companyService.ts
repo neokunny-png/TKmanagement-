@@ -5,7 +5,7 @@ import { CompanyInfo } from '../types';
 export const DEFAULT_COMPANY_INFO: CompanyInfo = {
   companyName: '㈜TK Company (티케이컴퍼니)',
   brandName: 'TK MANAGEMENT (티케이 매니지먼트)',
-  ceo: '',
+  ceo: '조태경',
   privacyOfficer: '개인정보보호 담당 부서',
   businessNumber: '291-88-03353',
   entertainmentRegistration: '제2025-서울강남-0418호(등록대기중)',
@@ -39,7 +39,7 @@ export function subscribeCompanyInfo(
         onUpdate({
           companyName: data.companyName || DEFAULT_COMPANY_INFO.companyName,
           brandName: data.brandName || DEFAULT_COMPANY_INFO.brandName,
-          ceo: '',
+          ceo: data.ceo || DEFAULT_COMPANY_INFO.ceo || '조태경',
           privacyOfficer: data.privacyOfficer && data.privacyOfficer.includes('부서') ? data.privacyOfficer : DEFAULT_COMPANY_INFO.privacyOfficer,
           businessNumber: data.businessNumber || DEFAULT_COMPANY_INFO.businessNumber,
           entertainmentRegistration: data.entertainmentRegistration || DEFAULT_COMPANY_INFO.entertainmentRegistration,

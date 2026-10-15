@@ -512,7 +512,7 @@ export function buildActorHtml(baseHtml: string, actor: StaticActor): string {
   </div>
 </div>`;
 
-  html = html.replace(/<div id="root">[\s\S]*?<\/div>/i, actorRootHtml);
+  html = html.replace(/<div id="root">[\s\S]*<\/div>(?=\s*(?:<script|<\/body>))/i, actorRootHtml);
 
   return html;
 }
@@ -1297,7 +1297,7 @@ export function buildSectionHtml(baseHtml: string, section: StaticPageConfig): s
 </div>`;
   }
 
-  html = html.replace(/<div id="root">[\s\S]*?<\/div>/i, sectionRootHtml);
+  html = html.replace(/<div id="root">[\s\S]*<\/div>(?=\s*(?:<script|<\/body>))/i, sectionRootHtml);
 
   return html;
 }
