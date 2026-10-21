@@ -45,11 +45,11 @@ export function isValidArtistImageUrl(url?: string | null): boolean {
 
 /**
  * Retrieves the verified official static image for a given actor slug or ID.
- * Always resolves to the specific actor's own static asset.
- * NEVER returns another actor's image or artists[0].
+ * Returns the specific official actor's static asset if matching, or null.
+ * NEVER returns another actor's image or defaults to choi-eunseo for new actors.
  */
-export function getOfficialActorStaticImage(slugOrId?: string | null): string {
-  if (!slugOrId) return OFFICIAL_ACTOR_IMAGES['choi-eunseo'];
+export function getOfficialActorStaticImage(slugOrId?: string | null): string | null {
+  if (!slugOrId) return null;
   const clean = slugOrId.replace(/^artist-/, '').toLowerCase().trim();
   if (clean in OFFICIAL_ACTOR_IMAGES) {
     return OFFICIAL_ACTOR_IMAGES[clean];
@@ -73,7 +73,7 @@ export function getOfficialActorStaticImage(slugOrId?: string | null): string {
       return OFFICIAL_ACTOR_IMAGES[officialSlug];
     }
   }
-  return OFFICIAL_ACTOR_IMAGES['choi-eunseo'];
+  return null;
 }
 
 export interface ResolveArtistImageOptions {
@@ -83,30 +83,29 @@ export interface ResolveArtistImageOptions {
 /**
  * Unified canonical image resolver for artist representative images across the entire app.
  * Execution order:
- * 1. Frame 0 / Initial Render: Immediately use actor's official static image (zero network wait, zero FOUC)
- * 2. Firestore complete: If Firestore has a valid admin-registered URL (https://...), use it
- * 3. Fallback: If Firestore URL is missing, deleted, or invalid, fall back to actor's own official static image
+ * 1. Check for valid admin Firestore image URL (supports https, http, relative paths, and compressed data URLs)
+ * 2. If missing, check if this actor has a verified official static image (최은서, 이은수, 박민욱, 박현진)
+ * 3. Fallback: Return null so caller can display a neutral placeholder without borrowing another actor's image
  */
 export function resolveArtistRepresentativeImage(
   artist: Partial<Artist> | null | undefined,
   options: ResolveArtistImageOptions = {}
-): string {
-  if (!artist) return OFFICIAL_ACTOR_IMAGES['choi-eunseo'];
+): string | null {
+  if (!artist) return null;
 
-  const slug = getArtistSlug(artist as Artist) || (artist.id ? artist.id.replace('artist-', '') : '').toLowerCase();
-  const staticImage = getOfficialActorStaticImage(slug);
-
-  // 1. Initial Frame 0 render always uses static official image
-  if (options.isInitialRender === true) {
-    return staticImage;
-  }
-
-  // 2. Check for valid admin Firestore image URL
+  // 1. Check for valid admin Firestore image URL
   const firestoreImage = artist.profileImageUrl || artist.image || artist.profileImage;
   if (isValidArtistImageUrl(firestoreImage)) {
     return firestoreImage as string;
   }
 
-  // 3. Fallback to actor's official static image
-  return staticImage;
+  // 2. Only if the actor is one of the verified official actors with static asset, use it
+  const slug = getArtistSlug(artist as Artist) || (artist.id ? artist.id.replace('artist-', '') : '').toLowerCase();
+  const staticImage = getOfficialActorStaticImage(slug);
+  if (staticImage) {
+    return staticImage;
+  }
+
+  // 3. New actors or actors without a photo return null
+  return null;
 }

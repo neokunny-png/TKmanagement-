@@ -266,10 +266,10 @@ export function getArtistSlug(artist: Artist): string {
   // Fallback slug from english name or sanitized id if valid
   if (artist.nameEn) {
     const slug = artist.nameEn.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-    if (slug && OFFICIAL_ACTORS[slug]) return slug;
+    if (slug) return slug;
   }
   const cleanId = (artist.id || '').replace(/^artist-/, '');
-  if (OFFICIAL_ACTORS[cleanId]) return cleanId;
+  if (cleanId) return cleanId;
 
   return '';
 }

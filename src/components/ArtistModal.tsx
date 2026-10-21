@@ -36,16 +36,14 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
 
   const slug = artist ? getArtistSlug(artist) : '';
   const official = slug ? OFFICIAL_ACTORS[slug] : undefined;
-  const staticOfficialImage = artist ? getActorStaticImage(artist) : '';
-  const profilePhoto = artist ? (resolveArtistRepresentativeImage(artist) || staticOfficialImage) : '';
+  const staticOfficialImage = artist ? (getActorStaticImage(artist) || '') : '';
+  const profilePhoto = artist ? (resolveArtistRepresentativeImage(artist) || staticOfficialImage || '') : '';
 
   // Build full photo list: main profile photo + any additional gallery photos (preserving admin order)
   const allPhotos: Array<{ id: string; url: string }> = [];
   if (artist) {
     if (profilePhoto) {
       allPhotos.push({ id: 'main-profile', url: profilePhoto });
-    } else if (staticOfficialImage) {
-      allPhotos.push({ id: 'main-profile', url: staticOfficialImage });
     }
     if (Array.isArray(artist.galleryImages)) {
       const sortedGallery = [...artist.galleryImages].sort((a, b) => {
@@ -301,24 +299,34 @@ export const ArtistModal: React.FC<ArtistModalProps> = ({
               )}
 
               {/* Large Uncropped Actor Photo (object-contain, default large size only) */}
-              <img
-                ref={photoImgRef}
-                key={currentPhoto || staticOfficialImage}
-                src={imgError ? staticOfficialImage : (currentPhoto || staticOfficialImage)}
-                alt={`TK매니지먼트 소속 배우 ${artist.nameKo}`}
-                onLoad={updateMeasuredPhotoWidth}
-                onError={() => {
-                  if (!imgError) {
+              {(currentPhoto || staticOfficialImage) && !imgError ? (
+                <img
+                  ref={photoImgRef}
+                  key={currentPhoto || staticOfficialImage || ''}
+                  src={currentPhoto || staticOfficialImage || ''}
+                  alt={`TK매니지먼트 소속 배우 ${artist.nameKo}`}
+                  onLoad={updateMeasuredPhotoWidth}
+                  onError={() => {
                     setImgError(true);
-                  }
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                }}
-                className="max-h-[82dvh] sm:max-h-[88dvh] max-w-[94vw] sm:max-w-[86vw] w-auto h-auto object-contain select-none block"
-                loading="eager"
-                decoding="async"
-              />
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                  className="max-h-[82dvh] sm:max-h-[88dvh] max-w-[94vw] sm:max-w-[86vw] w-auto h-auto object-contain select-none block"
+                  loading="eager"
+                  decoding="async"
+                />
+              ) : (
+                <div className="w-64 sm:w-80 aspect-[3/4] flex flex-col items-center justify-center bg-[#111319] border border-white/10 text-gray-400 p-8 text-center select-none">
+                  <Film className="w-12 h-12 mb-3 text-gray-600 opacity-60 stroke-[1.5]" />
+                  <span className="text-base font-display font-bold tracking-tight text-white mb-1">
+                    {artist.nameKo}
+                  </span>
+                  <span className="text-[11px] font-mono tracking-widest text-gray-500 uppercase">
+                    공식 프로필 사진 등록 대기
+                  </span>
+                </div>
+              )}
 
               {/* Minimal Right Arrow (>) - opacity 0 by default, opacity 1 on hover */}
               {totalPhotos > 1 && (

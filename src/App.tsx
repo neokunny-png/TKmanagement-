@@ -93,6 +93,11 @@ export function resolveInitialRoute(): {
         };
         return { slug: rawSlug, artist: initialArtist, isNotFound: false, activeSection: 'artists' };
       }
+    } else {
+      const cached = getCachedArtistBySlug(rawSlug);
+      if (cached) {
+        return { slug: rawSlug, artist: cached, isNotFound: false, activeSection: 'artists' };
+      }
     }
 
     // Unofficial or non-existent actor slug -> strictly 404
@@ -280,6 +285,15 @@ export default function App() {
           }
         }
       } else {
+        const found = artists.find(
+          a => a.id === slug || a.id === `artist-${slug}` || getArtistSlug(a) === slug || (a.nameKo && slug.includes(a.nameKo))
+        );
+        if (found) {
+          setIsNotFound(false);
+          setSelectedArtist(found);
+          setActiveSection('artists');
+          return;
+        }
         // Unknown actor slug or non-official actor -> 404
         setSelectedArtist(null);
         setIsNotFound(true);

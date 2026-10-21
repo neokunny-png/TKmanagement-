@@ -559,25 +559,8 @@ export function getCachedArtistBySlug(slug: string): Artist | null {
     const list = JSON.parse(raw);
     if (!Array.isArray(list)) return null;
 
-    const OFFICIAL_NAMES = new Set(['최은서', '이은수', '박민욱', '박현진']);
-    const OFFICIAL_IDS = new Set([
-      'artist-choi-eunseo',
-      'artist-lee-eunsoo',
-      'artist-park-minwook',
-      'artist-park-hyunjin',
-    ]);
-
-    // Filter strictly to the 4 official actors
-    const valid = list.filter((item: any) => {
-      const name = (item.nameKo || '').trim();
-      const id = (item.id || '').trim();
-      return OFFICIAL_NAMES.has(name) || OFFICIAL_IDS.has(id);
-    });
-
-    // Save cleaned list back if non-official items were removed
-    if (valid.length !== list.length) {
-      localStorage.setItem(CACHE_KEY_ARTISTS, JSON.stringify(valid));
-    }
+    // Filter to valid artist items
+    const valid = list.filter((item: any) => Boolean(item && (item.id || item.nameKo)));
 
     // Match strictly by slug, canonical ID, or exact Korean name
     const found = valid.find((item: any) => {
@@ -598,12 +581,12 @@ export function getCachedArtistBySlug(slug: string): Artist | null {
         return itemSlug === 'park-hyunjin' || itemId === 'artist-park-hyunjin' || itemName === '박현진';
       }
 
-      return itemSlug === cleanSlug || itemId === `artist-${cleanSlug}`;
+      return itemSlug === cleanSlug || itemId === `artist-${cleanSlug}` || itemId === cleanSlug || itemName.toLowerCase() === cleanSlug;
     });
 
     if (!found) return null;
 
-    // Use valid Firestore profileImageUrl if present, otherwise fallback to official static image
+    // Use valid Firestore profileImageUrl if present, otherwise fallback to official static image only for official actors
     const validUrl = isValidArtistImageUrl(found.profileImageUrl)
       ? found.profileImageUrl
       : (cleanSlug in OFFICIAL_ACTOR_IMAGES ? OFFICIAL_ACTOR_IMAGES[cleanSlug] : null);
@@ -646,8 +629,8 @@ export function saveCachedArtists(artists: Artist[]): void {
 
 /**
  * Deduplicates and normalizes artist records.
- * Strictly guarantees that ONLY the 4 official actors (최은서, 이은수, 박민욱, 박현진)
- * are retained. All obsolete, test, or duplicate docs are purged.
+ * Supports expanding roster beyond the 4 official actors (최은서, 이은수, 박민욱, 박현진, 강재우, etc.).
+ * Duplicates for the same canonical actor are safely merged and cleaned.
  */
 export function normalizeArtists(rawItems: Artist[]): { normalized: Artist[]; duplicatesToDelete: string[] } {
   const groupMap = new Map<string, Artist[]>();
@@ -671,17 +654,9 @@ export function normalizeArtists(rawItems: Artist[]): { normalized: Artist[]; du
   const result: Artist[] = [];
 
   for (const [canonicalId, group] of groupMap.entries()) {
-    const isNonOfficial = !OFFICIAL_CANONICAL_IDS.has(canonicalId);
-
-    if (isNonOfficial) {
-      group.forEach(g => {
-        if (g.id) duplicatesToDelete.push(g.id);
-      });
-      continue;
-    }
-
+    const isOfficial = OFFICIAL_CANONICAL_IDS.has(canonicalId);
     const slugFromId = canonicalId.replace('artist-', '').toLowerCase().trim();
-    const staticImageFallback = getOfficialActorStaticImage(slugFromId);
+    const staticImageFallback = isOfficial ? getOfficialActorStaticImage(slugFromId) : null;
 
     if (group.length === 1) {
       const single = group[0];

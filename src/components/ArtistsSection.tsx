@@ -4,6 +4,8 @@ import { Artist } from '../types';
 import { getArtistSlug, OFFICIAL_ACTOR_IMAGES } from '../lib/seo';
 import { STATIC_OFFICIAL_ARTISTS } from '../data/artists';
 
+import { isValidArtistImageUrl } from '../utils/artistImageResolver';
+
 interface ArtistsSectionProps {
   artists: Artist[];
   onSelectArtist: (artist: Artist) => void;
@@ -12,9 +14,10 @@ interface ArtistsSectionProps {
 
 /**
  * Maps an artist to their official static profile image.
- * Safely handles slug, id, or Korean name fallback so static image is NEVER empty.
+ * Strictly returns the specific official actor's static asset (최은서, 이은수, 박민욱, 박현진),
+ * or null for any newly added actors. NEVER defaults to choi-eunseo.
  */
-export function getActorStaticImage(artist: Artist): string {
+export function getActorStaticImage(artist: Artist): string | null {
   const name = (artist.nameKo || '').trim();
   const rawSlug = getArtistSlug(artist) || (artist.id ? artist.id.replace(/^artist-/, '') : '').toLowerCase().trim();
 
@@ -33,62 +36,77 @@ export function getActorStaticImage(artist: Artist): string {
   if (rawSlug in OFFICIAL_ACTOR_IMAGES) {
     return OFFICIAL_ACTOR_IMAGES[rawSlug];
   }
-  return OFFICIAL_ACTOR_IMAGES['choi-eunseo'];
+  return null;
 }
 
 interface ArtistCardImageProps {
   artist: Artist;
-  staticImage: string;
+  staticImage: string | null;
 }
 
 /**
- * 2-tier robust artist card image:
- * Tier 1: Immediately render the official static image (zero delay, zero flicker, 100% availability).
- * Tier 2: If Firestore has a valid remote Storage URL, preload in background and swap only on success.
- * If preload fails or Firestore is null, the static official image is always maintained.
+ * Robust artist card image renderer:
+ * 1. If artist has an uploaded / valid profileImageUrl (HTTPS or optimized compressed data URL), displays that actor's own image.
+ * 2. If no custom image exists but actor is one of the 4 official actors, displays their own static asset.
+ * 3. If no image exists, displays a neutral placeholder box (NEVER another actor's photo).
  */
 const ArtistCardImage: React.FC<ArtistCardImageProps> = ({ artist, staticImage }) => {
-  const [currentSrc, setCurrentSrc] = useState<string>(staticImage);
+  const rawPhoto = artist.profileImageUrl || artist.image || artist.profileImage || null;
+  const validRemotePhoto = isValidArtistImageUrl(rawPhoto) ? (rawPhoto as string) : null;
+  const initialPhoto = validRemotePhoto || staticImage || null;
+
+  const [currentSrc, setCurrentSrc] = useState<string | null>(initialPhoto);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    // Always guarantee staticImage as base
-    setCurrentSrc(staticImage);
-
-    const remoteUrl = artist.profileImageUrl || artist.image || artist.profileImage;
-    if (
-      remoteUrl &&
-      typeof remoteUrl === 'string' &&
-      (remoteUrl.startsWith('https://') || remoteUrl.startsWith('http://')) &&
-      !remoteUrl.includes('placeholder') &&
-      !remoteUrl.includes('dummy') &&
-      !remoteUrl.includes('default') &&
-      remoteUrl !== staticImage
-    ) {
-      let isSubscribed = true;
-      const preloader = new Image();
-      preloader.onload = () => {
-        if (isSubscribed) {
-          setCurrentSrc(remoteUrl);
-        }
-      };
-      preloader.onerror = () => {
-        if (isSubscribed) {
-          setCurrentSrc(staticImage);
-        }
-      };
-      preloader.src = remoteUrl;
-
-      return () => {
-        isSubscribed = false;
-      };
+    setHasError(false);
+    const candidate = artist.profileImageUrl || artist.image || artist.profileImage || null;
+    if (isValidArtistImageUrl(candidate)) {
+      setCurrentSrc(candidate as string);
+    } else if (staticImage) {
+      setCurrentSrc(staticImage);
+    } else {
+      setCurrentSrc(null);
     }
-  }, [artist.profileImageUrl, artist.image, artist.profileImage, staticImage]);
+  }, [artist.id, artist.profileImageUrl, artist.image, artist.profileImage, staticImage]);
+
+  if (!currentSrc || hasError) {
+    if (staticImage && !hasError) {
+      return (
+        <img
+          src={staticImage}
+          alt={`TK매니지먼트 소속 배우 ${artist.nameKo} 프로필`}
+          onError={() => setHasError(true)}
+          className="relative z-[1] w-full h-full object-cover object-center filter grayscale-[15%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700 ease-out"
+          loading="eager"
+          decoding="async"
+        />
+      );
+    }
+    return (
+      <div className="relative z-[1] w-full h-full flex flex-col items-center justify-center bg-[#111319] text-gray-500 p-6 text-center select-none border border-white/5">
+        <Users className="w-10 h-10 mb-3 text-gray-600 opacity-60 stroke-[1.5]" />
+        <span className="text-xs font-mono font-bold tracking-wider text-gray-300 uppercase">
+          {artist.nameKo || 'NEW ARTIST'}
+        </span>
+        <span className="text-[10px] text-gray-500 font-mono tracking-widest mt-1 uppercase">
+          프로필 사진 등록 대기
+        </span>
+      </div>
+    );
+  }
 
   return (
     <img
-      src={currentSrc || staticImage}
+      src={currentSrc}
       alt={`TK매니지먼트 소속 배우 ${artist.nameKo} 프로필`}
-      onError={() => setCurrentSrc(staticImage)}
+      onError={() => {
+        if (staticImage && currentSrc !== staticImage) {
+          setCurrentSrc(staticImage);
+        } else {
+          setHasError(true);
+        }
+      }}
       className="relative z-[1] w-full h-full object-cover object-center filter grayscale-[15%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700 ease-out"
       loading="eager"
       decoding="async"

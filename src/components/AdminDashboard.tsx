@@ -71,7 +71,7 @@ import { ARTISTS } from '../data/artists';
 import { NEWS_ARTICLES } from '../data/news';
 import { TKLogoMark } from './TKLogo';
 import { AdminInquiriesTab } from './AdminInquiriesTab';
-import { resolveArtistRepresentativeImage } from '../utils/artistImageResolver';
+import { resolveArtistRepresentativeImage, isValidArtistImageUrl } from '../utils/artistImageResolver';
 
 interface AdminDashboardProps {
   artists: Artist[];
@@ -726,6 +726,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setShowArtistCloseConfirm(false);
     setSelectedPhotoFile(null);
     setPhotoPreviewUrl(null);
+    if (profileFileInputRef.current) {
+      profileFileInputRef.current.value = '';
+    }
     setProfileImageMode('upload');
     setLanguagesInput('한국어');
     setSpecialtyInput('연기');
@@ -743,6 +746,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       instagram: '@',
       bio: '',
       profileImage: '',
+      profileImageUrl: null,
+      image: null,
+      galleryImages: [],
       showreelUrl: '',
       filmography: [],
       isActive: true,
@@ -755,6 +761,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setShowArtistCloseConfirm(false);
     setSelectedPhotoFile(null);
     setPhotoPreviewUrl(null);
+    if (profileFileInputRef.current) {
+      profileFileInputRef.current.value = '';
+    }
     setProfileImageMode(artist.profileImageUrl || artist.profileImage || artist.image ? 'upload' : 'upload');
     setLanguagesInput((artist.languages || []).join(', '));
     setSpecialtyInput((artist.specialty || []).join(', '));
@@ -2463,8 +2472,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
                       {/* Photo Preview Box */}
                       {(() => {
-                        const previewSrc = photoPreviewUrl || editingArtist.profileImageUrl || editingArtist.profileImage || editingArtist.image || resolveArtistRepresentativeImage(editingArtist);
-                        const hasCustom = Boolean(photoPreviewUrl || editingArtist.profileImageUrl || editingArtist.profileImage || editingArtist.image);
+                        const rawExisting = editingArtist.profileImageUrl || editingArtist.profileImage || editingArtist.image;
+                        const validExisting = isValidArtistImageUrl(rawExisting) ? rawExisting : null;
+                        const officialStatic = isNewArtist ? null : resolveArtistRepresentativeImage(editingArtist);
+                        const previewSrc = photoPreviewUrl || validExisting || officialStatic;
+                        const hasCustom = Boolean(photoPreviewUrl || validExisting);
                         return (
                           <div className="w-32 aspect-[3/4] bg-black border border-white/20 overflow-hidden shrink-0 relative group">
                             {previewSrc ? (
@@ -2492,11 +2504,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                       onClick={() => {
                                         setSelectedPhotoFile(null);
                                         setPhotoPreviewUrl(null);
+                                        if (profileFileInputRef.current) {
+                                          profileFileInputRef.current.value = '';
+                                        }
                                         setEditingArtist(prev => prev ? ({ ...prev, profileImage: '', profileImageUrl: '', image: '' }) : null);
                                       }}
                                       className="w-full py-1 bg-red-950/80 text-red-300 border border-red-800 text-[10px] font-bold uppercase tracking-wider hover:bg-red-900 transition-colors"
                                     >
-                                      기본으로 복구
+                                      사진 삭제
                                     </button>
                                   )}
                                 </div>
@@ -3330,6 +3345,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   onClick={() => {
                     setShowArtistCloseConfirm(false);
                     setEditingArtist(null);
+                    setSelectedPhotoFile(null);
+                    setPhotoPreviewUrl(null);
+                    if (profileFileInputRef.current) {
+                      profileFileInputRef.current.value = '';
+                    }
                     showToast('배우 정보 수정을 취소하고 창을 닫았습니다.');
                   }}
                   className="px-3 py-2 text-xs font-mono text-red-400 hover:text-red-300 border border-red-900/40 hover:bg-red-950/40 transition-colors text-center"
