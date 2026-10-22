@@ -37,13 +37,16 @@ export function getCanonicalArtistId(idOrKo: string, nameEn?: string): string {
     return 'artist-park-hyunjin';
   }
 
-  if (idOrKo && idOrKo.startsWith('artist-') && idOrKo.length > 7) {
-    return idOrKo;
-  }
-
+  // Generate canonical ID from English name if provided (e.g. "KANG JAE WOO" -> "artist-kang-jae-woo")
   if (nameEn && nameEn.trim()) {
     const slug = nameEn.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-    if (slug) return `artist-${slug}`;
+    if (slug) {
+      return `artist-${slug}`;
+    }
+  }
+
+  if (idOrKo && idOrKo.startsWith('artist-') && idOrKo.length > 7) {
+    return idOrKo;
   }
 
   return idOrKo || `artist-${Date.now()}`;
